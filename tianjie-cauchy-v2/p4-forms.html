@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #orth{position:absolute;inset:0;opacity:0;}
+  #cv{position:absolute;inset:0;}
+  #pill{position:absolute;left:0;right:0;top:795px;text-align:center;opacity:0;}
+  #pill .chip{font-size:36px;}
+  #rhoCard{position:absolute;left:0;right:0;top:268px;text-align:center;opacity:0;}
+  #rhoCard .inner{display:inline-block;border:3px solid var(--gold-hi);border-radius:16px;padding:10px 46px;
+    font-size:52px;color:var(--gold-hi);box-shadow:0 0 40px rgba(255,215,106,.30);}
+  #stele{left:810px;top:170px;width:300px;height:470px;opacity:0;}
+  .op{position:absolute;left:0;right:0;top:120px;text-align:center;font-size:200px;color:var(--gold-hi);opacity:0;}
+  #frow{position:absolute;left:0;right:0;top:690px;text-align:center;font-size:54px;white-space:nowrap;}
+  #frow .opn{display:inline-block;min-width:1.1em;}
+  #frow .rst{display:inline-block;}
+  #plain{position:absolute;left:0;right:0;top:790px;text-align:center;font-size:34px;color:var(--muted);}
+  #plain span{position:absolute;left:0;right:0;opacity:0;}
+  #flashRow{position:absolute;left:0;right:0;top:872px;text-align:center;font-size:40px;color:var(--gold-hi);opacity:0;}
+  #resLab{position:absolute;left:0;right:0;top:745px;text-align:center;font-size:30px;color:var(--orange);opacity:0;}
+</style>
+</head>
+<body>
+<svg id="orth" width="1920" height="1080">
+  <line x1="960" y1="700" x2="960" y2="420" stroke="var(--gold)" stroke-width="6"/>
+  <line x1="960" y1="700" x2="1270" y2="700" stroke="var(--cyan)" stroke-width="6"/>
+  <circle cx="960" cy="700" r="8" fill="var(--white)"/>
+  <text x="1000" y="660" class="fx" font-size="34" fill="var(--orange)">影子 = 0</text>
+</svg>
+
+<svg id="cv" width="1920" height="1080">
+  <line id="trend" stroke="var(--gold)" stroke-width="4" opacity="0"/>
+  <g id="pts"></g>
+  <g id="res"></g>
+  <circle id="mpG" r="11" fill="var(--gold)" opacity="0"/>
+  <circle id="mpC" r="11" fill="var(--cyan)" opacity="0"/>
+  <text id="labG" class="fx" font-size="34" fill="var(--gold)" opacity="0">X</text>
+  <text id="labC" class="fx" font-size="34" fill="var(--cyan)" opacity="0">Y</text>
+  <path id="arcT" fill="none" stroke="rgba(122,134,153,.9)" stroke-width="2.5" opacity="0"/>
+  <text id="thT" class="fx" font-size="30" fill="var(--muted)" opacity="0">θ</text>
+</svg>
+
+<div id="pill"><div class="chip fx">相关系数 ρ = <span class="gold-hi">0.81</span></div></div>
+<div id="resLab">残差——还是影子</div>
+<div id="rhoCard"><div class="inner fx">|ρ| ≤ 1</div></div>
+
+<div id="stele" class="stele">
+  <div class="op fx" id="op0">Σ</div>
+  <div class="op fx" id="op1">∫</div>
+  <div class="op fx" id="op2">E</div>
+  <div class="op fx" id="op3">⟨,⟩</div>
+</div>
+
+<div id="frow" class="fx"><span class="opn" id="fop">Σ</span><span class="rst" id="frst"> a<sub>i</sub>b<sub>i</sub> ≤ √(Σa<sub>i</sub><sup>2</sup>) · √(Σb<sub>i</sub><sup>2</sup>)</span></div>
+<div id="plain">
+  <span id="pl0">求和 · 数列</span><span id="pl1">积分 · 函数</span><span id="pl2">平均 · 概率</span><span id="pl3">点积 · 向量</span>
+</div>
+<div id="flashRow" class="fx">Σ　∫　E　⟨,⟩</div>
+<div id="starHost"></div>
+<div class="vign"></div>
+<div class="cap">在数据的世界，夹角叫相关系数</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var C = { x: 970, y: 530 };                       /* 趋势线枢轴 */
+var A0 = Math.atan2(370 - 690, 1560 - 380);        /* 基准角（屏幕系） */
+var r = F.rng(9), PTS = [];
+function trendY(x) { return 690 + (x - 380) * (370 - 690) / (1560 - 380); }
+for (var i = 0; i < 55; i++) {
+  var x = 340 + r() * 1220;
+  PTS.push({ x: x, y: trendY(x) + (r() + r() - 1) * 95, t0: 1.5 + i * .082 });
+}
+var G = { x: 420, y: 0 }, YP = { x: 1520, y: 0 };
+G.y = trendY(G.x); YP.y = trendY(YP.x);
+
+/* 星尘（H15 兜底） */
+var sr = F.rng(9), starEls = [];
+for (var s = 0; s < 26; s++) {
+  var e = document.createElement('div'); e.className = 'p';
+  e.style.background = 'rgba(244,246,250,.8)';
+  $('starHost').appendChild(e);
+  starEls.push({ e: e, x: sr() * 1920, y: sr() * 1000, sz: 1.5 + sr() * 2, f: .4 + sr() * .8, p: sr() * 6 });
+}
+
+function lineDir(t) { /* 9.0–9.7 趋势线微调 +2° */
+  var a = A0 - 2 * D2() * F.eic(F.seg(t, 9.0, 9.7));
+  return { x: Math.cos(a), y: Math.sin(a) };
+}
+function D2() { return Math.PI / 180; }
+function footOf(p, dir) {
+  var k = (p.x - C.x) * dir.x + (p.y - C.y) * dir.y;
+  return { x: C.x + k * dir.x, y: C.y + k * dir.y };
+}
+
+window.film = {
+  duration: 22,
+  frame: function (t) {
+    F.capShow(document.querySelector('.cap'), t, .5, 4.5);
+
+    /* 正交回闪（0.2–1.5）→ 溶入散点云 */
+    var ou = F.seg(t, .2, 1.5);
+    $('orth').style.opacity = ou > 0 && ou < 1 ? Math.sin(Math.PI * Math.min(1, ou)) * 1 : 0;
+
+    var dir = lineDir(t);
+    var L1 = { x: C.x - dir.x * 640, y: C.y - dir.y * 640 };
+    var L2 = { x: C.x + dir.x * 640, y: C.y + dir.y * 640 };
+
+    /* 云粒入场：自趋势线垂线方向 12px 落位 + 透明度（非纯淡入） */
+    var g = $('pts').children, res = $('res').children;
+    for (var i = 0; i < PTS.length; i++) {
+      var p = PTS[i], u = F.eoc(F.seg(t, p.t0, p.t0 + .5));
+      var ft = footOf(p, dir);
+      /* 10.5–12.5 沿垂线 24% 吸附再松弛（投影感） */
+      var ad = .24 * F.eic(F.seg(t, 10.5, 11.4)) * (1 - F.eoc(F.seg(t, 11.4, 12.4)));
+      var px = p.x + (ft.x - p.x) * ad, py = p.y + (ft.y - p.y) * ad;
+      var dy = (1 - u) * 12;
+      g[i].setAttribute('cx', px); g[i].setAttribute('cy', py + dy);
+      g[i].setAttribute('r', 4.5); g[i].setAttribute('opacity', u * .85);
+      res[i].setAttribute('x1', px); res[i].setAttribute('y1', py + dy);
+      res[i].setAttribute('x2', ft.x); res[i].setAttribute('y2', ft.y);
+      res[i].setAttribute('opacity', u * F.eoc(F.seg(t, 7.0 + i * .03, 7.4 + i * .03)) * .30);
+    }
+
+    /* 趋势线绘出（6.0–9.0） */
+    var tu = F.eoq(F.seg(t, 6.0, 9.0));
+    var tr = $('trend');
+    tr.setAttribute('opacity', F.seg(t, 6.0, 6.3));
+    tr.setAttribute('x1', L1.x); tr.setAttribute('y1', L1.y);
+    tr.setAttribute('x2', F.lerp(C.x, L2.x, tu)); tr.setAttribute('y2', F.lerp(C.y, L2.y, tu));
+    $('resLab').style.opacity = F.eoc(F.seg(t, 8.4, 8.9)) * .95;
+
+    /* 两主点 + θ 弧 */
+    var mpU = F.eoc(F.seg(t, 4.8, 5.5));
+    $('mpG').setAttribute('cx', G.x); $('mpG').setAttribute('cy', G.y); $('mpG').setAttribute('opacity', mpU);
+    $('mpC').setAttribute('cx', YP.x); $('mpC').setAttribute('cy', YP.y); $('mpC').setAttribute('opacity', mpU);
+    $('labG').setAttribute('x', G.x - 46); $('labG').setAttribute('y', G.y - 22); $('labG').setAttribute('opacity', mpU);
+    $('labC').setAttribute('x', YP.x + 20); $('labC').setAttribute('y', YP.y - 22); $('labC').setAttribute('opacity', mpU);
+    var arcU = F.eoc(F.seg(t, 11.6, 12.1));
+    $('arcT').setAttribute('opacity', arcU);
+    $('arcT').setAttribute('d', 'M' + (G.x + 78) + ' ' + G.y + ' A78 78 0 0 0 ' + (G.x + 78 * Math.cos(-.23 - 2 * D2())) + ' ' + (G.y + 78 * Math.sin(-.23 - 2 * D2())));
+    $('thT').setAttribute('opacity', arcU);
+    $('thT').setAttribute('x', G.x + 96); $('thT').setAttribute('y', G.y - 18);
+
+    /* ρ 读数与 |ρ|≤1 金框卡（12.5 过冲落场变奏：缩放形态、无旋转） */
+    $('pill').style.opacity = F.eoc(F.seg(t, 11.0, 11.5));
+    var rc = F.eob(F.seg(t, 12.5, 13.0));
+    $('rhoCard').style.opacity = rc * (t > 13 ? .85 + .15 * Math.sin(2 * Math.PI * 2 * t) : 1);
+    $('rhoCard').style.transform = 'scale(' + F.lerp(.4, 1, rc) + ')';
+
+    /* 星碑浮现（13.0–14.0） */
+    var su = F.eoc(F.seg(t, 13.0, 14.0));
+    $('stele').style.opacity = su;
+    $('stele').style.transform = 'translateY(' + ((1 - su) * 40) + 'px)';
+    for (var q = 0; q < starEls.length; q++) {
+      var st = starEls[q];
+      st.e.style.left = st.x + 'px'; st.e.style.top = st.y + 'px';
+      st.e.style.width = st.e.style.height = st.sz + 'px';
+      st.e.style.opacity = su * (.25 + .55 * Math.abs(Math.sin(2 * Math.PI * st.f * t + st.p)));
+    }
+
+    /* 碑心运算符换装 Σ(14)→∫(16)→E(18)→⟨,⟩(20)：入 0.6 eoc / 驻 / 换 0.4 */
+    var OPS = [[14, 16], [16, 18], [18, 20], [20, 22.4]];
+    var REST = [' a<sub>i</sub>b<sub>i</sub> ≤ √(Σa<sub>i</sub><sup>2</sup>) · √(Σb<sub>i</sub><sup>2</sup>)',
+                ' f·g  ≤  ‖f‖ · ‖g‖',
+                ' E[XY] ≤ √(E[X²]) · √(E[Y²])',
+                ' ⟨u,v⟩ ≤ ‖u‖ · ‖v‖'];
+    var OPCH = ['Σ', '∫', 'E', '⟨,⟩'];
+    for (var k = 0; k < 4; k++) {
+      var el = $('op' + k), w0 = OPS[k][0], w1 = OPS[k][1];
+      var uIn = F.eoc(F.seg(t, w0, w0 + .6));
+      var uOut = F.eoc(F.seg(t, w1 - .4, w1));
+      var vis = t >= w0 && t < w1 ? uIn * (1 - uOut) : 0;
+      el.style.opacity = vis;
+      el.style.transform = 'translateY(' + ((1 - uIn) * -30 + uOut * 30) + 'px)';
+      /* 公式行：运算符 token 同位滑动换装，其余整段替换 */
+      if (t >= w0 && t < w1) {
+        $('fop').textContent = OPCH[k];
+        $('frst').innerHTML = REST[k];
+        $('fop').style.transform = 'translateX(' + ((1 - uIn) * 26) + 'px)';
+        $('frst').style.opacity = uIn;
+        $('pl' + k).style.opacity = uIn;
+      } else $('pl' + k).style.opacity = 0;
+    }
+    /* 三图标同拍闪（21.2–21.8） */
+    var fl = Math.abs(Math.sin(2 * Math.PI * 2.5 * F.seg(t, 21.2, 21.8) * 1.6)) * F.seg(t, 21.2, 21.8);
+    $('flashRow').style.opacity = fl * (1 - F.seg(t, 21.8, 22));
+  }
+};
+</script>
+
+<script>
+/* 云粒与残差线一次性建 DOM（55 粒，种子见上） */
+(function () {
+  var pts = document.getElementById('pts'), res = document.getElementById('res');
+  for (var i = 0; i < 55; i++) {
+    var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('fill', 'rgba(244,246,250,.85)'); pts.appendChild(c);
+    var l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('stroke', 'var(--orange)'); l.setAttribute('stroke-width', '2'); l.setAttribute('stroke-dasharray', '6 6');
+    res.appendChild(l);
+  }
+})();
+</script>
+</body>
+</html>

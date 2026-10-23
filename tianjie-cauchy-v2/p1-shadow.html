@@ -1,0 +1,283 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #geo{position:absolute;inset:0;}
+  .mArrA{fill:var(--gold);} .mArrB{fill:var(--cyan);}
+  #stage{position:absolute;inset:0;}
+  #band{position:absolute;left:0;top:0;width:560px;height:46px;margin:-23px 0 0 -280px;border-radius:24px;
+    background:linear-gradient(90deg,transparent,rgba(244,246,250,.16),transparent);opacity:0;filter:blur(4px);}
+  #ruler{right:70px;top:100px;width:420px;padding:20px 26px;opacity:0;}
+  #ruler .rt{font-size:24px;letter-spacing:.25em;color:var(--muted);margin-bottom:14px;}
+  #ruler .track{position:relative;height:26px;margin:10px 0 4px;}
+  #ruler .mid{position:absolute;left:50%;top:-4px;width:2px;height:34px;background:var(--line);}
+  #ruler .goldbar{position:absolute;left:50%;top:3px;height:20px;width:160px;border-radius:4px;background:var(--gold);}
+  #ruler .obar{position:absolute;top:3px;height:20px;border-radius:4px;background:var(--orange);}
+  #ruler .rl{font-size:26px;margin-top:6px;}
+  #pills{position:absolute;left:70px;bottom:110px;display:flex;gap:18px;opacity:0;}
+  #pills .chip{font-size:34px;}
+  #bridgeWrap{position:absolute;left:0;right:0;top:130px;text-align:center;perspective:600px;opacity:0;}
+  #bridge{font-size:46px;display:inline-block;}
+  #handWrap{position:absolute;left:0;right:0;top:430px;text-align:center;}
+  #hand{position:relative;display:inline-block;font-size:72px;opacity:0;}
+  #hand .halo{position:absolute;left:50%;top:50%;width:900px;height:300px;margin:-150px 0 0 -450px;border-radius:50%;
+    background:radial-gradient(ellipse at center,rgba(232,182,76,.30),transparent 65%);opacity:0;pointer-events:none;}
+  #pen{position:absolute;top:54px;width:12px;height:12px;border-radius:50%;background:var(--gold-hi);
+    box-shadow:0 0 26px 8px rgba(255,215,106,.8);opacity:0;}
+  #note{position:absolute;left:0;right:0;top:600px;text-align:center;font-size:30px;color:var(--muted);opacity:0;}
+  #ring1{position:absolute;border:3px solid var(--gold-hi);border-radius:50%;opacity:0;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="geo" width="1920" height="1080">
+    <defs>
+      <pattern id="gp" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M40 0H0V40" fill="none" stroke="rgba(244,246,250,.10)" stroke-width="1"/>
+      </pattern>
+      <marker id="arrA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="mArrA" d="M0 0L10 5L0 10z"/></marker>
+      <marker id="arrB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="mArrB" d="M0 0L10 5L0 10z"/></marker>
+    </defs>
+    <rect id="gridRect" x="0" y="0" width="1920" height="1080" fill="url(#gp)" opacity="0"/>
+    <line id="dirline" stroke="rgba(88,196,212,.35)" stroke-width="2.5" stroke-dasharray="14 12" opacity="0"/>
+    <line id="shadowBar" stroke="var(--orange)" stroke-width="18" stroke-linecap="round" opacity="0"/>
+    <line id="shadowDash" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-dasharray="8 8" opacity="0"/>
+    <line id="perp" stroke="var(--orange)" stroke-width="2.5" stroke-dasharray="10 8" opacity="0"/>
+    <line id="rodA" stroke="var(--gold)" stroke-width="6" marker-end="url(#arrA)" opacity="0"/>
+    <line id="rodB" stroke="var(--cyan)" stroke-width="6" marker-end="url(#arrB)" opacity="0"/>
+    <path id="arc" fill="none" stroke="rgba(122,134,153,.9)" stroke-width="2.5" opacity="0"/>
+    <circle id="footFlash" r="8" fill="none" stroke="var(--gold-hi)" stroke-width="3" opacity="0"/>
+    <circle id="origin" cx="640" cy="760" r="5" fill="var(--white)" opacity="0"/>
+    <text id="labA" class="fx" font-size="38" fill="var(--gold)" opacity="0">a=(3,4)</text>
+    <text id="labB" class="fx" font-size="38" fill="var(--cyan)" opacity="0">b=(5,12)</text>
+    <text id="lenLab" class="fx" font-size="30" fill="var(--muted)" opacity="0">5</text>
+    <text id="thLab" class="fx" font-size="34" fill="var(--muted)" opacity="0">θ</text>
+    <text id="shadowLab" class="fx" font-size="32" fill="var(--orange)" opacity="0">4.85</text>
+  </svg>
+
+  <div id="band"></div>
+
+  <div id="ruler" class="panel abs">
+    <div class="rt">标尺 · 以杆长为 5.00</div>
+    <div class="track"><div class="mid"></div><div class="goldbar"></div><div class="obar" id="obar"></div></div>
+    <div class="rl fx">影子 = <span id="rShadow" class="gold-hi">4.85</span>　　cos θ = <span id="rCos">0.97</span></div>
+    <div class="rl" style="font-size:24px;color:var(--muted)">金条 = 杆长（恒 5.00）· 橙条 = 影子（可负）</div>
+  </div>
+
+  <div id="pills">
+    <div class="chip fx">影子 = <span id="pvS" class="gold-hi">4.85</span></div>
+    <div class="chip fx">cos θ = <span id="pvC">0.97</span></div>
+  </div>
+
+  <div id="bridgeWrap"><div id="bridge" class="fx">a·b = <span data-tok>‖a‖</span>·<span data-tok>‖b‖</span>·<span data-tok>cos θ</span>，而 <span data-tok>a·b</span> 是乘积之和</div></div>
+
+  <div id="handWrap"><div id="hand" class="fx">
+    <div class="halo"></div>
+    <span id="hL">|a·b|</span><span id="hM" style="padding:0 .18em">≤</span><span id="hR">‖a‖·‖b‖</span>
+    <div id="pen"></div>
+  </div></div>
+  <div id="note">a·b 读作点积——对应相乘，再相加</div>
+
+  <div id="ring1"></div>
+  <div id="burstHost"></div>
+  <div id="stamp1" class="stamp kai" style="left:700px;top:400px;font-size:56px;">取等 · 共线</div>
+  <div class="flash" id="fl"></div>
+  <div class="vign"></div>
+  <div class="cap">两个向量，一道影子——长短由夹角决定</div>
+</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var g = function (id) { return document.getElementById(id); };
+var D = Math.PI / 180;
+var OX = 640, OY = 760, UA = 44; /* 44px/单位：a=220px、b=572px，负角扫描全程在屏内 */
+var A_ANG = 53.1301024, TH0 = 14.2501;
+var aTip = { x: OX + 220 * Math.cos(A_ANG * D), y: OY - 220 * Math.sin(A_ANG * D) }; /* ≈(772,584) */
+
+/* θ 相对角（度）：分段扫描 */
+function thRel(t) {
+  if (t < 13) return TH0;
+  if (t < 16) return F.lerp(TH0, 0, F.eic(F.seg(t, 13, 16)));
+  if (t < 19.5) return 0;
+  if (t < 24) return F.lerp(0, 90, F.eic(F.seg(t, 19.5, 24)));
+  if (t < 27.5) return F.lerp(90, 143.1301, F.eic(F.seg(t, 24, 27.5)));
+  if (t < 37.5) return 143.1301;
+  if (t < 40.5) return F.lerp(143.1301, TH0, F.eic(F.seg(t, 37.5, 40.5)));
+  return TH0;
+}
+
+var burst = F.makeBurst($('burstHost'), aTip.x, aTip.y, 36, 21, 'rgba(255,215,106,.95)', 320);
+
+window.film = {
+  duration: 42,
+  frame: function (t) {
+    var th = thRel(t), thR = th * D;
+    var bAng = A_ANG + th, bR = bAng * D;
+    var d = { x: Math.cos(bR), y: -Math.sin(bR) };
+    var sv = 5 * Math.cos(thR);                 /* 影子（单位，可负） */
+    var cs = Math.cos(thR);
+    var bLen = 572 * F.eoc(F.seg(t, 2.0, 3.2)); /* b 画出 */
+    var bTip = { x: OX + bLen * d.x, y: OY + bLen * d.y };
+    var grow = F.eic(F.seg(t, 6.0, 9.0));
+    var pulse = (t > 10.5 && t < 13) ? 1 + .006 * Math.sin(2 * Math.PI * 6 * t) : 1;
+    var spx = 220 * Math.cos(thR) * grow * pulse; /* 影长 px（负=反向） */
+    var shEnd = { x: OX + spx * d.x, y: OY + spx * d.y };
+    var dirU = F.eoc(F.seg(t, 3.5, 4.5)) * 1600;
+
+    /* 网格 / 原点 / a / b / 方向线 */
+    g('gridRect').setAttribute('opacity', .5 * F.eoc(F.seg(t, 0, 2)));
+    g('origin').setAttribute('opacity', F.eoc(F.seg(t, .2, 1)));
+    g('rodA').setAttribute('opacity', F.eoc(F.seg(t, 1.0, 1.8)));
+    var aGrow = F.eoc(F.seg(t, .4, 1.6));
+    g('rodA').setAttribute('x1', OX); g('rodA').setAttribute('y1', OY);
+    g('rodA').setAttribute('x2', OX + (aTip.x - OX) * aGrow);
+    g('rodA').setAttribute('y2', OY + (aTip.y - OY) * aGrow);
+    g('rodB').setAttribute('opacity', F.eoc(F.seg(t, 2.0, 2.5)));
+    g('rodB').setAttribute('x1', OX); g('rodB').setAttribute('y1', OY);
+    g('rodB').setAttribute('x2', bTip.x); g('rodB').setAttribute('y2', bTip.y);
+    g('dirline').setAttribute('opacity', .8 * F.eoc(F.seg(t, 3.5, 4.5)));
+    g('dirline').setAttribute('x1', OX - dirU * d.x); g('dirline').setAttribute('y1', OY - dirU * d.y);
+    g('dirline').setAttribute('x2', OX + dirU * d.x); g('dirline').setAttribute('y2', OY + dirU * d.y);
+
+    /* 标签 */
+    var laU = F.eoc(F.seg(t, 1.6, 2.0));
+    g('labA').setAttribute('opacity', laU);
+    g('labA').setAttribute('x', 742); g('labA').setAttribute('y', 640);
+    g('labB').setAttribute('opacity', F.eoc(F.seg(t, 2.8, 3.2)));
+    g('labB').setAttribute('x', bTip.x - 150 * d.x - 60); g('labB').setAttribute('y', bTip.y - 150 * d.y + 40);
+    g('lenLab').setAttribute('opacity', .9 * laU);
+    g('lenLab').setAttribute('x', 660); g('lenLab').setAttribute('y', 736);
+
+    /* 光带（⟂b 扫过 a，4.5–6.0）与垂足闪光 */
+    var bandU = F.seg(t, 4.5, 6.4);
+    var band = $('band');
+    if (bandU > 0 && bandU < 1) {
+      var off = F.lerp(-200, 0, F.eoc(F.seg(t, 4.5, 6.0)));
+      band.style.opacity = .9 * Math.sin(Math.PI * Math.min(1, bandU));
+      band.style.left = (aTip.x + off * d.x) + 'px';
+      band.style.top = (aTip.y + off * d.y) + 'px';
+      band.style.transform = 'rotate(' + (-bAng) + 'deg)';
+    } else band.style.opacity = 0;
+    var fk = Math.sin(Math.PI * F.seg(t, 5.7, 6.5));
+    g('footFlash').setAttribute('cx', shEnd.x); g('footFlash').setAttribute('cy', shEnd.y);
+    g('footFlash').setAttribute('r', 8 + 30 * fk); g('footFlash').setAttribute('opacity', fk);
+
+    /* 影子条 + 白虚线中轴（色觉冗余） + 垂线 + 端头读数 */
+    var shOp = grow > 0 ? (spx < 0 ? .7 : .85) : 0;
+    g('shadowBar').setAttribute('opacity', shOp * F.eoc(F.seg(t, 6.0, 6.6)));
+    g('shadowBar').setAttribute('x1', OX); g('shadowBar').setAttribute('y1', OY);
+    g('shadowBar').setAttribute('x2', shEnd.x); g('shadowBar').setAttribute('y2', shEnd.y);
+    g('shadowDash').setAttribute('opacity', .8 * shOp);
+    g('shadowDash').setAttribute('x1', OX); g('shadowDash').setAttribute('y1', OY);
+    g('shadowDash').setAttribute('x2', shEnd.x); g('shadowDash').setAttribute('y2', shEnd.y);
+    var perpOp = Math.abs(sv) < .5 ? .3 : .8;
+    g('perp').setAttribute('opacity', perpOp * F.eoc(F.seg(t, 5.2, 6.0)));
+    g('perp').setAttribute('x1', aTip.x); g('perp').setAttribute('y1', aTip.y);
+    g('perp').setAttribute('x2', shEnd.x); g('perp').setAttribute('y2', shEnd.y);
+    var sl = g('shadowLab');
+    sl.setAttribute('opacity', .95 * F.eoc(F.seg(t, 8.4, 8.9)));
+    sl.textContent = F.fmt(Math.abs(sv) < .005 ? 0 : sv, 2);
+    sl.setAttribute('x', shEnd.x + 16 * d.x - 10); sl.setAttribute('y', shEnd.y + 16 * d.y - 14);
+
+    /* 夹角弧 */
+    var arcU = F.eoc(F.seg(t, 9.0, 9.8));
+    var r0 = A_ANG * D, r1 = bR;
+    var big = 0, sweep = 0; /* 屏幕逆时针（θ 增大方向） */
+    var RR = 130;
+    var p0 = { x: OX + RR * Math.cos(r0), y: OY - RR * Math.sin(r0) };
+    var p1 = { x: OX + RR * Math.cos(r1), y: OY - RR * Math.sin(r1) };
+    g('arc').setAttribute('opacity', arcU * (th > 170 ? 0 : 1));
+    g('arc').setAttribute('d', 'M' + p0.x + ' ' + p0.y + ' A' + RR + ' ' + RR + ' 0 ' + big + ' ' + sweep + ' ' + p1.x + ' ' + p1.y);
+    var mid = (r0 + r1) / 2;
+    g('thLab').setAttribute('opacity', arcU);
+    g('thLab').setAttribute('x', OX + 172 * Math.cos(mid)); g('thLab').setAttribute('y', OY - 172 * Math.sin(mid) + 10);
+
+    /* 标尺面板与读数胶囊 */
+    var ruU = F.eoc(F.seg(t, 6.5, 8.0));
+    $('ruler').style.opacity = ruU;
+    $('ruler').style.transform = 'translateY(' + ((1 - ruU) * 20) + 'px)';
+    var obar = $('obar'), w = Math.min(Math.abs(sv), 5) / 5 * 160;
+    obar.style.width = w + 'px';
+    obar.style.left = sv >= 0 ? '50%' : 'calc(50% - ' + w + 'px)';
+    $('rShadow').textContent = F.fmt(sv, 2);
+    $('rShadow').style.color = sv < 0 ? 'var(--neg)' : 'var(--gold-hi)';
+    $('rCos').textContent = F.fmt(cs, 2);
+    $('rCos').style.color = cs < 0 ? 'var(--neg)' : 'var(--white)';
+    var pillU = F.eoc(F.seg(t, 9.0, 9.6));
+    $('pills').style.opacity = pillU;
+    var negWin = (t > 24 && t < 28) ? 1 : 0;
+    $('pvS').textContent = F.fmt(sv, 2);
+    $('pvS').style.color = sv < -.005 ? (negWin ? 'var(--neg)' : 'var(--orange)') : 'var(--gold-hi)';
+    $('pvC').textContent = F.fmt(cs, 2);
+    $('pvC').style.color = cs < -.005 && negWin ? 'var(--neg)' : 'var(--white)';
+    /* 负影停拍脉动（27.5–29） */
+    var np = (t > 27.5 && t < 29) ? 1 + .05 * Math.sin(2 * Math.PI * 3 * t) : 1;
+    $('pills').style.transform = 'scale(' + np + ')';
+
+    /* 取等时刻：白闪① + 爆发 + 金环 + 印章 */
+    var fl = document.getElementById('fl');
+    fl.style.opacity = .18 * Math.sin(Math.PI * F.seg(t, 15.92, 16.24));
+    burst.update(t, 16, 1.1);
+    var rU = F.eoc(F.seg(t, 16, 16.9));
+    var ring = $('ring1');
+    ring.style.opacity = (rU > 0 && rU < 1) ? 1 - rU : 0;
+    ring.style.width = ring.style.height = (40 + 760 * rU) + 'px';
+    ring.style.left = (aTip.x - 20 - 380 * rU) + 'px';
+    ring.style.top = (aTip.y - 20 - 380 * rU) + 'px';
+    var st = $('stamp1');
+    var stIn = F.eob(F.seg(t, 16.1, 16.5));
+    var stOut = 1 - F.seg(t, 19.1, 19.5);
+    st.style.opacity = stIn * stOut;
+    st.style.transform = 'rotate(-6deg) scale(' + F.lerp(.4, 1, stIn) + ')';
+
+    /* 桥式 + token 联动 */
+    var bw = $('bridgeWrap');
+    var brU = F.eoc(F.seg(t, 29.2, 30.0));
+    bw.style.opacity = brU * (1 - F.seg(t, 40.5, 41.3));
+    $('bridge').style.transform = 'translateY(' + ((1 - brU) * 14) + 'px) rotateX(' + ((1 - brU) * 8) + 'deg)';
+    F.token($('bridge'), t, [[30.2, .6], [30.8, .6], [31.4, .6], [32.0, .6]]);
+
+    /* 金笔手写（32.8–35.2）+ ≤ 挤压（34.4–35.0）+ 呼吸 + 定理牌沉降 */
+    var hand = $('hand');
+    var wU = F.eoc(F.seg(t, 32.8, 35.2));
+    hand.style.opacity = Math.min(1, wU * 5);
+    hand.style.clipPath = 'inset(0 ' + ((1 - wU) * 100) + '% 0 0)';
+    var HW = 700;
+    var pen = $('pen');
+    pen.style.opacity = (wU > 0 && wU < 1) ? 1 : 0;
+    pen.style.left = (350 - 40 + wU * HW) + 'px';
+    var sq = Math.sin(Math.PI * F.seg(t, 34.4, 35.0));
+    $('hL').style.transform = 'translateX(' + (6 * sq) + 'px)';
+    $('hR').style.transform = 'translateX(' + (-6 * sq) + 'px)';
+    $('hM').style.textShadow = sq > 0 ? '0 0 ' + (26 * sq) + 'px rgba(255,215,106,.95)' : '';
+    hand.querySelector('.halo').style.opacity = F.seg(t, 35.2, 35.8) * (.55 + .3 * Math.sin(2 * Math.PI * 2.5 * t));
+    /* 小标 */
+    var nU = F.eoc(F.seg(t, 35.4, 36.2));
+    $('note').style.opacity = nU * (1 - F.seg(t, 40.5, 41.2)) * .95;
+    /* 沉降为定理牌（40.5–42） */
+    var pl = F.eic(F.seg(t, 40.5, 42));
+    var hw2 = $('handWrap');
+    hw2.style.transform = 'translateY(' + (-360 * pl) + 'px)';
+    hand.style.transform = 'scale(' + F.lerp(1, .34, pl) + ')';
+    hand.style.opacity = F.lerp(1, .45, pl);
+
+    /* 场景压暗（29–30） */
+    var dim = F.lerp(1, .45, F.seg(t, 29, 30));
+    g('geo').style.opacity = dim;
+    $('ruler').style.opacity = ruU * dim;
+    $('pills').style.opacity = pillU * dim;
+
+    /* 字幕（② 段首 / ③ 负角段首） */
+    var capEl = document.querySelector('.cap');
+    if (t < 12) { capEl.textContent = '两个向量，一道影子——长短由夹角决定'; F.capShow(capEl, t, .5, 5); }
+    else { capEl.textContent = '转过 90°，影子会怎样？'; F.capShow(capEl, t, 19.5, 23.5); }
+  }
+};
+</script>
+</body>
+</html>

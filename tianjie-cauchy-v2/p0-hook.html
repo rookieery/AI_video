@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #cone{position:absolute;left:360px;top:-120px;width:1300px;height:1400px;
+    clip-path:polygon(78% 0,96% 0,42% 100%,16% 100%);
+    background:linear-gradient(205deg,rgba(244,246,250,.17),rgba(244,246,250,.05) 55%,transparent 75%);
+    filter:blur(3px);opacity:0;transform-origin:820px 900px;}
+  #ground{position:absolute;left:300px;top:779px;width:1240px;height:2px;
+    background:linear-gradient(90deg,transparent,var(--line) 20%,var(--line) 80%,transparent);opacity:0;}
+  #rod{position:absolute;left:876px;top:356px;width:8px;height:424px;border-radius:4px;
+    background:linear-gradient(180deg,var(--gold-hi),var(--gold));
+    box-shadow:0 0 22px rgba(232,182,76,.45);transform-origin:50% 100%;opacity:0;}
+  #shadow{position:absolute;top:774px;height:12px;border-radius:6px;opacity:0;
+    background:repeating-linear-gradient(90deg,var(--orange) 0 14px,rgba(255,154,61,.5) 14px 22px);
+    box-shadow:0 0 14px rgba(255,154,61,.3);}
+</style>
+</head>
+<body>
+<div id="cone"></div>
+<div id="ground"></div>
+<div id="shadow"></div>
+<div id="rod"></div>
+<div class="vign"></div>
+<div class="cap">影子，能比杆长吗？</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var cone = $('cone'), rod = $('rod'), sh = $('shadow'), cap = document.querySelector('.cap');
+
+window.film = {
+  duration: 10,
+  frame: function (t) {
+    /* 光锥淡入 → 8.5s 起收窄聚焦 */
+    var cu = F.eoc(F.seg(t, 0, .8));
+    var focus = F.eic(F.seg(t, 8.5, 10));
+    cone.style.opacity = cu * F.lerp(.85, 1, focus);
+    cone.style.transform = 'scale(' + F.lerp(1, .6, focus) + ')';
+
+    /* 杆自地面立起（0.8–2.2），随后 ±4° 摆动（自 3s 起，与影子同源连续） */
+    var gu = F.eoc(F.seg(t, .8, 2.2));
+    var ang = gu < 1 ? 0 : 4 * Math.sin(2 * Math.PI * .35 * (t - 3));
+    rod.style.opacity = Math.min(1, gu * 3);
+    rod.style.height = (424 * gu) + 'px';
+    rod.style.top = (780 - 424 * gu) + 'px';
+    rod.style.transform = 'rotate(' + ang + 'deg)';
+
+    /* 地面线 */
+    $('ground').style.opacity = F.eoc(F.seg(t, 2.2, 3));
+
+    /* 影子：2.2–3.0 拉出至 300px，随后与摆动联动的连续伸缩（+40px 同源波动） */
+    var base = 300 + (gu < 1 ? 0 : 40 * Math.sin(2 * Math.PI * .35 * (t - 3)));
+    var len = base * F.eic(F.seg(t, 2.2, 3));
+    sh.style.opacity = gu < 1 ? 0 : .85;
+    sh.style.width = len + 'px';
+    sh.style.left = (880 - len) + 'px';
+
+    F.capShow(cap, t, .5, 5);
+  }
+};
+</script>
+</body>
+</html>

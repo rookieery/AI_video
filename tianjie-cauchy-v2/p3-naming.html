@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #beam{position:absolute;left:870px;top:0;width:180px;height:1000px;opacity:0;
+    background:linear-gradient(180deg,transparent,rgba(232,182,76,.20) 30%,rgba(232,182,76,.30) 70%,transparent);
+    filter:blur(6px);}
+  #plaque{position:absolute;left:580px;width:760px;height:340px;border:3px solid var(--gold-hi);border-radius:20px;
+    background:linear-gradient(180deg,rgba(232,182,76,.10),rgba(232,182,76,.03));
+    box-shadow:0 0 60px rgba(232,182,76,.25), inset 0 0 50px rgba(232,182,76,.10);opacity:0;}
+  #ptitle{position:absolute;left:0;right:0;top:206px;text-align:center;font-size:56px;letter-spacing:.28em;opacity:0;}
+  #mainF{position:absolute;left:0;right:0;text-align:center;font-size:62px;opacity:0;}
+  #subF{position:absolute;left:0;right:0;top:398px;text-align:center;font-size:28px;color:var(--muted);opacity:0;}
+  .name{position:absolute;top:560px;width:340px;text-align:center;font-size:34px;opacity:0;}
+  .name .ic{display:block;font-size:42px;color:var(--gold-hi);margin-bottom:8px;}
+  .name .yr{color:var(--muted);font-size:26px;}
+  #varF{position:absolute;left:0;right:0;top:420px;text-align:center;font-size:62px;opacity:0;}
+  #hs{position:absolute;left:0;right:0;top:568px;text-align:center;font-size:30px;color:var(--muted);opacity:0;}
+  .scard{position:absolute;top:770px;width:380px;height:104px;display:flex;align-items:center;justify-content:center;opacity:0;}
+  #shadowLine{position:absolute;left:0;right:0;top:690px;text-align:center;font-size:44px;opacity:0;}
+  #ring2,#ring3{position:absolute;border:3px solid var(--gold-hi);border-radius:50%;opacity:0;}
+</style>
+</head>
+<body>
+<div id="beam"></div>
+<div id="plaque"></div>
+<div id="ptitle" class="kai">天 阶 公 式</div>
+<div id="mainF" class="fx"><span id="mfT">(Σ a<sub>i</sub>b<sub>i</sub>)<sup>2</sup> ≤ (Σ a<sub>i</sub><sup>2</sup>)(Σ b<sub>i</sub><sup>2</sup>)</span></div>
+<div id="subF">n 个数，同样成立</div>
+
+<div class="name" id="n1" style="left:250px;"><span class="ic fx">Σ</span>Cauchy<span class="yr">　1821 · 求和形</span></div>
+<div class="name" id="n2" style="left:790px;"><span class="ic fx">∫</span>Bunyakovsky<span class="yr">　1859 · 积分形</span></div>
+<div class="name" id="n3" style="left:1330px;"><span class="ic fx">⟨,⟩</span>Schwarz<span class="yr">　1880s · 内积形</span></div>
+
+<div id="varF" class="fx">(a₁+⋯+a<sub>n</sub>)<sup>2</sup> ≤ n(a₁<sup>2</sup>+⋯+a<sub>n</sub><sup>2</sup>)</div>
+<div id="hs" class="fx">n = 3：(a+b+c)² ≤ 3(a²+b²+c²) —— 你高中见过</div>
+<div class="scard panel fx" id="c1" style="left:660px;font-size:34px;">a²+b² ≥ 2ab</div>
+<div class="scard panel fx" id="c2" style="left:1140px;font-size:34px;">H ≤ G ≤ A ≤ Q</div>
+<div id="shadowLine" class="kai"><span class="gold-hi">都是它的影子</span></div>
+
+<div id="ring2"></div><div id="ring3"></div>
+<div id="burstHost"></div>
+<div id="hudHost"></div>
+<div class="vign"></div>
+<div class="cap">它有一个正式的名字</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var rise = F.makeRise(document.body, 960, 240, 700, 26, 11, 'rgba(232,182,76,.55)');
+var burst = F.makeBurst($('burstHost'), 960, 480, 18, 7, 'rgba(255,215,106,.9)', 200);
+var hud = F.makeHUD($('hudHost'), 1460, 840, 1);
+hud.style.opacity = .92;
+
+window.film = {
+  duration: 17,
+  frame: function (t) {
+    F.capShow(document.querySelector('.cap'), t, .5, 4.5);
+
+    /* 光柱 + 上升金尘 */
+    $('beam').style.opacity = .9 * F.eoc(F.seg(t, .2, 1.4)) * (1 - F.seg(t, 9.5, 10.5));
+    rise.update(t);
+
+    /* 金匾降落（back 过冲，1.0–4.0）+ 落定金尘与双环（不用白闪） */
+    var pu = F.eob(F.seg(t, 1.0, 4.0));
+    $('plaque').style.opacity = Math.min(1, pu * 2);
+    $('plaque').style.top = F.lerp(-560, 150, pu) + 'px';
+    $('ptitle').style.opacity = F.eoc(F.seg(t, 3.4, 4.2));
+    burst.update(t, 4.0, .9);
+    [['ring2', 0, 560], ['ring3', .25, 840]].forEach(function (r) {
+      var u = F.eoc(F.seg(t, 4.0 + r[1], 4.9 + r[1]));
+      var el = $(r[0]);
+      el.style.opacity = u > 0 && u < 1 ? 1 - u : 0;
+      el.style.width = el.style.height = r[2] * u + 'px';
+      el.style.left = (960 - r[2] * u / 2) + 'px';
+      el.style.top = (480 - r[2] * u / 2) + 'px';
+    });
+
+    /* 主式整式点亮（4.0–6.0）+ 匾内小标 */
+    var mfU = F.eoc(F.seg(t, 4.0, 6.0));
+    var mf = $('mainF');
+    mf.style.opacity = F.lerp(.2, 1, mfU) * (1 - F.seg(t, 10.0, 10.8));
+    mf.style.fontSize = '62px';
+    mf.style.top = mfU < 1 ? '296px' : F.lerp(296, 420, F.eob(F.seg(t, 10.0, 10.8))) + 'px';
+    if (t >= 10.0) mf.style.fontSize = F.lerp(62, 62 * 1.12, F.eob(F.seg(t, 10.0, 10.8))) + 'px';
+    $('subF').style.opacity = F.eoc(F.seg(t, 5.2, 5.8)) * (1 - F.seg(t, 10.0, 10.6));
+
+    /* 三人名滑入（6.0/6.9/7.8，位移 620px，eoc） */
+    [['n1', 6.0, -620, 0], ['n2', 6.9, 0, 90], ['n3', 7.8, 620, 0]].forEach(function (n) {
+      var u = F.eoc(F.seg(t, n[1], n[1] + .8));
+      var el = $(n[0]);
+      el.style.opacity = u;
+      el.style.transform = 'translate(' + (1 - u) * n[2] + 'px,' + (1 - u) * n[3] + 'px)';
+    });
+
+    /* 特例滑变：token bᵢ 金光替换（11.0–11.6）→ 同位滑变成 n 项收缩式（12.6–13.4） */
+    var tk = Math.sin(Math.PI * F.seg(t, 11.0, 11.6));
+    $('mfT').style.textShadow = tk > 0 ? '0 0 ' + (22 * tk) + 'px rgba(255,215,106,.95)' : '';
+    var vU = F.eic(F.seg(t, 12.6, 13.4));
+    $('varF').style.opacity = vU;
+    $('varF').style.transform = 'translateX(' + ((1 - vU) * 50) + 'px)';
+    $('mainF').style.transform = 'translateX(' + (-50 * vU) + 'px)';
+
+    /* 小标 + 两枚小卡 + 「都是它的影子」 */
+    $('hs').style.opacity = F.eoc(F.seg(t, 13.5, 14.1)) * (t > 16 ? .8 + .2 * Math.sin(2 * Math.PI * 2 * t) : 1);
+    [['c1', 15.0], ['c2', 15.6]].forEach(function (c) {
+      var u = F.eoc(F.seg(t, c[1], c[1] + .6));
+      $(c[0]).style.opacity = u * .95;
+      $(c[0]).style.transform = 'translateY(' + ((1 - u) * 22) + 'px)';
+    });
+    var sl = F.eoc(F.seg(t, 15.8, 16.4));
+    $('shadowLine').style.opacity = sl * (.8 + .2 * Math.sin(2 * Math.PI * 2 * t));
+
+    /* 记分牌蹲守 */
+    hud.style.transform = 'scale(' + (1 + .008 * Math.sin(2 * Math.PI * 1.6 * t)) + ')';
+    hud.style.transformOrigin = '1460px 840px';
+  }
+};
+</script>
+</body>
+</html>

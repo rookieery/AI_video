@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #world{position:absolute;inset:0;transform-origin:1640px 620px;}
+  #axisL{position:absolute;left:120px;top:619px;height:3px;width:0;
+    background:linear-gradient(90deg,var(--gold-dim),var(--gold));}
+  #axisA{position:absolute;left:0;top:608px;border-left:16px solid var(--gold);
+    border-top:13px solid transparent;border-bottom:13px solid transparent;opacity:0;}
+  .stg{position:absolute;text-align:center;opacity:0;}
+  .stgDot{border-radius:50%;margin:0 auto;}
+  #s1{left:250px;top:592px;width:140px;} #s1 .stgDot{width:20px;height:20px;background:var(--white);opacity:.85;}
+  #s2{left:650px;top:590px;width:140px;} #s2 .stgDot{width:24px;height:24px;background:var(--cyan);}
+  #s3{left:1090px;top:586px;width:180px;} #s3 .stgDot{width:30px;height:30px;background:var(--gold);
+    box-shadow:0 0 26px rgba(232,182,76,.8);}
+  .stgL{font-size:34px;margin-top:10px;}
+  #beam6{position:absolute;left:1120px;top:150px;width:120px;height:470px;opacity:0;
+    background:linear-gradient(180deg,transparent,rgba(232,182,76,.28) 40%,rgba(232,182,76,.42));filter:blur(5px);}
+  #miniF{position:absolute;left:0;right:0;top:440px;text-align:center;font-size:34px;opacity:0;}
+  #runner{position:absolute;top:613px;width:14px;height:14px;border-radius:50%;background:var(--gold-hi);
+    box-shadow:0 0 20px 6px rgba(255,215,106,.8);opacity:0;}
+  .ring6{position:absolute;border:3px solid var(--gold-hi);border-radius:50%;opacity:0;}
+  #core{position:absolute;left:1632px;top:612px;width:16px;height:16px;border-radius:50%;background:var(--white);
+    box-shadow:0 0 30px 10px rgba(244,246,250,.9);opacity:0;}
+  #neb{position:absolute;left:1360px;top:340px;width:560px;height:560px;border-radius:50%;opacity:0;
+    background:radial-gradient(circle,rgba(244,246,250,.30),rgba(232,182,76,.12) 45%,transparent 70%);}
+  #god{position:absolute;left:0;right:0;top:230px;text-align:center;font-size:112px;color:var(--gold-hi);opacity:0;
+    text-shadow:0 0 50px rgba(232,182,76,.6);}
+  #gt{position:absolute;left:0;right:0;top:404px;text-align:center;font-size:30px;color:var(--muted);opacity:0;}
+  #gf1{position:absolute;left:0;right:0;top:462px;text-align:center;font-size:26px;color:var(--gold);opacity:0;}
+  #gf2{position:absolute;left:0;right:0;top:520px;text-align:center;font-size:30px;color:var(--gold);opacity:0;}
+  #finalStar{position:absolute;left:1622px;top:602px;width:36px;height:36px;border-radius:50%;background:var(--gold-hi);
+    box-shadow:0 0 60px 24px rgba(255,215,106,.95);opacity:0;}
+</style>
+</head>
+<body>
+<div id="world">
+  <div id="starHost"></div>
+  <div id="neb"></div><div id="core"></div>
+  <div id="axisL"></div><div id="axisA"></div>
+  <div class="stg kai" id="s1"><div class="stgDot"></div><div class="stgL">凡阶</div></div>
+  <div class="stg kai" id="s2"><div class="stgDot"></div><div class="stgL" style="color:var(--cyan-hi)">地阶</div></div>
+  <div class="stg kai" id="s3"><div class="stgDot"></div><div class="stgL" style="color:var(--gold-hi);font-size:46px">天阶</div></div>
+  <div id="beam6"></div>
+  <div id="miniF" class="fx">(Σa<sub>i</sub>b<sub>i</sub>)<sup>2</sup> ≤ (Σa<sub>i</sub><sup>2</sup>)(Σb<sub>i</sub><sup>2</sup>)</div>
+  <div id="runner"></div>
+  <div class="ring6" id="rg1"></div><div class="ring6" id="rg2"></div><div class="ring6" id="rg3"></div>
+  <div class="ring6" id="rh1"></div><div class="ring6" id="rh2"></div>
+  <div id="god" class="kai">神</div>
+  <div id="gt">神阶 · Hölder 不等式</div>
+  <div id="gf1" class="fx">Σ|a<sub>i</sub>b<sub>i</sub>| ≤ (Σ|a<sub>i</sub>|<sup>p</sup>)<sup>1/p</sup> (Σ|b<sub>i</sub>|<sup>q</sup>)<sup>1/q</sup></div>
+  <div id="gf2" class="fx">1/p + 1/q = 1</div>
+  <div id="finalStar"></div>
+</div>
+<div class="vign"></div>
+<div class="cap">影子，永远不超过杆长<span class="sub">柯西 – 施瓦茨不等式</span></div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var r = F.rng(2023), stars = [];
+for (var i = 0; i < 70; i++) {
+  var e = document.createElement('div'); e.className = 'p';
+  e.style.background = i % 3 ? 'rgba(244,246,250,.9)' : 'rgba(232,182,76,.9)';
+  $('starHost').appendChild(e);
+  stars.push({ e: e, x: 40 + r() * 1840, y: 40 + r() * 980, sz: 1.4 + r() * 2.4, f: .5 + r() * .8, p: r() * 6, t0: r() * 1.0 });
+}
+function runX(t) {
+  if (t < 1.5) return 120;
+  if (t < 1.8) return F.lerp(120, 320, F.eoc(F.seg(t, 1.5, 1.8)));
+  if (t < 2.8) return F.lerp(320, 720, F.eoc(F.seg(t, 1.8, 2.8)));
+  if (t < 3.8) return F.lerp(720, 1180, F.eoc(F.seg(t, 2.8, 3.8)));
+  if (t < 4.6) return 1180;
+  var u = Math.pow(F.seg(t, 4.6, 5.0), 2.6);
+  return F.lerp(1180, 1640, u);
+}
+function ring(id, t, t0, R) {
+  var u = F.eoc(F.seg(t, t0, t0 + .9));
+  var el = $(id);
+  el.style.opacity = u > 0 && u < 1 ? 1 - u : 0;
+  el.style.width = el.style.height = R * u + 'px';
+  return el;
+}
+window.film = {
+  duration: 13,
+  frame: function (t) {
+    F.capShow(document.querySelector('.cap'), t, .5, 6);
+
+    /* 星尘亮起（各频闪烁） */
+    var wOp = 1;
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var ap = F.eoc(F.seg(t, s.t0, s.t0 + .5));
+      s.e.style.left = s.x + 'px'; s.e.style.top = s.y + 'px';
+      s.e.style.width = s.e.style.height = s.sz + 'px';
+      s.e.style.opacity = ap * (.3 + .6 * Math.abs(Math.sin(2 * Math.PI * s.f * t + s.p))) * wOp;
+    }
+
+    /* 数轴与光斑 */
+    $('axisL').style.width = 1520 * F.eoq(F.seg(t, 1.0, 1.8)) + 'px';
+    $('axisA').style.opacity = F.seg(t, 1.6, 1.9);
+    $('axisA').style.left = (120 + 1520 * F.eoq(F.seg(t, 1.0, 1.8))) + 'px';
+    var rx = runX(t), run = $('runner');
+    run.style.opacity = F.seg(t, 1.5, 1.7) * (1 - F.seg(t, 4.95, 5.1));
+    run.style.left = (rx - 7) + 'px';
+
+    /* 三阶点燃（各配冲击环） */
+    var u1 = F.eoc(F.seg(t, 1.8, 2.2)), u2 = F.eoc(F.seg(t, 2.8, 3.2)), u3 = F.eoc(F.seg(t, 3.8, 4.2));
+    $('s1').style.opacity = u1 * .9;
+    $('s2').style.opacity = u2 * .95;
+    var s3 = $('s3');
+    s3.style.opacity = u3;
+    s3.style.transform = 'translateY(' + ((1 - u3) * 12) + 'px)';
+    var breathe = .85 + .15 * Math.sin(2 * Math.PI * 1.8 * t);
+    s3.firstElementChild.style.transform = 'scale(' + breathe + ')';
+    $('beam6').style.opacity = u3 * (.7 + .2 * Math.sin(2 * Math.PI * 1.5 * t));
+    var mf = $('miniF');
+    mf.style.opacity = F.eoc(F.seg(t, 3.8, 4.4)) * F.lerp(1, .2, F.seg(t, 4.6, 5.2));
+    ring('rg1', t, 1.8, 120).style.left = (320 - 0) + 'px';
+    $('rg1').style.left = (320 - 60 * F.eoc(F.seg(t, 1.8, 2.7))) + 'px';
+    $('rg1').style.top = (620 - 60 * F.eoc(F.seg(t, 1.8, 2.7))) + 'px';
+    var g2 = ring('rg2', t, 2.8, 140);
+    g2.style.left = (720 - 70 * F.eoc(F.seg(t, 2.8, 3.7))) + 'px';
+    g2.style.top = (620 - 70 * F.eoc(F.seg(t, 2.8, 3.7))) + 'px';
+    var g3 = ring('rg3', t, 3.8, 170);
+    g3.style.left = (1180 - 85 * F.eoc(F.seg(t, 3.8, 4.7))) + 'px';
+    g3.style.top = (620 - 85 * F.eoc(F.seg(t, 3.8, 4.7))) + 'px';
+
+    /* 消失点：白核 + 星云晕 + 神阶暗影 */
+    var vu = F.eoc(F.seg(t, 5.0, 6.0));
+    $('core').style.opacity = vu * (1 - F.seg(t, 9.0, 9.6)) * (1 - F.seg(t, 11.0, 11.4));
+    $('core').style.transform = 'scale(' + F.lerp(.4, 1.1, vu) + ')';
+    $('neb').style.opacity = vu * .9 * (1 - F.seg(t, 10.4, 11.0));
+    var gu = F.eoc(F.seg(t, 6.0, 6.6));
+    var god = $('god');
+    god.style.opacity = gu * (.8 + .2 * Math.sin(2 * Math.PI * 1.5 * t)) * (1 - F.seg(t, 10.6, 11.2));
+    god.style.transform = 'scale(' + F.lerp(.9, 1, gu) + ')';
+    $('gt').style.opacity = F.eoc(F.seg(t, 6.3, 6.8)) * (1 - F.seg(t, 10.6, 11.2));
+    $('gf1').style.opacity = F.eoc(F.seg(t, 6.5, 7.2)) * .55 * (1 - F.seg(t, 10.6, 11.2));
+    var gf2u = F.eoc(F.seg(t, 6.9, 7.5));
+    var gp = Math.sin(Math.PI * F.seg(t, 7.6, 8.6));
+    $('gf2').style.opacity = gf2u * .6 * (1 - F.seg(t, 10.6, 11.2));
+    $('gf2').style.color = gp > .05 ? 'var(--gold-hi)' : 'var(--gold)';
+    $('gf2').style.textShadow = gp > 0 ? '0 0 ' + (20 * gp) + 'px rgba(255,215,106,.9)' : '';
+    var h1 = ring('rh1', t, 6.5, 420), h2 = ring('rh2', t, 7.3, 560);
+    var rr;
+    rr = F.eoc(F.seg(t, 6.5, 7.6)); h1.style.left = (1640 - 210 * rr) + 'px'; h1.style.top = (620 - 210 * rr) + 'px';
+    rr = F.eoc(F.seg(t, 7.3, 8.5)); h2.style.left = (1640 - 280 * rr) + 'px'; h2.style.top = (620 - 280 * rr) + 'px';
+
+    /* 阶位沉为剪影 → 全场景收缩成星 → 闪耀 → 熄灭 */
+    var sink = F.lerp(1, .22, F.seg(t, 8.0, 8.8));
+    $('s1').style.opacity = u1 * .9 * sink; $('s2').style.opacity = u2 * .95 * sink;
+    $('s3').style.opacity = u3 * sink;
+    $('miniF').style.opacity = F.eoc(F.seg(t, 3.8, 4.4)) * F.lerp(1, .2, F.seg(t, 4.6, 5.2)) * sink;
+    $('beam6').style.opacity = u3 * (.7 + .2 * Math.sin(2 * Math.PI * 1.5 * t)) * sink;
+    $('axisL').style.opacity = sink; $('axisA').style.opacity = F.seg(t, 1.6, 1.9) * sink;
+
+    var sh = F.eic(F.seg(t, 9.0, 11.0));
+    $('world').style.transform = 'scale(' + F.lerp(1, .16, sh) + ')';
+
+    var fs = F.eob(F.seg(t, 11.2, 11.6));
+    var fst = $('finalStar');
+    fst.style.opacity = F.seg(t, 11.2, 11.4) * (1 - F.seg(t, 12.0, 12.4));
+    fst.style.transform = 'scale(' + F.lerp(1, 2.3, fs) + ')';
+  }
+};
+</script>
+</body>
+</html>

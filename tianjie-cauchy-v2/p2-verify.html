@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #bg{position:absolute;inset:0;opacity:.22;}
+  #caps{position:absolute;left:0;right:0;top:210px;display:flex;justify-content:center;gap:60px;opacity:0;}
+  #caps .chip{font-size:40px;}
+  #fwrap{position:absolute;left:0;right:0;top:340px;text-align:center;opacity:0;}
+  #fx1{font-size:52px;display:inline-block;position:relative;}
+  #fx1 .slot{display:inline-block;min-width:.62em;color:var(--muted);opacity:.55;}
+  #sweep{position:absolute;top:-8px;height:76px;width:120px;border-radius:8px;pointer-events:none;
+    background:linear-gradient(105deg,transparent,rgba(255,215,106,.30),transparent);opacity:0;}
+  #chart{position:absolute;inset:0;}
+  #axis{position:absolute;left:520px;top:859px;height:3px;width:0;
+    background:linear-gradient(90deg,var(--line),var(--white));}
+  .bar{position:absolute;top:0;width:190px;border-radius:8px 8px 0 0;}
+  #barG{left:640px;background:linear-gradient(180deg,var(--gold-hi),var(--gold));box-shadow:0 0 24px rgba(232,182,76,.35);}
+  #barC{left:1100px;background:linear-gradient(180deg,var(--cyan-hi),var(--cyan));box-shadow:0 0 24px rgba(88,196,212,.30);}
+  .cnt{position:absolute;width:190px;text-align:center;font-size:42px;}
+  #cntG{left:640px;} #cntC{left:1100px;}
+  .gapline{position:absolute;left:840px;width:250px;border-top:3px dashed var(--gold-hi);opacity:0;}
+  #d256{position:absolute;left:905px;top:560px;font-size:64px;opacity:0;}
+  #meet{position:absolute;left:0;right:0;top:0;}
+  .mi{position:absolute;opacity:0;}
+  #m1{left:330px;top:220px;font-size:44px;}
+  #m2{left:330px;top:320px;font-size:44px;}
+  #m3{left:326px;top:420px;font-size:58px;}
+  .marr{position:absolute;font-size:40px;color:var(--muted);opacity:0;}
+  #hudHost{position:absolute;inset:0;}
+  .fly{position:absolute;font-size:46px;opacity:0;z-index:30;}
+</style>
+</head>
+<body>
+<svg id="bg" width="1920" height="1080">
+  <line x1="260" y1="700" x2="392" y2="508" stroke="var(--gold)" stroke-width="5"/>
+  <line id="bgB" x1="260" y1="700" x2="480" y2="172" stroke="var(--cyan)" stroke-width="5"/>
+  <line x1="260" y1="700" x2="342" y2="510" stroke="var(--orange)" stroke-width="14" stroke-linecap="round" opacity=".8"/>
+  <line x1="392" y1="508" x2="342" y2="510" stroke="var(--orange)" stroke-width="2.5" stroke-dasharray="9 7"/>
+  <path d="M318 655 A80 80 0 0 0 337 624" fill="none" stroke="rgba(122,134,153,.9)" stroke-width="2"/>
+  <text id="bgCos" x="300" y="612" class="fx" font-size="30" fill="var(--muted)">cos θ = 0.97</text>
+</svg>
+
+<div id="caps">
+  <div class="chip fx"><span class="gold">a = (3, 4)</span></div>
+  <div class="chip fx"><span class="cyan">b = (5, 12)</span></div>
+</div>
+
+<div id="fwrap"><div id="fx1" class="fx">(<span class="slot" id="s1">□</span>·<span class="slot" id="s2">□</span>+<span class="slot" id="s3">□</span>·<span class="slot" id="s4">□</span>)<sup>2</sup> <span style="padding:0 .15em">≤</span> (<span class="slot" id="s5">□</span><sup>2</sup>+<span class="slot" id="s6">□</span><sup>2</sup>)(<span class="slot" id="s7">□</span><sup>2</sup>+<span class="slot" id="s8">□</span><sup>2</sup>)<div id="sweep"></div></div></div>
+
+<div id="chart">
+  <div id="axis"></div>
+  <div class="bar" id="barG"></div><div class="bar" id="barC"></div>
+  <div class="cnt fx" id="cntG"><span class="gold">0</span></div>
+  <div class="cnt fx" id="cntC"><span class="cyan">0</span></div>
+  <div class="gapline" id="gl1"></div><div class="gapline" id="gl2"></div>
+  <div id="d256" class="fx"><span class="gold-hi">256</span></div>
+</div>
+
+<div id="meet">
+  <div class="mi fx" id="m1"><span class="gold">3969</span> / <span class="cyan">4225</span></div>
+  <div class="marr" id="a1" style="left:520px;top:222px;">→</div>
+  <div class="mi fx" id="m2">= (63/65)<sup>2</sup></div>
+  <div class="marr" id="a2" style="left:520px;top:330px;">→</div>
+  <div class="mi fx" id="m3"><span class="gold-hi">= cos²θ</span></div>
+</div>
+
+<div id="hudHost"></div>
+<div class="vign"></div>
+<div class="cap">代入一组数，亲手验证</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+
+/* 槽位几何：DOM 就绪后一次测定（布局与 t 无关，确定性成立） */
+var slots = {}, flyers = [];
+var NUMS = [
+  { id: 's1', n: '3', cls: 'gold',  t0: 3.2, from: [810, 235] },
+  { id: 's2', n: '5', cls: 'cyan',  t0: 3.7, from: [1110, 235] },
+  { id: 's3', n: '4', cls: 'gold',  t0: 4.2, from: [810, 235] },
+  { id: 's4', n: '12', cls: 'cyan', t0: 4.7, from: [1110, 235] },
+  { id: 's5', n: '3', cls: 'gold',  t0: 5.6 }, { id: 's6', n: '4', cls: 'gold', t0: 5.85 },
+  { id: 's7', n: '5', cls: 'cyan',  t0: 6.1 }, { id: 's8', n: '12', cls: 'cyan', t0: 6.35 }
+];
+function init() {
+  for (var i = 0; i < NUMS.length; i++) {
+    var m = NUMS[i], el = $(m.id), r = el.getBoundingClientRect();
+    slots[m.id] = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    if (m.from) {
+      var f = document.createElement('div');
+      f.className = 'fly fx ' + m.cls; f.textContent = m.n;
+      document.body.appendChild(f);
+      flyers.push({ el: f, m: m });
+    }
+  }
+}
+init();
+
+var hud = F.makeHUD($('hudHost'), 1460, 840, 1);
+hud.style.opacity = 0;
+
+window.film = {
+  duration: 23,
+  frame: function (t) {
+    /* 背景剪影微动（活仪表） */
+    $('bgB').setAttribute('transform', 'rotate(' + (0.5 * Math.sin(0.5 * t)) + ' 260 700)');
+    $('bgCos').setAttribute('fill', (t > 18.2 && t < 19.4) ? 'var(--gold-hi)' : 'var(--muted)');
+
+    /* 字幕④ */
+    F.capShow(document.querySelector('.cap'), t, .5, 4.5);
+
+    /* 胶囊对 + 槽位式 */
+    $('caps').style.opacity = F.eoc(F.seg(t, 1.0, 1.8));
+    $('caps').style.transform = 'translateY(' + ((1 - F.eoc(F.seg(t, 1.0, 1.8))) * 24) + 'px)';
+    $('fwrap').style.opacity = F.lerp(0, .55, F.seg(t, 3.0, 3.3)) + F.seg(t, 7.0, 7.4) * .45;
+
+    /* 数字飞行入槽 */
+    for (var i = 0; i < flyers.length; i++) {
+      var fl = flyers[i], m = fl.m, s = slots[m.id];
+      var u = F.eic(F.seg(t, m.t0, m.t0 + .6));
+      if (u > 0 && u < 1) {
+        fl.el.style.opacity = 1;
+        fl.el.style.left = F.lerp(m.from[0], s.x, u) - 14 + 'px';
+        fl.el.style.top = F.lerp(m.from[1], s.y, u) - 30 + 'px';
+      } else fl.el.style.opacity = 0;
+    }
+    for (var j = 0; j < NUMS.length; j++) {
+      var mm = NUMS[j], el = $(mm.id);
+      if (t >= mm.t0 + .6) {
+        var pop = F.eob(F.seg(t, mm.t0 + .6, mm.t0 + .85));
+        el.textContent = mm.n; el.className = 'slot ' + mm.cls; el.style.opacity = 1;
+        el.style.transform = 'scale(' + F.lerp(.6, 1, pop) + ')';
+      }
+    }
+
+    /* 整式点亮 + 金色扫过 */
+    var sw = F.seg(t, 7.0, 7.7);
+    var sweep = $('sweep'), fxEl = $('fx1');
+    sweep.style.opacity = sw > 0 && sw < 1 ? 1 : 0;
+    sweep.style.left = F.lerp(-140, 1180, F.eoc(sw)) + 'px';
+
+    /* 双柱对决（同一时钟） */
+    $('axis').style.width = 900 * F.eoq(F.seg(t, 7.0, 7.6)) + 'px';
+    var gu = F.eic(F.seg(t, 8.0, 11.5));
+    var hg = 235 * gu, hc = 250 * gu;
+    $('barG').style.height = hg + 'px'; $('barG').style.top = (860 - hg) + 'px';
+    $('barC').style.height = hc + 'px'; $('barC').style.top = (860 - hc) + 'px';
+    $('cntG').style.top = (860 - hg - 62) + 'px'; $('cntC').style.top = (860 - hc - 62) + 'px';
+    $('cntG').firstElementChild.textContent = Math.round(3969 * gu);
+    $('cntC').firstElementChild.textContent = Math.round(4225 * gu);
+
+    /* 差距定格 256（不用白闪：色彩 + 缩放） */
+    var g1 = $('gl1'), g2 = $('gl2');
+    var glU = F.eoc(F.seg(t, 13.0, 13.6));
+    g1.style.opacity = glU * .9; g1.style.top = (860 - hg - 2) + 'px';
+    g2.style.opacity = glU * .9; g2.style.top = (860 - hc - 2) + 'px';
+    g1.style.width = g2.style.width = 250 * glU + 'px';
+    var dU = F.eob(F.seg(t, 13.3, 13.9));
+    var dEl = $('d256');
+    dEl.style.opacity = dU;
+    dEl.style.transform = 'scale(' + F.lerp(1.4, 1, dU) * (1 + .05 * Math.sin(2 * Math.PI * 2.5 * t)) + ')';
+
+    /* 记分牌 HUD 成型（15–17：柱图缩小沉降 → HUD 交叉淡入） */
+    var dockU = F.eic(F.seg(t, 15.0, 17.0));
+    var chart = $('chart');
+    chart.style.transformOrigin = '1030px 740px';
+    chart.style.transform = 'translate(' + 610 * dockU + 'px,' + 200 * dockU + 'px) scale(' + F.lerp(1, .34, dockU) + ')';
+    chart.style.opacity = 1 - F.seg(t, 16.4, 17.0);
+    hud.style.opacity = F.seg(t, 16.2, 17.0) * (t < 23 ? 1 : 1);
+    hud.style.transform = 'scale(' + (1 + .008 * Math.sin(2 * Math.PI * 1.6 * t)) + ')';
+    hud.style.transformOrigin = '1460px 840px';
+
+    /* 会师：(63/65)² = cos²θ，背景 θ 读数同拍发亮 */
+    function mi(id, t0) {
+      var u = F.eoc(F.seg(t, t0, t0 + .6));
+      $(id).style.opacity = u * (t > 20 ? .85 + .15 * Math.sin(2 * Math.PI * 2 * t) : u);
+      $(id).style.transform = 'translateY(' + ((1 - u) * 18) + 'px)';
+    }
+    mi('m1', 17.0); mi('m2', 17.8); mi('m3', 18.6);
+    $('a1').style.opacity = F.eoc(F.seg(t, 17.5, 17.9));
+    $('a2').style.opacity = F.eoc(F.seg(t, 18.3, 18.7));
+  }
+};
+</script>
+</body>
+</html>

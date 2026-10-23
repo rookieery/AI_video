@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #geo{position:absolute;inset:0;}
+  #frow{position:absolute;left:0;right:0;top:96px;text-align:center;font-size:44px;opacity:0;}
+  #panel{position:absolute;left:1160px;top:240px;width:640px;height:440px;padding:0;opacity:0;}
+  #drow{position:absolute;left:0;right:0;top:862px;text-align:center;font-size:44px;opacity:0;}
+  #lrow{position:absolute;left:0;right:0;top:250px;text-align:center;font-size:52px;opacity:0;}
+  #qe{position:absolute;left:0;right:0;top:930px;text-align:center;font-size:38px;opacity:0;}
+  #qsub{position:absolute;left:0;right:0;top:1000px;text-align:center;font-size:30px;color:var(--muted);opacity:0;}
+  #walk{position:absolute;left:0;right:0;top:812px;text-align:center;font-size:30px;color:var(--muted);opacity:0;}
+  #fly256{position:absolute;font-size:56px;opacity:0;}
+  #qed{position:absolute;left:1420px;top:225px;font-size:66px;color:var(--gold-hi);opacity:0;}
+  #stamp2{left:640px;top:690px;font-size:40px;}
+  #tri{position:absolute;inset:0;}
+</style>
+</head>
+<body>
+<svg id="geo" width="1920" height="1080">
+  <line id="ray" stroke="rgba(88,196,212,.5)" stroke-width="3" stroke-dasharray="12 10" opacity="0"/>
+  <line id="stick" stroke="var(--white)" stroke-width="3" opacity="0"/>
+  <circle id="aDot" r="9" fill="var(--gold)" opacity="0"/>
+  <text id="aLab" class="fx" font-size="36" fill="var(--gold)" opacity="0">a</text>
+  <circle id="tdot" r="8" fill="var(--cyan-hi)" opacity="0" style="filter:drop-shadow(0 0 10px rgba(140,224,236,.9));"/>
+  <text id="tLab" class="fx" font-size="30" fill="var(--cyan-hi)" opacity="0">t = 0</text>
+  <text id="dLab" class="fx" font-size="30" fill="var(--white)" opacity="0"></text>
+  <circle id="footP" r="7" fill="none" stroke="var(--orange)" stroke-width="3" opacity="0"/>
+  <line id="link" stroke="var(--gold-hi)" stroke-width="3" opacity="0"/>
+  <circle id="vpP" r="7" fill="none" stroke="var(--gold-hi)" stroke-width="3" opacity="0"/>
+</svg>
+
+<svg id="tri" width="1920" height="1080" opacity="0">
+  <line id="triB" x1="1141" y1="940" x2="1330" y2="940" stroke="var(--white)" stroke-width="4"/>
+  <line id="triH" x1="1330" y1="940" x2="1330" y2="892" stroke="var(--cyan)" stroke-width="4"/>
+  <line id="triD" x1="1141" y1="940" x2="1330" y2="892" stroke="var(--gold-hi)" stroke-width="4"/>
+  <text x="1215" y="978" class="fx" font-size="30" fill="var(--white)">63</text>
+  <text x="1348" y="922" class="fx" font-size="30" fill="var(--cyan)">16</text>
+  <text x="1185" y="872" class="fx" font-size="30" fill="var(--gold-hi)">65</text>
+</svg>
+
+<div id="frow" class="fx">f(t) = (3t−5)² + (4t−12)² = <span class="gold">25</span>t² − 126t + <span class="cyan">169</span></div>
+
+<div id="panel" class="panel"><svg width="640" height="440">
+  <line x1="60" y1="400" x2="620" y2="400" stroke="var(--line)" stroke-width="2"/>
+  <line x1="60" y1="30" x2="60" y2="400" stroke="var(--line)" stroke-width="2"/>
+  <path id="curve" d="" stroke="var(--gold-hi)" stroke-width="3.5" fill="none" pathLength="100"
+        stroke-dasharray="100" stroke-dashoffset="100"/>
+  <circle id="cd" r="7" fill="var(--cyan-hi)" opacity="0"/>
+  <line id="cdv" stroke="rgba(122,134,153,.6)" stroke-width="2" stroke-dasharray="5 5" opacity="0"/>
+  <text id="cLab" class="fx" font-size="26" fill="var(--white)" opacity="0"></text>
+  <text id="vLab" class="fx" font-size="26" fill="var(--gold-hi)" opacity="0">顶点 (2.52, 10.24)</text>
+  <text x="596" y="428" class="fx" font-size="24" fill="var(--muted)">t</text>
+  <text x="20" y="46" class="fx" font-size="24" fill="var(--muted)">f</text>
+</svg></div>
+
+<div id="drow" class="fx">Δ = 126² − 4·<span class="gold">25</span>·<span class="cyan">169</span> = −1024 = −4×<span class="gold-hi" id="d256">256</span></div>
+<div id="lrow" class="fx">Σ(a<sub>i</sub>t−b<sub>i</sub>)² ≥ 0　⟹　Δ ≤ 0</div>
+<div id="qed" class="fx">∎</div>
+<div id="walk">沿 b 走 t 步，离 a 有多远？</div>
+<div id="qe" class="fx"><span class="gold-hi">256 = 16²</span></div>
+<div id="qsub" class="fx">63² + 16² = 65²</div>
+<div id="fly256" class="fx gold-hi">256</div>
+<div id="stamp2" class="stamp kai">Δ = 0 ⟺ 共线 ⟺ 影子追平杆长</div>
+<div id="burstHost"></div>
+<div class="flash" id="fl"></div>
+<div id="hudHost"></div>
+<div class="vign"></div>
+<div class="cap">为什么影子，永远超不过杆？</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var D = Math.PI / 180;
+var O = { x: 420, y: 760 }, RA = -33 * D, DIR = { x: Math.cos(RA), y: Math.sin(RA) }; /* 屏幕系方向（右上） */
+var PU = 170;                    /* 每 t 步的像素长 */
+var A = { x: 637, y: 309 };      /* a 点：垂足 t*=2.52 的正上方 */
+function f(x) { return 25 * x * x - 126 * x + 169; }
+function tt(t) {
+  if (t < 1.5) return 0;
+  if (t < 5.0) return F.lerp(0, 4.5, F.eic(F.seg(t, 1.5, 5.0)));
+  if (t < 6.0) return 4.5;
+  if (t < 8.0) return F.lerp(4.5, 5.0, F.eic(F.seg(t, 6.0, 8.0)));
+  if (t < 10.0) return F.lerp(5.0, 3.2, F.eic(F.seg(t, 8.0, 10.0)));
+  return F.lerp(3.2, 2.52, F.eic(F.seg(t, 10.0, 10.6)));
+}
+/* 抛物线映射：t∈[0,5]→x 60..600；f∈[0,180]→y 400..40（面板内） */
+function pxy(tv, fv) { return { x: 60 + tv * 108, y: 400 - fv * 2 }; }
+
+/* 曲线路径（一次生成） */
+(function () {
+  var d = '';
+  for (var i = 0; i <= 60; i++) {
+    var tv = i / 12, p = pxy(tv, f(tv));
+    d += (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+  }
+  $('curve').setAttribute('d', d);
+})();
+
+var burst = F.makeBurst($('burstHost'), 960, 505, 30, 13, 'rgba(255,215,106,.95)', 300);
+var hud = F.makeHUD($('hudHost'), 1460, 840, 1);
+hud.style.opacity = .92;
+
+window.film = {
+  duration: 22,
+  frame: function (t) {
+    F.capShow(document.querySelector('.cap'), t, .5, 5);
+
+    /* 场景回归（0–1 上浮淡入，复合） */
+    var inU = F.eoc(F.seg(t, 0, 1));
+    $('geo').style.opacity = inU;
+    $('geo').style.transform = 'translateY(' + ((1 - inU) * 20) + 'px)';
+
+    var tv = tt(t);
+    var P = { x: O.x + tv * PU * DIR.x, y: O.y + tv * PU * DIR.y };
+    var rayU = F.eoc(F.seg(t, .6, 1.4));
+
+    /* 方向线 + 刻度 */
+    $('ray').setAttribute('opacity', rayU * .9);
+    $('ray').setAttribute('x1', O.x); $('ray').setAttribute('y1', O.y);
+    $('ray').setAttribute('x2', O.x + 850 * DIR.x); $('ray').setAttribute('y2', O.y + 850 * DIR.y);
+
+    /* a 点 + 动点 + 距离棒 */
+    $('aDot').setAttribute('cx', A.x); $('aDot').setAttribute('cy', A.y);
+    $('aDot').setAttribute('opacity', rayU); $('aLab').setAttribute('x', A.x - 40); $('aLab').setAttribute('y', A.y - 16);
+    $('aLab').setAttribute('opacity', rayU);
+    var td = $('tdot');
+    td.setAttribute('cx', P.x); td.setAttribute('cy', P.y);
+    td.setAttribute('opacity', F.seg(t, 1.4, 1.8) * (1 - F.seg(t, 19.5, 20.3)) * .2 + .8 * F.seg(t, 1.4, 1.8));
+    $('tLab').setAttribute('x', P.x + 14); $('tLab').setAttribute('y', P.y + 34);
+    $('tLab').setAttribute('opacity', F.seg(t, 1.8, 2.2));
+    $('tLab').textContent = 't = ' + F.fmt(tv, 2);
+    $('stick').setAttribute('opacity', .85 * F.seg(t, 1.8, 2.2));
+    $('stick').setAttribute('x1', P.x); $('stick').setAttribute('y1', P.y);
+    $('stick').setAttribute('x2', A.x); $('stick').setAttribute('y2', A.y);
+    var mid = { x: (P.x + A.x) / 2, y: (P.y + A.y) / 2 };
+    $('dLab').setAttribute('x', mid.x + 12); $('dLab').setAttribute('y', mid.y - 10);
+    $('dLab').setAttribute('opacity', F.seg(t, 2.0, 2.4));
+    $('dLab').textContent = '距离 = ' + F.fmt(Math.sqrt(f(tv)), 2);
+    $('walk').style.opacity = F.eoc(F.seg(t, 2.0, 2.5)) * (1 - F.seg(t, 5.2, 5.8));
+
+    /* 顶行 f(t) 式（5.5 入场） */
+    var fr = $('frow');
+    var frU = F.eoc(F.seg(t, 5.5, 6.0));
+    fr.style.opacity = frU * F.lerp(1, .25, F.seg(t, 18.0, 18.4));
+    fr.style.transform = 'translateY(' + ((1 - frU) * 16) + 'px)';
+
+    /* 抛物线面板 + 双视图同参联动 */
+    var paU = F.eoc(F.seg(t, 5.8, 6.5));
+    $('panel').style.opacity = paU;
+    var cu = F.eoq(F.seg(t, 6.0, 7.5));
+    $('curve').setAttribute('stroke-dashoffset', 100 - 100 * cu);
+    var cg = .55 + .2 * Math.sin(2 * Math.PI * 2 * t);
+    $('curve').setAttribute('opacity', F.seg(t, 6.5, 7) * cg);
+    var cp = pxy(tv, f(tv));
+    $('cd').setAttribute('cx', cp.x); $('cd').setAttribute('cy', cp.y);
+    $('cd').setAttribute('opacity', F.seg(t, 6.0, 6.4));
+    $('cdv').setAttribute('x1', cp.x); $('cdv').setAttribute('y1', cp.y);
+    $('cdv').setAttribute('x2', cp.x); $('cdv').setAttribute('y2', 400);
+    $('cdv').setAttribute('opacity', .7 * F.seg(t, 6.2, 6.6));
+    $('cLab').setAttribute('x', Math.min(cp.x + 10, 520)); $('cLab').setAttribute('y', cp.y - 12);
+    $('cLab').setAttribute('opacity', F.seg(t, 6.4, 6.8));
+    $('cLab').textContent = 'f = ' + F.fmt(f(tv), 1);
+    $('vLab').setAttribute('x', 350); $('vLab').setAttribute('y', 388);
+    $('vLab').setAttribute('opacity', F.eoc(F.seg(t, 11.4, 11.9)));
+
+    /* 三重会师（10.5–11.3）：顶点 ⟷ 垂足 ⟷ 影子端点 */
+    var hk = Math.sin(Math.PI * F.seg(t, 10.5, 11.6));
+    var foot = { x: O.x + 2.52 * PU * DIR.x, y: O.y + 2.52 * PU * DIR.y };
+    $('footP').setAttribute('cx', foot.x); $('footP').setAttribute('cy', foot.y);
+    $('footP').setAttribute('r', 7 + 16 * hk); $('footP').setAttribute('opacity', Math.max(.25, hk));
+    var vAbs = { x: 1160 + pxy(2.52, 0).x, y: 240 + pxy(2.52, f(2.52)).y };
+    $('vpP').setAttribute('cx', vAbs.x); $('vpP').setAttribute('cy', vAbs.y);
+    $('vpP').setAttribute('r', 7 + 16 * hk); $('vpP').setAttribute('opacity', Math.max(.25, hk));
+    var lk = F.eoc(F.seg(t, 10.5, 10.9)) * (1 - F.seg(t, 11.6, 12.2));
+    $('link').setAttribute('opacity', lk);
+    $('link').setAttribute('x1', foot.x); $('link').setAttribute('y1', foot.y);
+    $('link').setAttribute('x2', vAbs.x); $('link').setAttribute('y2', vAbs.y);
+
+    /* Δ 行（12.5） */
+    var drU = F.eoc(F.seg(t, 12.5, 13.0));
+    var drow = $('drow');
+    drow.style.opacity = drU * (t > 13.2 ? .88 + .12 * Math.sin(2 * Math.PI * 2 * t) : 1);
+    drow.style.transform = 'translateY(' + ((1 - drU) * 14) + 'px)';
+
+    /* 256 自 HUD 飞入 Δ 行（14.0–15.0），HUD 熄灭 */
+    var fu = F.eic(F.seg(t, 14.0, 15.0));
+    var fly = $('fly256');
+    if (fu > 0 && fu < 1) {
+      fly.style.opacity = 1;
+      fly.style.left = F.lerp(1560, 1010, fu) + 'px';
+      fly.style.top = F.lerp(930, 846, fu) + 'px';
+    } else fly.style.opacity = 0;
+    hud.style.opacity = .92 * (1 - F.seg(t, 15.0, 15.4));
+    hud.style.transform = 'scale(' + F.lerp(1, .9, F.seg(t, 15.0, 15.4)) + ')';
+    hud.style.transformOrigin = '1460px 840px';
+    var dp = Math.sin(Math.PI * F.seg(t, 15.0, 15.8));
+    $('d256').style.textShadow = dp > 0 ? '0 0 ' + (24 * dp) + 'px rgba(255,215,106,.95)' : '';
+    $('d256').style.transform = 'scale(' + (1 + .18 * dp) + ')';
+
+    /* 印章变奏（17.0，−3° 金框卡） */
+    var st2 = F.eob(F.seg(t, 17.0, 17.5));
+    var stamp2 = $('stamp2');
+    stamp2.style.opacity = st2 * (1 - F.seg(t, 19.4, 19.9));
+    stamp2.style.transform = 'rotate(-3deg) scale(' + F.lerp(.5, 1, st2) + ')';
+
+    /* 字母式 + ∎ + 白闪② */
+    var lu = F.eoc(F.seg(t, 18.0, 19.0));
+    var lrow = $('lrow');
+    lrow.style.opacity = lu * (t > 19.2 ? .85 + .15 * Math.sin(2 * Math.PI * 2 * t) : 1);
+    lrow.style.transform = 'translateY(' + ((1 - lu) * 18) + 'px)';
+    var qu = F.eob(F.seg(t, 19.2, 19.6));
+    $('qed').style.opacity = qu;
+    $('qed').style.transform = 'scale(' + F.lerp(1.9, 1, qu) + ')';
+    document.getElementById('fl').style.opacity = .16 * Math.sin(Math.PI * F.seg(t, 19.2, 19.52));
+    burst.update(t, 19.25, 1.0);
+
+    /* 勾股彩蛋（19.6–22） */
+    $('qe').style.opacity = F.eoc(F.seg(t, 19.6, 20.1)) * (1 - F.seg(t, 21.7, 22));
+    var triU = F.eoc(F.seg(t, 20.0, 20.8));
+    var tri = $('tri');
+    tri.style.opacity = F.seg(t, 20.0, 20.3);
+    [['triB', 0], ['triD', .3], ['triH', .6]].forEach(function (s) {
+      var el = $(s[0]);
+      el.setAttribute('pathLength', 100);
+      el.setAttribute('stroke-dasharray', 100);
+      el.setAttribute('stroke-dashoffset', 100 - 100 * F.eoc(F.seg(t, 20.0 + s[1], 20.6 + s[1])));
+    });
+    $('qsub').style.opacity = F.eoc(F.seg(t, 20.8, 21.3));
+  }
+};
+</script>
+</body>
+</html>
