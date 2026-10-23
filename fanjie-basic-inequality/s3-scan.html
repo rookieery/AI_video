@@ -1,0 +1,189 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #gSlit{position:absolute;left:170px;top:300px;width:304px;height:16px;border:3px solid var(--sec);border-radius:4px;opacity:.25;}
+  #gSq{position:absolute;left:170px;top:520px;width:160px;height:160px;border:4px solid var(--pri);border-radius:8px;opacity:.25;}
+  #gLab1{position:absolute;left:170px;top:430px;font-size:26px;color:var(--sec-hi);opacity:.25;}
+  #gLab2{position:absolute;left:170px;top:700px;font-size:26px;color:var(--pri-hi);opacity:.25;}
+  #mrect{position:absolute;border:3px solid var(--white);border-radius:6px;opacity:0;background:rgba(244,246,250,.03);}
+  #ghostR{position:absolute;border:3px dashed var(--line);border-radius:6px;opacity:0;}
+  #aChip{position:absolute;left:0;right:0;top:452px;text-align:center;opacity:0;}
+  #aChip .chip{font-size:38px;color:var(--pri-hi);}
+  #pChip{position:absolute;left:0;right:0;top:200px;text-align:center;opacity:0;font-size:26px;color:var(--muted);}
+  #f5{position:absolute;left:0;right:0;top:542px;text-align:center;font-size:52px;opacity:0;}
+  #v100{position:absolute;left:830px;top:466px;font-size:48px;color:var(--pri-hi);opacity:0;
+    text-shadow:0 0 26px rgba(232,182,76,.55);white-space:nowrap;}
+  #sb{left:1480px;top:830px;border-color:rgba(232,182,76,.5);opacity:0;}
+  #plots{position:absolute;left:1470px;top:560px;width:390px;height:200px;opacity:0;}
+  #pl1{position:absolute;left:20px;top:80px;width:152px;height:8px;border:2.5px solid var(--sec);border-radius:3px;}
+  #pl2{position:absolute;left:230px;top:8px;width:80px;height:80px;border:3px solid var(--pri);border-radius:5px;
+    box-shadow:0 0 18px rgba(232,182,76,.35);}
+</style>
+</head>
+<body>
+<div id="gSlit"></div><div id="gSq"></div>
+<div id="gLab1">19×1 = 19㎡</div><div id="gLab2">10×10 = 100㎡</div>
+
+<svg width="1920" height="1080" style="position:absolute;inset:0;">
+  <path id="ghostArc" d="M 200 470 A 250 250 0 0 1 700 470" fill="none" stroke="var(--white)" stroke-width="2" opacity=".12"/>
+  <line x1="200" y1="470" x2="700" y2="470" stroke="var(--white)" stroke-width="2" opacity=".1"/>
+</svg>
+
+<div id="pChip">围法扫描器 · 周长 2(l+w) = 40m</div>
+<div id="mrect"></div>
+<div id="ghostR"></div>
+<div id="aChip"><span class="chip fx" id="aTxt">A = 19.0 ㎡</span></div>
+<div id="v100" class="fx">100㎡</div>
+
+<svg width="1920" height="1080" style="position:absolute;inset:0;">
+  <line id="axis" x1="360" y1="900" x2="1500" y2="900" stroke="var(--line)" stroke-width="2" opacity="0"/>
+  <path id="curve" fill="none" stroke="var(--pri-hi)" stroke-width="3.5" opacity="0"/>
+  <path id="gcurve" fill="none" stroke="var(--sec)" stroke-width="2.5" stroke-dasharray="8 7" opacity="0"/>
+  <circle id="dot" r="7" fill="var(--pri-hi)" opacity="0"/>
+  <circle id="gdot" r="6" fill="var(--sec)" opacity="0"/>
+  <line id="drop" stroke="rgba(122,134,153,.6)" stroke-width="2" stroke-dasharray="5 5" opacity="0"/>
+  <circle id="halo" fill="none" stroke="var(--pri-hi)" stroke-width="3" opacity="0"/>
+  <g id="pticks"></g>
+</svg>
+
+<div id="f5" class="fx">√(l·w) ≤ <span class="frac"><span class="top">l+w</span><span class="bot">2</span></span> <span data-tok>= 10</span> ⇒ l·w ≤ 100</div>
+
+<div id="sb" class="hud">
+  <div class="hud-t">记 分 牌</div>
+  <div class="fx" style="font-size:44px;color:var(--pri-hi);text-align:center;margin-top:14px;">最大 100㎡</div>
+  <div class="fx" style="font-size:26px;color:var(--white);text-align:center;margin-top:16px;">当且仅当 l = w = 10</div>
+</div>
+<div id="plots">
+  <div id="pl1"></div><div id="pl2"></div>
+  <div style="position:absolute;left:20px;top:104px;font-size:22px;color:var(--sec-hi);">19㎡</div>
+  <div style="position:absolute;left:230px;top:98px;font-size:22px;color:var(--pri-hi);">100㎡</div>
+  <div style="position:absolute;left:0;right:0;top:150px;text-align:center;font-size:20px;color:var(--muted);">同比例尺并置</div>
+</div>
+
+<div id="burstHost" style="position:absolute;inset:0;"></div>
+<div class="vign"></div>
+<div class="cap">弦，只在<span class="k">圆心</span>碰到半径</div>
+<div class="cap" id="cap5">正方形，赢麻了</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+function xOf(w) { return 360 + (w - 1) * (1140 / 18); }        /* w∈[1,19] → x 360–1500 */
+function yOf(A) { return 900 - 3.2 * A; }                      /* A 3.2px/单位，轴 y=900 */
+function AOf(w) { return w * (20 - w); }
+function pathD(w0, w1) {
+  var d = '', n = 40;
+  for (var i = 0; i <= n; i++) {
+    var w = F.lerp(w0, w1, i / n);
+    d += (i ? 'L' : 'M') + xOf(w).toFixed(1) + ' ' + yOf(AOf(w)).toFixed(1);
+  }
+  return d;
+}
+var PTS = [{ w: 1, lab: '19×1=19' }, { w: 5, lab: '15×5=75' }, { w: 8, lab: '12×8=96' }, { w: 10, lab: '10×10=100' }];
+PTS.forEach(function (s) { s.tm = .5 + 6.5 * Math.sqrt((s.w - 1) / 9); });   /* 匀加速 u=s² 的过点时刻 */
+var ptG = $('pticks');
+PTS.forEach(function (s) {
+  var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', xOf(s.w)); c.setAttribute('cy', yOf(AOf(s.w))); c.setAttribute('r', 5);
+  c.setAttribute('fill', 'var(--pri)'); c.style.opacity = 0; ptG.appendChild(c); s.ce = c;
+  var tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  tx.setAttribute('class', 'fx'); tx.setAttribute('font-size', '26'); tx.setAttribute('fill', s.w === 10 ? 'var(--pri-hi)' : 'var(--white)');
+  tx.setAttribute('x', xOf(s.w) - 44); tx.setAttribute('y', yOf(AOf(s.w)) - 18); tx.textContent = s.lab;
+  tx.style.opacity = 0; ptG.appendChild(tx); s.te = tx;
+});
+var burst = F.makeBurst($('burstHost'), 930, 580, 30, 5, 'rgba(255,215,106,.95)', 180);
+
+window.film = {
+  duration: 13,
+  frame: function (t) {
+    /* 0–0.5 转场：两矩形提亮归位；半圆影子压暗；扫描器光晕呼吸【H15】 */
+    var bri = F.eoc(F.seg(t, 0, .5));
+    ['gSlit', 'gSq', 'gLab1', 'gLab2'].forEach(function (id) { $(id).style.opacity = F.lerp(.25, 1, bri); });
+    $('gSlit').style.boxShadow = '0 0 ' + (10 + 14 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(88,196,212,.3)';
+    $('ghostArc').style.opacity = F.lerp(.18, .12, bri);
+    $('pChip').style.opacity = F.eoc(F.seg(t, .2, .6));
+
+    /* 字幕④跨镜承接（H26 有意跨镜延续登记）：t0 全亮续驻，1.4–1.8 淡出 */
+    document.querySelector('.cap').style.opacity = 1 - F.seg(t, 1.4, 1.8);
+
+    /* 0.5–7.0 w 自 1 连续扫向 10（匀加速 u=s²）：矩形形变+面积滚动+金笔描抛物线 */
+    var s = F.seg(t, .5, 7.0), u = s * s, w = 1 + 9 * u, A = AOf(w);
+    var rw = w * 20, rh = (20 - w) * 20;                       /* 20px/单位，中心 (960,330) */
+    var mr = $('mrect');
+    mr.style.opacity = F.eoc(F.seg(t, .5, 1.0));
+    mr.style.width = rw + 'px'; mr.style.height = rh + 'px';
+    mr.style.left = (960 - rw / 2) + 'px'; mr.style.top = (330 - rh / 2) + 'px';
+    var aT = $('aTxt');
+    $('aChip').style.opacity = F.eoc(F.seg(t, .6, 1.0));
+    aT.textContent = 'A = ' + F.fmt(A, 1) + ' ㎡';
+    var drawU = F.eoc(F.seg(t, .5, 7.0));
+    $('axis').style.opacity = drawU;
+    $('curve').setAttribute('d', pathD(1, Math.max(1.001, 1 + 9 * drawU)));
+    $('curve').style.opacity = drawU * (.8 + .2 * Math.sin(2 * Math.PI * 1.5 * t));   /* 微呼吸【H15】 */
+    $('dot').setAttribute('cx', xOf(w)); $('dot').setAttribute('cy', yOf(A));
+    $('dot').style.opacity = drawU;
+    $('dot').setAttribute('r', w >= 9.98 ? 9 : 7);
+    /* 打点标签：过点弹出（eob），随后降权 */
+    PTS.forEach(function (p) {
+      var on = t >= p.tm ? 1 : 0;
+      var pop = 1 + .3 * Math.sin(Math.PI * F.seg(t, p.tm, p.tm + .4));
+      p.te.style.opacity = on * (t < p.tm + 1.5 ? 1 : .65);
+      p.te.setAttribute('transform', 'translate(' + (xOf(p.w) - 44) + ' ' + (yOf(AOf(p.w)) - 18) + ') scale(' + pop + ') translate(' + (-(xOf(p.w) - 44)) + ' ' + (-(yOf(AOf(p.w)) - 18)) + ')');
+      p.ce.style.opacity = on * .9;
+    });
+
+    /* 7.0 封顶爆发：金晕+粒子 30 粒（种子 5，不用白闪不盖章）；「100㎡」弹性过冲 */
+    burst.update(t, 7.0, .9);
+    var hk = F.eoc(F.seg(t, 7.0, 7.8));
+    $('halo').setAttribute('cx', 930); $('halo').setAttribute('cy', 580);
+    $('halo').setAttribute('r', 30 + 150 * hk);
+    $('halo').style.opacity = (1 - hk) * .8;
+    var vu = F.eob(F.seg(t, 7.0, 7.6));
+    $('v100').style.opacity = Math.min(1, F.seg(t, 7.0, 7.3) * 3);
+    $('v100').style.transform = 'translateX(-50%) scale(' + F.lerp(1.35, 1, Math.min(1, vu)) + ')';
+    $('v100').style.left = '930px';
+
+    /* 7.5–8.2 F5 入场（52px 整式）；8.2–9.0 token「=10」脉冲 */
+    var fu = F.eic(F.seg(t, 7.5, 8.2));
+    var f5 = $('f5');
+    f5.style.opacity = fu;
+    f5.style.transform = 'translateY(' + ((1 - fu) * 16) + 'px)';
+    F.token(f5, t, [[8.2, .8]]);
+
+    /* 9.0–11.0 半透明镜像回扫 w:10→19（0.35 透明）：幽灵点滑落回 19、矩形退化回细缝 */
+    var mg = F.eic(F.seg(t, 9.0, 11.0));
+    var wg = 10 + 9 * mg;
+    $('gcurve').setAttribute('d', pathD(10, Math.max(10.001, 10 + 9 * mg)));
+    $('gcurve').style.opacity = .35 * F.seg(t, 9.0, 9.3);
+    $('gdot').setAttribute('cx', xOf(wg)); $('gdot').setAttribute('cy', yOf(AOf(wg)));
+    $('gdot').style.opacity = .5 * F.seg(t, 9.0, 9.2);
+    $('drop').setAttribute('x1', xOf(wg)); $('drop').setAttribute('y1', yOf(AOf(wg)));
+    $('drop').setAttribute('x2', xOf(wg)); $('drop').setAttribute('y2', 900);
+    $('drop').style.opacity = .3 * F.seg(t, 9.0, 9.2);
+    var grw = wg * 20, grh = (20 - wg) * 20;
+    var gr = $('ghostR');
+    gr.style.opacity = .35 * F.seg(t, 9.0, 9.3) * (1 - F.seg(t, 11.6, 12.2));
+    gr.style.width = grw + 'px'; gr.style.height = grh + 'px';
+    gr.style.left = (960 - grw / 2) + 'px'; gr.style.top = (330 - grh / 2) + 'px';
+
+    /* 11.0–13.0 记分牌定格降权常驻 + 右侧两块地并置（尺寸反差即说服） */
+    var sbu = F.eob(F.seg(t, 11.0, 11.6));
+    var sb = $('sb');
+    sb.style.opacity = sbu * F.lerp(1, .55, F.seg(t, 12.6, 13.0));
+    sb.style.transform = 'scale(' + F.lerp(.8, 1, sbu) + ')';
+    sb.style.transformOrigin = '1670px 930px';
+    var plu = F.eic(F.seg(t, 11.2, 11.8));
+    var plots = $('plots');
+    plots.style.opacity = plu * F.lerp(1, .55, F.seg(t, 12.6, 13.0));
+    plots.style.transform = 'translateY(' + ((1 - plu) * 18) + 'px)';
+
+    /* 字幕⑤ 11.0–14.0（3.0s，H26；本页呈现 11.0–13.0，余段 S4 t0–1.0 承接） */
+    F.capShow($('cap5'), t, 11.0, 14.0);
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+/* fanjie-basic-inequality shared.css — 类定义复制自 tianjie-cauchy-v2/shared.css，
+   :root 令牌按本片语义槽位重命名（--pri/--sec/--ter/--alert），并保留旧名别名
+   （--gold/--cyan/--orange/--neg）以兼容保留的类定义。色值与系列一致。 */
+:root{
+  --bg:#0a0e1a;
+  --pri:#e8b64c; --pri-hi:#ffd76a; --pri-dim:rgba(232,182,76,.35);   /* 金=算术平均/结论/高潮 */
+  --sec:#58c4d4; --sec-hi:#8ce0ec;                                    /* 青=b侧/几何平均·追赶者 */
+  --ter:#ff9a3d;                                                      /* 橙虚线=派生量(半弦/差距/残差) */
+  --alert:#ff6b6b;                                                    /* 红=仅−2ab负值移项瞬间 */
+  --white:#f4f6fa; --muted:#7a8699; --panel:rgba(255,255,255,.045); --line:rgba(255,255,255,.16);
+  --flash:#ffffff; --capbg:rgba(5,8,16,.55);
+  /* 字幕槽位（prompt-spec v1.3 H26）：本片启用字幕 */
+  --sub:var(--white); --sub-shadow:0 2px 8px rgba(0,0,0,.95),0 0 30px rgba(0,0,0,.8); --sub-key:var(--pri-hi);
+  /* 兼容别名（供保留类定义引用） */
+  --gold:var(--pri); --gold-hi:var(--pri-hi); --gold-dim:var(--pri-dim);
+  --cyan:var(--sec); --cyan-hi:var(--sec-hi); --orange:var(--ter); --neg:var(--alert);
+}
+html,body{margin:0;padding:0;overflow:hidden;background:var(--bg);width:100%;height:100%;}
+body{position:relative;color:var(--white);font-family:"Microsoft YaHei","PingFang SC",sans-serif;}
+.abs{position:absolute;}
+.fx{font-family:"Cambria Math","Times New Roman","STIX Two Text",serif;}
+.kai{font-family:"KaiTi","STKaiti","Microsoft YaHei",serif;}
+sub,sup{font-size:.55em;}
+.sym{display:inline-block;opacity:0;}
+.gold{color:var(--pri);} .gold-hi{color:var(--pri-hi);}
+.cyan{color:var(--sec);} .cyan-hi{color:var(--sec-hi);}
+.muted{color:var(--muted);}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:-0.75em;line-height:1.15;margin:0 .08em;}
+.frac .bot{border-top:.055em solid currentColor;padding:0 .18em;}
+.frac .top{padding:0 .18em;}
+.chip{display:inline-flex;align-items:center;padding:10px 26px;border:1px solid var(--line);border-radius:999px;background:var(--panel);}
+.panel{border:1px solid var(--line);border-radius:20px;background:var(--panel);}
+.p{position:absolute;border-radius:50%;pointer-events:none;opacity:0;}
+.stamp{position:absolute;border:4px solid var(--pri-hi);border-radius:14px;padding:12px 32px;color:var(--pri-hi);opacity:0;font-size:52px;letter-spacing:.1em;box-shadow:0 0 46px rgba(255,215,106,.35);white-space:nowrap;}
+.vign{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 42%,rgba(255,255,255,0) 55%,rgba(0,0,0,.5));}
+
+/* ---- components（沿用 v2 组件；.cap 按本片横屏定稿：64px 思源黑体 Bold、下置条中心 y≈690、双层衬影、【】金高亮） ---- */
+.cap{position:absolute;left:50%;transform:translateX(-50%);top:632px;padding:14px 44px;border-radius:18px;background:var(--capbg);color:var(--sub);font-family:"Source Han Sans SC","Source Han Sans CN","Noto Sans CJK SC","Microsoft YaHei",sans-serif;font-weight:700;font-size:64px;letter-spacing:2px;text-shadow:var(--sub-shadow);opacity:0;white-space:nowrap;z-index:60;}
+.cap .k{color:var(--sub-key);}
+.cap .sub{display:block;text-align:center;font-size:26px;color:var(--muted);margin-top:6px;letter-spacing:.12em;font-weight:400;}
+[data-tok]{display:inline-block;}
+.hud{position:absolute;width:360px;height:200px;border:1px solid var(--line);border-radius:18px;background:rgba(10,14,26,.78);padding:16px 22px;box-sizing:border-box;z-index:40;}
+.hud-t{font-size:22px;letter-spacing:.3em;color:var(--muted);margin-bottom:10px;}
+.hud-row{display:flex;align-items:center;gap:12px;margin:8px 0;}
+.hud-bar{height:20px;border-radius:5px;}
+.hud-n{font-size:25px;}
+.hud-d{font-size:29px;margin-top:8px;}
+.stele{position:absolute;border:1px solid rgba(232,182,76,.35);border-radius:24px;background:linear-gradient(180deg,rgba(232,182,76,.09),rgba(232,182,76,.02));box-shadow:0 0 60px rgba(232,182,76,.10) inset;}
+.flash{position:absolute;inset:0;background:var(--flash);opacity:0;pointer-events:none;z-index:80;}

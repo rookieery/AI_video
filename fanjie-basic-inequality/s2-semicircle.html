@@ -1,0 +1,214 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #svg{position:absolute;inset:0;}
+  #plate{position:absolute;left:0;right:0;top:86px;text-align:center;font-size:34px;color:var(--pri);opacity:0;}
+  #hud{left:1460px;top:830px;width:380px;height:158px;}
+  .hbar{height:18px;border-radius:5px;}
+  #stamp1{left:660px;top:300px;font-size:44px;}
+  #areaChip{position:absolute;left:560px;top:800px;opacity:0;font-size:30px;color:var(--pri-hi);}
+  #areaNum{font-size:40px;margin-left:14px;display:inline-block;}
+</style>
+</head>
+<body>
+<div id="plate" class="fx">√(ab) ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div>
+<svg id="svg" width="1920" height="1080">
+  <g id="semi">
+    <!-- 半圆弧：O=(960,620) 半径 500px，弧顶 (960,120)，50px/单位 -->
+    <path id="arc" d="M 460 620 A 500 500 0 0 1 1460 620" fill="none" stroke="var(--white)"
+          stroke-width="3" opacity=".5" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+    <line id="rad" x1="960" y1="620" x2="960" y2="620" stroke="var(--pri)" stroke-width="4" opacity="0"/>
+    <line id="hl" stroke="var(--ter)" stroke-width="4" stroke-dasharray="12 9" opacity="0"/>
+    <circle id="qd" r="5.5" fill="var(--ter)" opacity="0"/>
+    <path id="ra" fill="none" stroke="var(--muted)" stroke-width="2" opacity="0"/>
+    <circle id="pd" r="6" fill="var(--white)" opacity="0"/>
+    <text id="la" class="fx" font-size="26" fill="var(--pri-hi)" opacity="0"></text>
+    <text id="lb" class="fx" font-size="26" fill="var(--sec-hi)" opacity="0"></text>
+    <text id="lh" class="fx" font-size="28" fill="var(--ter)" opacity="0"></text>
+    <text id="lg" class="fx" font-size="24" fill="var(--ter)" opacity="0" text-anchor="end"></text>
+    <text id="proj" class="fx" font-size="22" fill="var(--muted)" opacity="0">h² = a·b（射影定理）</text>
+    <g id="marks"></g>
+  </g>
+  <line id="dia" x1="460" y1="620" x2="1460" y2="620" stroke="var(--pri)" stroke-width="4" pathLength="100"
+        stroke-dasharray="100" stroke-dashoffset="100" opacity="0"/>
+  <g id="posts" opacity="0"></g>
+  <text id="dl" class="fx" font-size="28" fill="var(--pri)" opacity="0" text-anchor="middle">a+b=20</text>
+  <text id="lr" class="fx" font-size="26" fill="var(--pri)" opacity="0">r=(a+b)/2=10</text>
+  <circle id="ring1" fill="none" stroke="var(--pri-hi)" stroke-width="3" opacity="0"/>
+  <circle id="ring2" fill="none" stroke="var(--pri-hi)" stroke-width="2" opacity="0"/>
+</svg>
+<div id="burstHost" style="position:absolute;inset:0;"></div>
+
+<div id="hud" class="hud">
+  <div class="hud-t">追 跑</div>
+  <div class="hud-row"><div class="hbar" style="width:300px;background:linear-gradient(90deg,var(--pri),var(--pri-hi));"></div><span class="fx hud-n" style="color:var(--pri-hi);">半径 r=10</span></div>
+  <div class="hud-row"><div class="hbar" id="hbarO" style="width:0;background:repeating-linear-gradient(90deg,var(--ter) 0 12px,rgba(255,154,61,.45) 12px 20px);"></div><span class="fx hud-n" id="hbarT" style="color:var(--ter);"></span></div>
+</div>
+<div class="chip" id="areaChip">面积 ab=h²<span class="fx" id="areaNum"></span></div>
+<div id="stamp1" class="stamp kai">取等 · a=b</div>
+<div class="flash" id="fl"></div>
+<div class="vign"></div>
+<div class="cap">弦，只在<span class="k">圆心</span>碰到半径</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var PU = 50, OY = 620;                                 /* 50px/单位，圆心 O=(960,620) */
+/* a(t)：19 固定 → 3.0–7.2 eic 滑至 10 → 8.5–10.5 回摆至 8 → 10.5–11.0 收回 10 定格 */
+function aOf(t) {
+  if (t < 3.0) return 19;
+  if (t < 7.2) return 19 - 9 * F.eic(F.seg(t, 3.0, 7.2));
+  if (t < 8.5) return 10;
+  if (t < 10.5) return 10 - 2 * F.eic(F.seg(t, 8.5, 10.5));
+  if (t < 11.0) return 8 + 2 * F.eic(F.seg(t, 10.5, 11.0));
+  return 10;
+}
+/* 快照打点时刻（对 aOf 数值反解，确定性预计算） */
+function crossA(am) {
+  for (var i = 0; i <= 840; i++) { var t = 3.0 + i * .005; if (19 - 9 * F.eic(F.seg(t, 3.0, 7.2)) <= am) return t; }
+  return 7.2;
+}
+var SNAPS = [
+  { a: 19, tm: 1.8, lab: '19:1' }, { a: 15, tm: crossA(15), lab: '15:5' },
+  { a: 12, tm: crossA(12), lab: '12:8' }, { a: 10, tm: 7.2, lab: '10:10' }
+];
+var marksG = $('marks');
+SNAPS.forEach(function (s) {
+  var ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  ln.setAttribute('x1', 460 + PU * s.a); ln.setAttribute('y1', 628); ln.setAttribute('x2', 460 + PU * s.a);
+  ln.setAttribute('y2', 646); ln.setAttribute('stroke', 'var(--line)'); ln.setAttribute('stroke-width', '2');
+  ln.style.opacity = 0; marksG.appendChild(ln); s.le = ln;
+  var tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  tx.setAttribute('class', 'fx'); tx.setAttribute('font-size', '24'); tx.setAttribute('fill', 'var(--muted)');
+  tx.setAttribute('x', 460 + PU * s.a - 30); tx.setAttribute('y', 696); tx.textContent = s.lab;
+  tx.style.opacity = 0; marksG.appendChild(tx); s.te = tx;
+});
+/* 栅栏刻度（morph 回 S0 篱笆线的 11 根桩） */
+var postsG = $('posts');
+for (var p = 0; p <= 10; p++) {
+  var pl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  pl.setAttribute('x1', 300 + p * 132); pl.setAttribute('y1', 530); pl.setAttribute('x2', 300 + p * 132);
+  pl.setAttribute('y2', 548); pl.setAttribute('stroke', 'var(--pri-dim)'); pl.setAttribute('stroke-width', '3');
+  postsG.appendChild(pl);
+}
+var burst = F.makeBurst($('burstHost'), 960, 620, 36, 21, 'rgba(255,215,106,.95)', 320);
+
+window.film = {
+  duration: 12,
+  frame: function (t) {
+    /* S1 定理牌顶部降权驻留（微呼吸【H15】） */
+    $('plate').style.opacity = .45 * F.eoc(F.seg(t, 0, .4)) * (.85 + .15 * Math.sin(2 * Math.PI * 1.5 * t));
+
+    /* 0.0–1.5 半圆登场：弧线描边（eoq）+直径点亮+半径立起（eoc）+标签就位 */
+    $('arc').setAttribute('stroke-dashoffset', 100 - 100 * F.eoq(F.seg(t, 0, 1.2)));
+    var du = F.eoc(F.seg(t, .2, .9));
+    $('dia').setAttribute('stroke-dashoffset', 100 - 100 * du);
+    $('dia').setAttribute('opacity', .95);
+    var ru = F.eoc(F.seg(t, .6, 1.2));
+    $('rad').setAttribute('y2', OY - 500 * ru);
+    $('rad').setAttribute('opacity', ru * .95);
+    var lbU = F.eoc(F.seg(t, 1.0, 1.5));
+    $('dl').setAttribute('opacity', lbU * (1 - F.seg(t, 10.5, 11.0)));
+    $('dl').setAttribute('x', 960); $('dl').setAttribute('y', 670);
+    $('lr').setAttribute('opacity', lbU);
+    $('lr').setAttribute('x', 986); $('lr').setAttribute('y', 378);
+
+    /* P / Q / h：P=(460+50a,620)，Q=(P.x, 620−50√(ab))；取等时 h 线转金 */
+    var a = aOf(t), b = 20 - a, h = Math.sqrt(a * b);
+    var px = 460 + PU * a, qy = OY - PU * h;
+    var equal = Math.abs(a - 10) < .06;
+    $('pd').setAttribute('cx', px); $('pd').setAttribute('cy', OY);
+    $('pd').setAttribute('opacity', F.seg(t, 1.5, 1.8));
+    var hu = F.eic(F.seg(t, 1.5, 3.0));
+    $('hl').setAttribute('x1', px); $('hl').setAttribute('y1', OY);
+    $('hl').setAttribute('x2', px); $('hl').setAttribute('y2', OY - PU * h * hu);
+    $('hl').setAttribute('opacity', .95 * hu);
+    $('hl').setAttribute('stroke', equal ? 'var(--pri-hi)' : 'var(--ter)');   /* 取等：h 与 r 重合成一根金线 */
+    $('qd').setAttribute('cx', px); $('qd').setAttribute('cy', qy);
+    $('qd').setAttribute('opacity', hu * (equal ? 0 : 1));
+    /* 双色分段标注 a（金）/ b（青） */
+    $('la').setAttribute('opacity', F.seg(t, 1.8, 2.1) * .9);
+    $('la').setAttribute('x', (460 + px) / 2 - 26); $('la').setAttribute('y', 660);
+    $('la').textContent = 'a=' + F.fmt(a, 1);
+    $('lb').setAttribute('opacity', F.seg(t, 1.8, 2.1) * .9);
+    $('lb').setAttribute('x', (px + 1460) / 2 - 26); $('lb').setAttribute('y', 660);
+    $('lb').textContent = 'b=' + F.fmt(b, 1);
+    /* h 动态标签 + 缺口 r−h 实时 */
+    $('lh').setAttribute('opacity', hu);
+    $('lh').setAttribute('x', px + 16); $('lh').setAttribute('y', (OY + qy) / 2);
+    $('lh').textContent = 'h=√(ab)≈' + F.fmt(h, 2);
+    $('lg').setAttribute('opacity', hu * .95);
+    $('lg').setAttribute('x', 932); $('lg').setAttribute('y', 410);
+    $('lg').textContent = 'r−h = ' + F.fmt(10 - h, 2);
+    /* Q 点直角块 + 射影定理小字（2.2–3.0 一闪即降权 0.3） */
+    var cgx = 960 - px, cgy = OY - qy, cl = Math.sqrt(cgx * cgx + cgy * cgy) || 1;
+    var ddx = cgx / cl * 14, ddy = cgy / cl * 14;
+    $('ra').setAttribute('d', 'M ' + px + ' ' + (qy + 14) + ' L ' + px + ' ' + qy + ' L ' + (px + ddx) + ' ' + (qy + ddy) +
+      ' L ' + (px + ddx) + ' ' + (qy + ddy + 14) + ' Z');
+    var raF = F.eoc(F.seg(t, 2.2, 2.6));
+    $('ra').setAttribute('opacity', raF * (t < 3.0 ? 1 : .3));
+    $('proj').setAttribute('opacity', raF * (t < 3.0 ? 1 : .3));
+    $('proj').setAttribute('x', Math.min(px - 150, 1180)); $('proj').setAttribute('y', Math.min(qy + 52, 560));
+
+    /* 快照打点：过点弹出（eob 微过冲），随后降权常驻 */
+    SNAPS.forEach(function (s) {
+      var on = t >= s.tm ? 1 : 0;
+      var pop = 1 + .35 * Math.sin(Math.PI * F.seg(t, s.tm, s.tm + .4));
+      s.te.style.opacity = on * (t < s.tm + 1.4 ? .95 : .5);
+      s.te.setAttribute('transform', 'translate(' + (460 + PU * s.a - 30) + ' 696) scale(' + pop + ') translate(' + (-(460 + PU * s.a - 30)) + ' -696)');
+      s.le.style.opacity = on * .8;
+    });
+
+    /* 追跑 HUD：橙条(弦)贴金条(半径)同步生长（30px/单位） */
+    $('hbarO').style.width = (30 * h * hu) + 'px';
+    $('hbarT').textContent = '弦 h=' + F.fmt(h, 2);
+
+    /* 7.2 取等：白闪 W1（0.18s）+爆发 36 粒（种子 21，rMax 320）+双扩散环；7.6 印章 S1 */
+    $('fl').style.opacity = .9 * Math.sin(Math.PI * F.seg(t, 7.2, 7.38));
+    burst.update(t, 7.2, 1.1);
+    var r1 = F.eoc(F.seg(t, 7.2, 8.1));
+    $('ring1').setAttribute('cx', 960); $('ring1').setAttribute('cy', 620); $('ring1').setAttribute('r', 420 * r1);
+    $('ring1').setAttribute('opacity', (1 - r1) * .8);
+    var r2 = F.eoc(F.seg(t, 7.35, 8.4));
+    $('ring2').setAttribute('cx', 960); $('ring2').setAttribute('cy', 620); $('ring2').setAttribute('r', 300 * r2);
+    $('ring2').setAttribute('opacity', (1 - r2) * .6);
+    var su = F.eob(F.seg(t, 7.6, 8.1));
+    var st1 = $('stamp1');
+    st1.style.opacity = su * (t > 10.0 ? .85 : 1);
+    st1.style.transform = 'rotate(-6deg) scale(' + F.lerp(.5, 1, su) + ')';
+
+    /* 10.5–12.0 定格 a=b；直径金光一闪 morph 回 S0 篱笆线（复制变形变奏：反向接桥）+栅栏桩淡入 */
+    var mo = F.eoq(F.seg(t, 10.5, 11.5));
+    $('dia').setAttribute('x1', F.lerp(460, 300, mo));
+    $('dia').setAttribute('x2', F.lerp(1460, 1620, mo));
+    $('dia').setAttribute('y1', F.lerp(620, 540, mo));
+    $('dia').setAttribute('y2', F.lerp(620, 540, mo));
+    postsG.style.opacity = F.eoc(F.seg(t, 11.0, 11.5)) * .9;
+    var flashL = Math.sin(Math.PI * F.seg(t, 10.5, 10.8));      /* 直径标签金光一闪 */
+    $('dia').setAttribute('stroke-width', 4 + 4 * flashL);
+    /* 面积 chip 连闪 19→75→96→100（0.3s/个，eob 逐个过冲） */
+    var ac = $('areaChip'), an = $('areaNum');
+    var acu = F.eob(F.seg(t, 10.5, 10.8));
+    ac.style.opacity = Math.min(1, acu * 2);
+    ac.style.transform = 'translateY(' + ((1 - Math.min(1, acu)) * 14) + 'px)';
+    var NUMS = [19, 75, 96, 100];
+    if (t >= 10.8) {
+      var idx = Math.min(3, Math.floor((t - 10.8) / .3));
+      var ku = Math.min(1, F.seg(t, 10.8 + idx * .3, 11.1 + idx * .3));
+      an.textContent = '× ' + NUMS[idx];
+      an.style.transform = 'scale(' + (1 + .3 * Math.sin(Math.PI * ku)) + ')';
+      an.style.textShadow = '0 0 ' + (8 + 16 * Math.sin(Math.PI * ku)) + 'px rgba(255,215,106,.8)';
+    } else { an.textContent = ''; }
+    /* 半圆构图 10.5–11.5 降权 55%（微呼吸驻留【H15】） */
+    $('semi').style.opacity = F.lerp(1, .55, F.seg(t, 10.5, 11.5)) * (.96 + .04 * Math.sin(2 * Math.PI * 1.2 * t));
+
+    /* 字幕④ 10.8–13.8（3.0s，H26；本页呈现 10.8–12.0，余段 S3 t0–1.8 全亮承接） */
+    F.capShow(document.querySelector('.cap'), t, 10.8, 13.8);
+  }
+};
+</script>
+</body>
+</html>

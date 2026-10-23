@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #grp{position:absolute;inset:0;transform-origin:960px 540px;}
+  #stele{left:620px;top:140px;width:680px;height:430px;}
+  #ttl{position:absolute;left:0;right:0;top:250px;text-align:center;font-size:128px;color:var(--pri-hi);opacity:0;
+    text-shadow:0 0 46px rgba(232,182,76,.4);letter-spacing:.08em;}
+  #cor{position:absolute;left:664px;top:172px;font-size:26px;color:var(--muted);opacity:0;letter-spacing:.2em;}
+  #f4m{position:absolute;left:0;right:0;top:414px;text-align:center;font-size:34px;color:var(--pri);opacity:0;}
+  #b1{position:absolute;left:700px;top:420px;font-size:24px;color:var(--ter);border:2px dashed var(--ter);border-radius:10px;padding:6px 16px;opacity:0;}
+  #b2{position:absolute;left:1130px;top:420px;font-size:24px;color:var(--pri-hi);border:2px solid var(--pri);border-radius:10px;padding:6px 16px;opacity:0;}
+  #abc{position:absolute;left:0;right:0;top:470px;text-align:center;opacity:0;font-size:24px;color:var(--sec-hi);}
+  .step{position:absolute;left:0;right:0;text-align:center;font-size:52px;opacity:0;}
+  #s1{top:512px;} #s2{top:618px;} #s3{top:722px;}
+  #f7{position:absolute;left:0;right:0;top:848px;text-align:center;font-size:40px;color:var(--muted);opacity:0;}
+  #f7l{position:absolute;left:0;right:0;top:906px;text-align:center;font-size:26px;color:var(--muted);opacity:0;}
+  #qed{position:absolute;left:1268px;top:714px;font-size:64px;color:var(--pri-hi);opacity:0;}
+  #stamp2{left:1100px;top:300px;font-size:44px;}
+</style>
+</head>
+<body>
+<div id="riseHost" style="position:absolute;inset:0;"></div>
+<svg width="1920" height="1080" style="position:absolute;inset:0;">
+  <circle id="ring1" fill="none" stroke="var(--pri-hi)" stroke-width="3" opacity="0"/>
+  <circle id="ring2" fill="none" stroke="var(--pri)" stroke-width="2" opacity="0"/>
+</svg>
+
+<div id="grp">
+  <div id="stele" class="stele">
+    <div id="cor">凡阶 · 第一式</div>
+    <div id="ttl" class="kai">基本不等式</div>
+    <div id="f4m" class="fx">√(ab) ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div>
+    <span id="b1" class="fx">几何平均 √ab</span><span id="b2" class="fx">算术平均 (a+b)/2</span>
+    <div id="abc" class="chip" style="display:inline-block;">a, b ≥ 0</div>
+  </div>
+  <div id="s1" class="step fx">(a+b)/2 − √(ab)</div>
+  <div id="s2" class="step fx">= (a+b−2√(ab))/2</div>
+  <div id="s3" class="step fx">= (<span data-tok>(√a−√b)²</span>)/2 <span id="ge0">≥ 0</span></div>
+  <div id="qed" class="fx">∎</div>
+</div>
+
+<div id="f7" class="fx">√(ab) ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span> ≤ √((a²+b²)/2)</div>
+<div id="f7l">链条还能往上接</div>
+<div id="burstHost" style="position:absolute;inset:0;"></div>
+<div id="stamp2" class="stamp kai">∎ 得证</div>
+<div class="flash" id="fl"></div>
+<div class="vign"></div>
+<div class="cap">正方形，赢麻了</div>
+<div class="cap" id="cap6">基本不等式 · 凡阶</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var rise = F.makeRise($('riseHost'), 960, 380, 700, 26, 11, 'rgba(255,215,106,.75)');
+var burst1 = F.makeBurst($('burstHost'), 960, 560, 16, 11, 'rgba(255,215,106,.9)', 120);   /* 落地金尘二次激扬（种子 11 变奏） */
+var burst2 = F.makeBurst($('burstHost'), 960, 505, 30, 13, 'rgba(255,215,106,.95)', 300);  /* ∎ 爆发（种子 13） */
+
+window.film = {
+  duration: 17,
+  frame: function (t) {
+    /* 0–0.5 转场：星尘汇拢（上升金尘 26 粒，种子 11）【H15】 */
+    rise.update(t);
+
+    /* 字幕⑤跨镜承接（H26 有意跨镜延续登记）：t0 全亮续驻，0.6–1.0 淡出 */
+    document.querySelector('.cap').style.opacity = 1 - F.seg(t, .6, 1.0);
+
+    /* 0.5–3.0 金匾自 −480px 降落（eob 过冲）+ 落地金尘 + 双金环（520/760px） */
+    var du = F.eob(F.seg(t, .5, 3.0));
+    $('stele').style.transform = 'translateY(' + (F.lerp(-480, 0, Math.min(1, du)) + (du > 1 ? (du - 1) * 60 : 0)) + 'px)';
+    $('stele').style.opacity = Math.min(1, F.seg(t, .5, 1.0) * 2);
+    var gl = .5 + .5 * Math.sin(2 * Math.PI * 2 * t);
+    $('stele').style.boxShadow = '0 0 ' + (40 + 50 * gl) + 'px rgba(232,182,76,' + (.12 + .18 * gl) + ') inset';
+    burst1.update(t, 2.6, .8);
+    var r1 = F.eoc(F.seg(t, 2.6, 3.4));
+    $('ring1').setAttribute('cx', 960); $('ring1').setAttribute('cy', 560);
+    $('ring1').setAttribute('r', 520 * r1); $('ring1').style.opacity = (1 - r1) * .7;
+    var r2 = F.eoc(F.seg(t, 2.8, 3.8));
+    $('ring2').setAttribute('cx', 960); $('ring2').setAttribute('cy', 560);
+    $('ring2').setAttribute('r', 760 * r2); $('ring2').style.opacity = (1 - r2) * .5;
+    /* 匾内题字点亮；匾下 F4 缩影+双徽章+chip 归位（4.0 起降权 0.6） */
+    $('ttl').style.opacity = F.eoc(F.seg(t, 2.4, 3.0));
+    $('cor').style.opacity = F.eoc(F.seg(t, 2.6, 3.2)) * .9;
+    var dock = F.eic(F.seg(t, 3.0, 3.5));
+    var dimS = F.lerp(1, .6, F.seg(t, 4.0, 4.5));
+    $('f4m').style.opacity = dock * dimS;
+    $('b1').style.opacity = F.eic(F.seg(t, 3.2, 3.6)) * dimS;
+    $('b2').style.opacity = F.eic(F.seg(t, 3.4, 3.8)) * dimS;
+    $('abc').style.opacity = F.eoc(F.seg(t, 3.6, 4.0)) * dimS;
+    $('abc').style.left = '0px'; $('abc').style.top = '480px';
+    /* abc 是 .chip inline-block，需居中容器：用 text-align 的父级——置于 stele 内已居中 */
+
+    /* 3.0–6.0 字幕⑥（3.0s，H26） */
+    F.capShow($('cap6'), t, 3.0, 6.0);
+
+    /* 3.0–12.0 F6 三步整式 morph（每行整式入场，token 高亮平方项，"≥0" 金晕呼吸） */
+    var sd = F.lerp(1, .45, F.seg(t, 12.0, 12.4));       /* 12.0 证明行降暗 */
+    var u1 = F.eic(F.seg(t, 3.0, 3.6));
+    $('s1').style.opacity = u1 * sd;
+    $('s1').style.transform = 'translateY(' + ((1 - u1) * 16) + 'px)';
+    var u2 = F.eic(F.seg(t, 6.0, 6.6));
+    $('s2').style.opacity = u2 * sd;
+    $('s2').style.transform = 'translateY(' + ((1 - u2) * 16) + 'px)';
+    var u3 = F.eic(F.seg(t, 9.0, 9.6));
+    $('s3').style.opacity = u3 * sd;
+    $('s3').style.transform = 'translateY(' + ((1 - u3) * 16) + 'px)';
+    F.token($('s3'), t, [[9.6, .8]]);
+    $('ge0').style.textShadow = t > 10 ? '0 0 ' + (10 + 16 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(255,215,106,.85)' : '';
+
+    /* 12.0–12.6 F7 均值链小字 + 跟随小标；14.0–14.5 退场 */
+    var fu = F.eic(F.seg(t, 12.0, 12.6));
+    $('f7').style.opacity = fu * F.lerp(1, .08, F.seg(t, 14.0, 14.5));
+    $('f7l').style.opacity = F.eoc(F.seg(t, 12.4, 12.8)) * F.lerp(1, .08, F.seg(t, 14.0, 14.5));
+
+    /* 14.0–14.8 收官牌组整理：金匾+F4缩影+F6 合体降权（缩放+透明度复合），不清场 */
+    var gu = F.eic(F.seg(t, 14.0, 14.8));
+    $('grp').style.transform = 'scale(' + F.lerp(1, .96, gu) + ')';
+    $('grp').style.opacity = F.lerp(1, .82, gu);
+
+    /* 14.8（影片 1:07.8）∎ 落笔（eob 1.9→1）→ 白闪 W2（0.16s）+ 爆发 30 粒（种子 13） */
+    var qu = F.eob(F.seg(t, 14.8, 15.15));
+    $('qed').style.opacity = qu;
+    $('qed').style.transform = 'scale(' + F.lerp(1.9, 1, qu) + ')';
+    $('qed').style.textShadow = t > 15.4 ? '0 0 ' + (10 + 14 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(255,215,106,.9)' : '';
+    $('fl').style.opacity = .16 * Math.sin(Math.PI * F.seg(t, 14.8, 14.96));
+    burst2.update(t, 14.85, .9);
+
+    /* 15.2（影片 1:08.2）印章 S2「∎ 得证」（−6° 过冲落场） */
+    var su = F.eob(F.seg(t, 15.2, 15.7));
+    var st2 = $('stamp2');
+    st2.style.opacity = su;
+    st2.style.transform = 'rotate(-6deg) scale(' + F.lerp(.5, 1, su) + ')';
+  }
+};
+</script>
+</body>
+</html>

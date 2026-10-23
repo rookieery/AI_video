@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  #bgSlit{position:absolute;left:200px;top:320px;width:190px;height:10px;border:2px solid var(--sec);border-radius:3px;opacity:0;}
+  #bgSq{position:absolute;left:180px;top:480px;width:100px;height:100px;border:2.5px solid var(--pri);border-radius:5px;opacity:0;}
+  #glow{position:absolute;left:360px;top:300px;width:1200px;height:300px;border-radius:50%;
+    background:radial-gradient(50% 50% at 50% 50%,rgba(232,182,76,.10),transparent 70%);opacity:0;}
+  .fxrow{position:absolute;left:0;right:0;text-align:center;opacity:0;}
+  #f1{top:398px;font-size:64px;}
+  #ex{top:398px;font-size:60px;}
+  #f2{top:392px;font-size:62px;padding:16px 44px;border:2px solid var(--pri);border-radius:16px;left:0;right:0;margin:0 auto;width:640px;box-sizing:border-box;}
+  #f3{top:398px;font-size:60px;}
+  #f4w{position:absolute;left:0;right:0;top:398px;text-align:center;transform-origin:50% 0;}
+  #f4{display:inline-block;font-size:60px;padding:18px 48px;border:2.5px solid var(--pri);border-radius:18px;opacity:0;}
+  #hatA,#hatB{position:absolute;font-size:56px;color:var(--pri-hi);opacity:0;top:322px;}
+  #abchip{position:absolute;left:870px;top:548px;opacity:0;font-size:32px;color:var(--sec-hi);border-color:rgba(88,196,212,.4);}
+  #d2L,#d2R{position:absolute;font-size:44px;color:var(--muted);opacity:0;top:400px;}
+  #ins{position:absolute;left:1440px;top:290px;width:390px;height:330px;opacity:0;font-size:24px;}
+  #cols{position:absolute;inset:0;opacity:0;}
+  .col{position:absolute;width:150px;border-radius:8px 8px 0 0;}
+  .colName{position:absolute;width:240px;text-align:center;font-size:26px;color:var(--muted);top:852px;}
+  .colVal{position:absolute;width:240px;text-align:center;font-size:32px;top:884px;}
+  .badge{position:absolute;width:300px;text-align:center;font-size:32px;padding:14px 0;border-radius:14px;opacity:0;}
+  .ring{position:absolute;border:2px solid var(--pri);border-radius:50%;opacity:0;}
+  #halo{position:absolute;border:2px solid var(--pri-hi);border-radius:50%;opacity:0;}
+</style>
+</head>
+<body>
+<div id="bgSlit"></div><div id="bgSq"></div>
+<div id="glow"></div>
+
+<div id="f1" class="fx fxrow">(a−b)² <span data-tok>≥ 0</span></div>
+<div id="ex" class="fx fxrow">a² <span id="mt">− 2ab</span> + b² ≥ 0</div>
+<div id="f2" class="fx fxrow">a² + b² ≥ 2ab</div>
+<div id="hatA" class="fx">√</div><div id="hatB" class="fx">√</div>
+<div id="f3" class="fx fxrow">a + b ≥ 2√(ab)</div>
+<div id="d2L" class="fx">/2</div><div id="d2R" class="fx">/2</div>
+<div id="f4w"><div id="f4" class="fx">√(ab) ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div></div>
+<div id="abchip" class="chip">a, b ≥ 0</div>
+
+<div id="ins" class="panel">
+  <div style="position:absolute;left:30px;top:36px;width:130px;height:130px;background:rgba(232,182,76,.20);border:2px solid var(--pri);border-radius:6px;"></div>
+  <div style="position:absolute;left:30px;top:176px;width:130px;height:130px;background:rgba(88,196,212,.18);border:2px solid var(--sec);border-radius:6px;"></div>
+  <div style="position:absolute;left:30px;top:36px;width:130px;height:130px;font-size:26px;color:var(--pri-hi);display:flex;align-items:center;justify-content:center;" class="fx">a²</div>
+  <div style="position:absolute;left:30px;top:176px;width:130px;height:130px;font-size:26px;color:var(--sec-hi);display:flex;align-items:center;justify-content:center;" class="fx">b²</div>
+  <div style="position:absolute;left:196px;top:52px;width:90px;height:90px;border:2.5px dashed var(--ter);border-radius:6px;"></div>
+  <div style="position:absolute;left:196px;top:52px;width:90px;height:90px;font-size:24px;color:var(--ter);display:flex;align-items:center;justify-content:center;" class="fx">(a−b)²</div>
+  <div style="position:absolute;left:300px;top:52px;width:58px;height:68px;background:repeating-linear-gradient(45deg,rgba(232,182,76,.35) 0 8px,rgba(88,196,212,.30) 8px 16px);border-radius:4px;"></div>
+  <div style="position:absolute;left:300px;top:130px;width:58px;height:68px;background:repeating-linear-gradient(45deg,rgba(232,182,76,.35) 0 8px,rgba(88,196,212,.30) 8px 16px);border-radius:4px;"></div>
+  <div style="position:absolute;left:300px;top:204px;width:58px;height:102px;font-size:22px;color:var(--muted);display:flex;align-items:center;justify-content:center;">ab×2</div>
+  <div style="position:absolute;left:0;right:0;top:286px;text-align:center;font-size:24px;color:var(--muted);">多出的面积 = (a−b)²</div>
+</div>
+
+<div id="cols">
+  <div class="col" id="c1" style="left:585px;background:linear-gradient(180deg,var(--pri),var(--pri-dim));"></div>
+  <div class="col" id="c2" style="left:885px;background:linear-gradient(180deg,var(--sec),rgba(88,196,212,.25));"></div>
+  <div class="col" id="c3" style="left:1185px;background:rgba(255,154,61,.16);border:2.5px dashed var(--ter);border-bottom:none;"></div>
+  <div class="colName" style="left:540px;">a²+b²</div><div class="colName" style="left:840px;">2ab</div><div class="colName" style="left:1140px;">差额 (a−b)²</div>
+  <div class="colVal fx" id="v1" style="left:540px;color:var(--pri-hi);">29</div>
+  <div class="colVal fx" id="v2" style="left:840px;color:var(--sec-hi);">20</div>
+  <div class="colVal fx" id="v3" style="left:1140px;color:var(--ter);">9</div>
+  <div id="axis" style="position:absolute;left:520px;top:840px;width:840px;height:2px;background:var(--line);opacity:0;"></div>
+  <div id="halo" style="left:1198px;top:810px;width:124px;height:124px;"></div>
+</div>
+
+<div class="badge" id="bd1" style="left:250px;top:612px;border:2.5px dashed var(--ter);color:var(--ter);">几何平均 √ab</div>
+<div class="badge" id="bd2" style="left:1370px;top:612px;border:2px solid var(--pri);color:var(--pri-hi);">算术平均 (a+b)/2</div>
+<div class="ring" id="rg1" style="left:310px;top:590px;width:180px;height:110px;"></div>
+<div class="ring" id="rg2" style="left:1430px;top:590px;width:180px;height:110px;"></div>
+
+<div class="vign"></div>
+<div class="cap">平方，永不小于零</div>
+<div class="cap" id="cap3">两个平均，正式见面</div>
+
+<script src="shared.js"></script>
+<script type="module">
+var $ = function (id) { return document.getElementById(id); };
+var f1 = $('f1'), ex = $('ex'), f2 = $('f2'), f3 = $('f3'), f4w = $('f4w'), f4 = $('f4'),
+    ins = $('ins'), cols = $('cols'), mt = $('mt');
+
+function aVal(t) {
+  if (t < 5.5) return 2;
+  if (t < 8.0) return F.lerp(2, 5, F.seg(t, 5.5, 8.0));
+  return 5 + 0.3 * Math.sin(2 * Math.PI * 0.25 * (t - 8));   /* 柱 trio 微动【H15】 */
+}
+
+window.film = {
+  duration: 19,
+  frame: function (t) {
+    /* 转场：S0 矩形降权驻留 + 公式区光晕 */
+    var bgu = F.seg(t, 0, .5);
+    $('bgSlit').style.opacity = F.lerp(.35, .25, bgu);
+    $('bgSq').style.opacity = F.lerp(.35, .25, bgu);
+    var gl = F.eoc(F.seg(t, 0, .6));
+    $('glow').style.opacity = gl * (.6 + .4 * Math.sin(2 * Math.PI * .5 * t));  /* 呼吸【H15】 */
+
+    /* F1 整式入场 0.5–3.0（上浮14px+透明度+微缩复合，eic）；≥0 token 2.4–3.0 */
+    var f1u = F.eic(F.seg(t, .5, 3.0));
+    f1.style.opacity = Math.min(1, f1u * 2.5) * (1 - F.seg(t, 3.0, 3.3));
+    f1.style.transform = 'translateY(' + ((1 - f1u) * 14) + 'px) scale(' + F.lerp(.96, 1, f1u) + ')';
+    F.token(f1, t, [[2.4, .6]]);
+
+    /* 展开式 3.0–3.6（token 重排+金光替换）；−2ab 红闪一瞬转正（全片唯一 --alert 拍） */
+    var exu = F.eic(F.seg(t, 3.0, 3.6));
+    ex.style.opacity = exu * F.lerp(1, .3, F.seg(t, 7.5, 8.0));
+    ex.style.transform = 'translateY(' + ((1 - exu) * -14) + 'px)';
+    if (t < 3.7) {
+      mt.style.color = 'var(--alert)';
+      var rk = .5 + .5 * Math.sin(2 * Math.PI * 6 * t);
+      mt.style.textShadow = '0 0 ' + (10 + 14 * rk) + 'px rgba(255,107,107,.8)';
+    } else { mt.style.color = ''; mt.style.textShadow = ''; }
+
+    /* 四分格插景卡 3.0–3.5 上浮（透明度+自右 40px），5.5 起降权 0.25 常驻 */
+    var iu = F.eic(F.seg(t, 3.0, 3.5));
+    ins.style.opacity = iu * F.lerp(1, .25, F.seg(t, 5.5, 6.0));
+    ins.style.transform = 'translateX(' + ((1 - iu) * 40) + 'px)';
+
+    /* 三根生长柱 5.5–7.5 升起；a 自 2 匀速滑向 5（至 8.0）；读数 29/20/9→50/50/0 */
+    var cu = F.eic(F.seg(t, 5.5, 7.5));
+    cols.style.opacity = F.eoc(F.seg(t, 5.5, 6.0)) * F.lerp(1, .5, F.seg(t, 17.0, 17.6));
+    $('axis').style.opacity = cu;
+    var a = aVal(t), h1 = (a * a + 25) * 5 * cu, h2 = (2 * a * 5) * 5 * cu, h3 = ((a - 5) * (a - 5)) * 5 * cu;
+    var hs = [['c1', h1], ['c2', h2], ['c3', h3]];
+    for (var i = 0; i < 3; i++) {
+      var el = $(hs[i][0]);
+      el.style.height = Math.max(2, hs[i][1]) + 'px';
+      el.style.top = (840 - Math.max(2, hs[i][1])) + 'px';
+    }
+    $('v1').textContent = F.fmt(a * a + 25);
+    $('v2').textContent = F.fmt(2 * a * 5);
+    $('v3').textContent = F.fmt((a - 5) * (a - 5));
+    /* 8.0 差额归零小金晕（不用白闪） */
+    var hk = Math.sin(Math.PI * F.seg(t, 8.0, 8.5));
+    $('halo').style.opacity = Math.max(0, hk) * (1 - F.seg(t, 17.0, 17.6));
+    $('halo').style.transform = 'scale(' + F.lerp(.4, 1.5, hk) + ')';
+
+    /* F2 7.5–8.0 落成（金框呼吸 2.5Hz）；√帽 10.5–11.0 落下；F3 11.0–11.5；F4 12.5–13.5 */
+    var f2u = F.eob(F.seg(t, 7.5, 8.0));
+    f2.style.opacity = f2u * (1 - F.seg(t, 10.8, 11.2));
+    f2.style.transform = 'scale(' + F.lerp(.8, 1, f2u) + ')';
+    var f2gl = .5 + .5 * Math.sin(2 * Math.PI * 2.5 * t);
+    f2.style.boxShadow = '0 0 ' + (10 + 26 * f2gl) + 'px rgba(232,182,76,' + (.15 + .3 * f2gl) + ')';
+    [['hatA', 690], ['hatB', 1090]].forEach(function (it) {
+      var hu = F.eob(F.seg(t, 10.5, 11.0));
+      var he = $(it[0]);
+      he.style.left = it[1] + 'px';
+      he.style.opacity = hu * (1 - F.seg(t, 11.0, 11.3));
+      he.style.transform = 'translateY(' + F.lerp(-60, 0, hu) + 'px)';
+    });
+    var f3u = F.eic(F.seg(t, 11.0, 11.5));
+    f3.style.opacity = f3u * (1 - F.seg(t, 12.2, 12.5));
+    f3.style.transform = 'translateY(' + ((1 - f3u) * -18) + 'px)';
+    /* /2 chip 两侧滑入 11.5–12.2 */
+    [['d2L', 560, 640], ['d2R', 1300, 1220]].forEach(function (it) {
+      var du = F.eic(F.seg(t, 11.5, 12.2));
+      var de = $(it[0]);
+      de.style.left = F.lerp(it[1], it[2], du) + 'px';
+      de.style.opacity = du * (1 - F.seg(t, 12.2, 12.5));
+    });
+    var abu = F.eoc(F.seg(t, 10.8, 11.2));
+    var ab = $('abchip');
+    ab.style.opacity = abu * F.lerp(1, .55, F.seg(t, 12.5, 13.0)) * (t > 13 ? .9 + .1 * Math.sin(2 * Math.PI * .5 * t) : 1);
+    ab.style.transform = 'translateY(' + ((1 - abu) * 10) + 'px)';
+    var f4u = F.eic(F.seg(t, 12.5, 13.5));
+    f4.style.opacity = f4u;
+    f4.style.transform = 'translateY(' + ((1 - f4u) * 16) + 'px) scale(' + F.lerp(.96, 1, f4u) + ')';
+    var f4gl = .5 + .5 * Math.sin(2 * Math.PI * 2.5 * t);
+    f4.style.boxShadow = '0 0 ' + (12 + 30 * f4gl) + 'px rgba(232,182,76,' + (.15 + .3 * f4gl) + ')';
+
+    /* 15.0–17.0：F4 缩 0.34× 沉降为顶部定理牌（y≈110）降权常驻全片 */
+    var pu = F.eic(F.seg(t, 15.0, 17.0));
+    f4w.style.top = F.lerp(398, 86, pu) + 'px';
+    f4w.style.transform = 'scale(' + F.lerp(1, .34, pu) + ')';
+
+    /* 双徽章 15.0–15.8 升起（各一圈扩散环） */
+    [['bd1', 'rg1'], ['bd2', 'rg2']].forEach(function (it) {
+      var bu = F.eic(F.seg(t, 15.0, 15.8));
+      $(it[0]).style.opacity = bu;
+      $(it[0]).style.transform = 'translateY(' + ((1 - bu) * 40) + 'px)';
+      var ru = F.seg(t, 15.2, 16.2);
+      $(it[1]).style.opacity = Math.sin(Math.PI * ru);
+      $(it[1]).style.transform = 'scale(' + F.lerp(.3, 1.8, ru) + ')';
+    });
+
+    /* 字幕② 2.5–5.5；字幕③ 14.5–17.5（各 3.0s，H26） */
+    F.capShow(document.querySelector('.cap'), t, 2.5, 5.5);
+    F.capShow($('cap3'), t, 14.5, 17.5);
+  }
+};
+</script>
+</body>
+</html>
