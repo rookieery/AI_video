@@ -1,0 +1,233 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .big{position:absolute;left:0;width:56%;text-align:center;}
+  .frac{vertical-align:middle;}
+  .tok{position:relative;display:inline-block;perspective:520px;}
+  .tok .one{position:absolute;left:0;top:0;width:100%;text-align:center;color:var(--white);opacity:0;}
+  #G>*{display:inline-block;}
+  #G .bt{display:inline-block;}
+  .ring{position:absolute;width:74px;height:74px;border:2px solid rgba(140,224,236,.85);border-radius:50%;opacity:0;pointer-events:none;}
+  .ring.gold{border-color:rgba(255,215,106,.9);}
+  #gbar{position:absolute;top:-15%;height:130%;width:230px;transform:skewX(-16deg);mix-blend-mode:screen;background:linear-gradient(105deg,rgba(140,224,236,0),rgba(190,230,255,.28) 45%,rgba(255,255,255,.42) 55%,rgba(140,224,236,0));}
+</style>
+</head>
+<body>
+  <!-- general 3-term form: b tokens will become 1 -->
+  <div id="Gglow" class="abs" style="opacity:0;border-radius:50%;pointer-events:none"></div>
+  <div id="G" class="big fx" style="top:70px;font-size:40px;opacity:0;perspective:700px">
+    <span class="sym">(</span><span class="gold">a</span><sub class="gold">1</sub><span class="tok" id="t1"><span class="bt" style="color:var(--cyan)">b<sub>1</sub></span><span class="one">1</span></span><span class="sym">+</span><span class="gold">a</span><sub class="gold">2</sub><span class="tok" id="t2"><span class="bt" style="color:var(--cyan)">b<sub>2</sub></span><span class="one">1</span></span><span class="sym">+</span><span class="gold">a</span><sub class="gold">3</sub><span class="tok" id="t3"><span class="bt" style="color:var(--cyan)">b<sub>3</sub></span><span class="one">1</span></span><span class="sym">)</span><sup class="sym">2</sup>
+    <span id="leq" class="sym" style="margin:0 .1em;position:relative">≤<span id="leqG" style="position:absolute;left:0;top:0;width:100%;text-align:center;color:var(--gold-hi);opacity:0">≤</span></span>
+    <span class="sym">(</span><span class="gold">a</span><sub class="gold">1</sub><sup class="gold">2</sup><span class="sym">+</span><span class="gold">a</span><sub class="gold">2</sub><sup class="gold">2</sup><span class="sym">+</span><span class="gold">a</span><sub class="gold">3</sub><sup class="gold">2</sup><span class="sym">)</span><span class="sym">(</span>
+    <span class="tok" id="t4"><span class="bt" style="color:var(--cyan)">b<sub>1</sub><sup>2</sup></span><span class="one">1</span></span><span class="sym">+</span>
+    <span class="tok" id="t5"><span class="bt" style="color:var(--cyan)">b<sub>2</sub><sup>2</sup></span><span class="one">1</span></span><span class="sym">+</span>
+    <span class="tok" id="t6"><span class="bt" style="color:var(--cyan)">b<sub>3</sub><sup>2</sup></span><span class="one">1</span></span><span class="sym">)</span>
+  </div>
+  <div id="Gclip" class="abs" style="overflow:hidden;pointer-events:none"><div id="gbar" style="opacity:0"></div></div>
+  <div id="Gul" class="abs" style="height:3px;border-radius:2px;opacity:0;background:linear-gradient(90deg,rgba(255,215,106,.1),#ffd76a 14%,#ffd76a 86%,rgba(255,215,106,.1));box-shadow:0 0 14px rgba(255,215,106,.55);transform-origin:left center;pointer-events:none"></div>
+  <div id="Gfx" class="abs" style="inset:0;pointer-events:none"></div>
+  <div id="S1" class="big fx" style="top:220px;font-size:50px;opacity:0">
+    <span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><span class="sym">+</span><span class="sym gold">a</span><sub class="sym gold">2</sub><span class="sym">+</span><span class="sym gold">a</span><sub class="sym gold">3</sub><span class="sym">)</span><sup class="sym">2</sup>
+    <span class="sym" style="margin:0 .1em">≤</span>
+    <span class="sym">3</span><span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><sup class="sym gold">2</sup><span class="sym">+</span><span class="sym gold">a</span><sub class="sym gold">2</sub><sup class="sym gold">2</sup><span class="sym">+</span><span class="sym gold">a</span><sub class="sym gold">3</sub><sup class="sym gold">2</sup><span class="sym">)</span>
+  </div>
+  <div id="S2" class="big fx" style="top:350px;font-size:60px;opacity:0">
+    <span class="sym">(</span><span class="sym gold">a</span><span class="sym">+</span><span class="sym gold">b</span><span class="sym">+</span><span class="sym gold">c</span><span class="sym">)</span><sup class="sym">2</sup>
+    <span class="sym" style="margin:0 .1em">≤</span>
+    <span class="sym">3</span><span class="sym">(</span><span class="sym gold">a</span><sup class="sym gold">2</sup><span class="sym">+</span><span class="sym gold">b</span><sup class="sym gold">2</sup><span class="sym">+</span><span class="sym gold">c</span><sup class="sym gold">2</sup><span class="sym">)</span>
+  </div>
+  <div id="S3" class="big fx" style="top:350px;font-size:52px;opacity:0">
+    <span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><span class="sym">+⋯+</span><span class="sym gold">a</span><sub class="sym gold">n</sub><span class="sym">)</span><sup class="sym">2</sup>
+    <span class="sym" style="margin:0 .1em">≤</span>
+    <span class="sym">n</span><span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><sup class="sym gold">2</sup><span class="sym">+⋯+</span><span class="sym gold">a</span><sub class="sym gold">n</sub><sup class="sym gold">2</sup><span class="sym">)</span>
+  </div>
+  <!-- Engel form -->
+  <div id="E" class="big fx" style="top:480px;font-size:48px;opacity:0">
+    <span class="sym">Σ</span>
+    <span class="sym"><span class="frac"><span class="top">x<sub>i</sub><sup>2</sup></span><span class="bot">a<sub>i</sub></span></span></span>
+    <span class="sym" style="margin:0 .25em">≥</span>
+    <span class="sym"><span class="frac"><span class="top">(Σx<sub>i</sub>)<sup>2</sup></span><span class="bot">Σa<sub>i</sub></span></span></span>
+  </div>
+  <div id="Ex" class="big fx" style="top:690px;font-size:42px;opacity:0">
+    <span class="sym">x + y = 1</span>
+    <span class="sym" style="margin:0 .18em">⟹</span>
+    <span class="sym">1/x + 1/y</span>
+    <span class="sym" style="margin:0 .18em">≥</span>
+    <span class="sym"><span class="frac"><span class="top">(1+1)<sup>2</sup></span><span class="bot">x+y</span></span></span>
+    <span class="sym" style="margin:0 .18em">=</span>
+    <span id="eq4" style="display:inline-block;opacity:0;color:var(--gold-hi)">4</span>
+  </div>
+  <!-- curve demo -->
+  <div id="gw" class="abs panel" style="left:1140px;top:180px;width:700px;height:440px;opacity:0">
+    <svg width="700" height="440" viewBox="0 0 840 520">
+      <line x1="70" y1="30" x2="70" y2="450" stroke="rgba(255,255,255,.25)" stroke-width="2"/>
+      <line x1="70" y1="450" x2="810" y2="450" stroke="rgba(255,255,255,.25)" stroke-width="2"/>
+      <line id="minl" x1="70" y1="370" x2="433" y2="370" stroke="rgba(255,255,255,.3)" stroke-width="2" stroke-dasharray="8 8" opacity="0"/>
+      <text id="minv" x="30" y="382" fill="#7a8699" font-size="34" opacity="0">4</text>
+      <g id="gclip">
+        <path id="gcur" fill="none" stroke="#8ce0ec" stroke-width="5"/>
+      </g>
+      <circle id="gdot" r="11" fill="#ffd76a" opacity="0"/>
+      <text id="gval" fill="#ffd76a" font-size="38" opacity="0"></text>
+      <text x="790" y="495" fill="#7a8699" font-size="32">x</text>
+      <text x="20" y="45" fill="#7a8699" font-size="32">f(x)</text>
+    </svg>
+  </div>
+  <div id="stampEq" class="stamp kai" style="left:1140px;top:640px;width:700px;text-align:center;border:none;box-shadow:none;font-size:48px">取等 · x = y = ½</div>
+  <div id="burstHost" class="abs"></div>
+  <div id="wflash" class="abs" style="inset:0;background:#fff;opacity:0"></div>
+  <div class="vign"></div>
+<script src="shared.js"></script>
+<script>
+var F = window.F;
+var $ = function (i) { return document.getElementById(i); };
+/* curve f(x) = 1/x + 1/(1-x), x in [.14,.86] -> panel px */
+function fxc(x) { return 1 / x + 1 / (1 - x); }
+function X(x) { return 70 + (x - .1) / .8 * 730; }
+function Y(v) { return 450 - (v - 3.5) / 5.2 * 400; }
+(function () {
+  var d = '';
+  for (var i = 0; i <= 60; i++) {
+    var x = .14 + (0.86 - .14) * i / 60;
+    d += (i ? 'L' : 'M') + X(x).toFixed(1) + ',' + Y(fxc(x)).toFixed(1);
+  }
+  $('gcur').setAttribute('d', d);
+})();
+var toks = ['t1', 't2', 't3', 't4', 't5', 't6'].map($);
+var burst = F.makeBurst($('burstHost'), 1502, 528, 30, 21, 'rgba(255,255,255,.95)', 300);
+/* --- G intro machinery: geometry measured once, effects built around it --- */
+var G = $('G');
+var Gc = Array.prototype.slice.call(G.children);
+var tokIdx = {}; toks.forEach(function (tk, k) { tokIdx[tk.id] = k; });
+var host = $('Gfx'), hr = host.getBoundingClientRect();
+var TC = toks.map(function (tk) {
+  var r = tk.getBoundingClientRect();
+  return [r.left + r.width / 2 - hr.left, r.top + r.height / 2 - hr.top];
+});
+var rings = [], rings2 = [], sparks = [];
+for (var k = 0; k < toks.length; k++) {
+  var rg = document.createElement('div'); rg.className = 'ring';
+  rg.style.left = (TC[k][0] - 37) + 'px'; rg.style.top = (TC[k][1] - 37) + 'px';
+  host.appendChild(rg); rings.push(rg);
+  var rg2 = document.createElement('div'); rg2.className = 'ring gold';
+  rg2.style.left = (TC[k][0] - 37) + 'px'; rg2.style.top = (TC[k][1] - 37) + 'px';
+  host.appendChild(rg2); rings2.push(rg2);
+  sparks.push(F.makeBurst(host, TC[k][0], TC[k][1], 9, 30 + k, 'rgba(255,215,106,.95)', 66));
+}
+var gr = G.getBoundingClientRect();
+var glow = $('Gglow');
+glow.style.left = (gr.left + gr.width / 2 - 470) + 'px';
+glow.style.top = (gr.top + gr.height / 2 - 140) + 'px';
+glow.style.width = '940px'; glow.style.height = '280px';
+glow.style.background = 'radial-gradient(closest-side, rgba(232,182,76,.15), rgba(88,196,212,.09) 48%, rgba(10,14,26,0) 72%)';
+var gclip2 = $('Gclip');
+gclip2.style.left = gr.left + 'px'; gclip2.style.top = (gr.top - 26) + 'px';
+gclip2.style.width = gr.width + 'px'; gclip2.style.height = (gr.height + 52) + 'px';
+var ul = $('Gul'), gc0 = Gc[0].getBoundingClientRect(), gcN = Gc[Gc.length - 1].getBoundingClientRect();
+ul.style.left = gc0.left + 'px';
+ul.style.top = (gr.bottom - 2) + 'px';
+ul.style.width = (gcN.right - gc0.left) + 'px';
+window.film = {
+  duration: 17,
+  frame: function (t) {
+    /* === G: 3s cinematic intro (film 36.2-39.2) === */
+    var gIn = F.seg(t, .18, .3);
+    var gOut = F.eoc(F.seg(t, 2.85, 3.22));
+    G.style.opacity = gIn * (1 - gOut);
+    G.style.transform = 'translateY(' + (-16 * gOut) + 'px)';
+    G.style.filter = gOut > 0 ? 'blur(' + (6 * gOut).toFixed(2) + 'px)' : 'none';
+    /* act 1: every glyph flies in from depth, blur-to-sharp, bounce landing */
+    for (var i = 0; i < Gc.length; i++) {
+      var el = Gc[i], s0 = .2 + i * .022;
+      var u = F.seg(t, s0, s0 + .42), eb = F.eob(u);
+      var xOut = F.eoc(F.seg(t, 2.85 + i * .007, 3.05 + i * .007));
+      var sc = F.lerp(1.85, 1, eb);
+      var kk = tokIdx[el.id];
+      if (kk !== undefined) {
+        var pl = Math.sin(Math.PI * F.seg(t, 1.5 + kk * .09 + .42, 1.5 + kk * .09 + .82));
+        if (pl > 0) sc *= 1 + .2 * pl;
+      }
+      el.style.opacity = F.eoc(F.seg(t, s0, s0 + .15)) * (1 - xOut);
+      el.style.transform = 'translateY(' + (F.lerp(30, 0, eb) - 20 * xOut) + 'px) rotateY(' + F.lerp(-30, 0, eb) + 'deg) rotateX(' + F.lerp(20, 0, eb) + 'deg) scale(' + sc.toFixed(4) + ')';
+      el.style.filter = u > 0 && u < 1 ? 'blur(' + ((1 - u) * 6).toFixed(2) + 'px)' : 'none';
+    }
+    /* glow: blooms with the landing, breathes, flares at the punch, folds on exit */
+    var breathe = 1 + .05 * Math.sin((t - .35) * 2.4);
+    var pu = Math.sin(Math.PI * F.seg(t, 2.45, 2.85));
+    glow.style.opacity = (.85 * F.seg(t, .35, 1.05) * breathe + .4 * pu) * (1 - gOut);
+    glow.style.transform = 'scale(' + (F.lerp(.72, 1, F.eoc(F.seg(t, .35, 1.05))) - .18 * gOut).toFixed(4) + ')';
+    /* light sweep across the assembled formula */
+    var sw = F.eic(F.seg(t, 1.12, 1.66));
+    $('gbar').style.left = F.lerp(-240, gr.width + 10, sw).toFixed(1) + 'px';
+    $('gbar').style.opacity = Math.min(F.seg(t, 1.12, 1.2), 1 - F.seg(t, 1.58, 1.68));
+    /* act 2: b -> 1 split-flip flips with rings + sparks */
+    for (var k2 = 0; k2 < toks.length; k2++) {
+      var tk = toks[k2], fs = 1.5 + k2 * .09;
+      var u1 = F.eoc(F.seg(t, fs, fs + .21)), u2 = F.eic(F.seg(t, fs + .21, fs + .42));
+      tk.querySelector('.bt').style.transform = 'rotateX(' + (-92 * u1).toFixed(2) + 'deg)';
+      tk.querySelector('.bt').style.opacity = 1 - F.seg(t, fs + .12, fs + .22);
+      tk.querySelector('.one').style.transform = 'rotateX(' + (92 - 92 * u2).toFixed(2) + 'deg)';
+      tk.querySelector('.one').style.opacity = F.seg(t, fs + .21, fs + .3);
+      var ru = F.seg(t, fs + .42, fs + .85);
+      rings[k2].style.transform = 'scale(' + F.lerp(.25, 1.75, F.eoc(ru)).toFixed(4) + ')';
+      rings[k2].style.opacity = ru > 0 && ru < 1 ? ((1 - ru) * .9).toFixed(3) : 0;
+      var ru2 = F.seg(t, fs + .5, fs + .95);
+      rings2[k2].style.transform = 'scale(' + F.lerp(.2, 1.15, F.eoc(ru2)).toFixed(4) + ')';
+      rings2[k2].style.opacity = ru2 > 0 && ru2 < 1 ? ((1 - ru2) * .8).toFixed(3) : 0;
+      sparks[k2].update(t, fs + .44, .5);
+    }
+    /* <= punch: gold flash + underline draws across */
+    $('leq').style.transform = 'scale(' + (1 + .34 * pu).toFixed(4) + ')';
+    $('leqG').style.opacity = pu.toFixed(3);
+    $('leqG').style.textShadow = '0 0 ' + (20 * pu).toFixed(1) + 'px rgba(255,215,106,.95)';
+    ul.style.transform = 'scaleX(' + F.eic(F.seg(t, 2.45, 2.85)).toFixed(4) + ')';
+    ul.style.opacity = F.seg(t, 2.45, 2.55) * (1 - gOut);
+    /* collapsed forms chain: strictly sequential — full display, snap exit (rise+blur like G), then the next enters */
+    var s1 = $('S1'), s2 = $('S2'), s3 = $('S3');
+    var s1o = F.eoc(F.seg(t, 5.0, 5.3));
+    s1.style.opacity = F.seg(t, 3.0, 3.35) * (1 - s1o);
+    s1.style.transform = 'translateY(' + (-14 * s1o) + 'px)';
+    s1.style.filter = s1o > 0 ? 'blur(' + (5 * s1o).toFixed(2) + 'px)' : 'none';
+    F.reveal(s1, t, 3.1, .04);
+    var s2o = F.eoc(F.seg(t, 7.25, 7.55));
+    s2.style.opacity = F.seg(t, 5.5, 5.85) * (1 - s2o);
+    s2.style.transform = 'translateY(' + (-14 * s2o) + 'px)';
+    s2.style.filter = s2o > 0 ? 'blur(' + (5 * s2o).toFixed(2) + 'px)' : 'none';
+    F.reveal(s2, t, 5.6, .04);
+    s3.style.opacity = F.seg(t, 7.75, 8.1) * (1 - .55 * F.seg(t, 9.0, 9.6));
+    F.reveal(s3, t, 7.85, .04);
+    /* Engel */
+    $('E').style.opacity = F.seg(t, 8.9, 9.3);
+    F.reveal($('E'), t, 9.0, .22, .35);
+    $('Ex').style.opacity = F.seg(t, 10.0, 10.4);
+    F.reveal($('Ex'), t, 10.2, .16, .35);
+    var e4 = F.seg(t, 12.0, 12.35);
+    $('eq4').style.opacity = e4;
+    $('eq4').style.transform = 'scale(' + F.lerp(.3, 1, F.eob(e4)) + ')';
+    /* curve demo */
+    $('gw').style.opacity = F.seg(t, 12.4, 12.9);
+    var cu = F.eoc(F.seg(t, 12.6, 14.0));
+    $('gclip').style.clipPath = 'inset(0 ' + ((1 - cu) * 100) + '% 0 0)';
+    $('minl').style.opacity = F.seg(t, 14.6, 15.0);
+    $('minv').style.opacity = F.seg(t, 14.6, 15.0);
+    var x = F.lerp(.15, .5, F.eic(F.seg(t, 12.8, 15.2)));
+    var v = fxc(x);
+    $('gdot').setAttribute('cx', X(x)); $('gdot').setAttribute('cy', Y(v));
+    $('gdot').setAttribute('opacity', F.seg(t, 12.9, 13.2));
+    $('gval').setAttribute('x', Math.min(X(x) + 20, 660));
+    $('gval').setAttribute('y', Math.max(Y(v) - 18, 50));
+    $('gval').setAttribute('opacity', F.seg(t, 13.0, 13.3));
+    $('gval').textContent = 'f(' + F.fmt(x, 2) + ') = ' + F.fmt(v, 2);
+    /* equality burst */
+    $('wflash').style.opacity = .16 * F.seg(t, 15.14, 15.2) * (1 - F.seg(t, 15.2, 15.7));
+    burst.update(t, 15.2, 1.0);
+    $('stampEq').style.opacity = F.seg(t, 15.25, 15.6) * (1 - F.seg(t, 16.5, 16.95));
+    $('stampEq').style.transform = 'rotate(' + (-6 + 2 * (1 - F.seg(t, 15.25, 15.7))) + 'deg)';
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .strip {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    opacity: 0.09; filter: blur(1.5px); pointer-events: none;
+  }
+  .logo { position: absolute; left: 0; right: 0; top: 200px; text-align: center;
+    font-size: 40px; font-weight: 300; letter-spacing: 0.3em; text-indent: 0.3em; color: var(--ink); }
+  .logo b { color: var(--green); font-weight: 600; }
+  .logoline { position: absolute; left: 50%; top: 268px; width: 0; height: 2px;
+    background: var(--green); transform: translateX(-50%); border-radius: 1px; }
+  .main { position: absolute; left: 0; right: 0; top: 400px; text-align: center;
+    font-size: 92px; font-weight: 200; color: var(--ink); letter-spacing: 0.12em; line-height: 1.5; }
+  .main .row { display: block; opacity: 0; }
+  .main .em { color: var(--green); font-weight: 500; }
+  .url { position: absolute; left: 0; right: 0; top: 706px; text-align: center; }
+  .url .chip { font-size: 26px; padding: 14px 34px; color: var(--ink); border-color: #2b5e49;
+    background: rgba(21, 42, 33, 0.55); }
+  .url .play { color: var(--green); font-size: 22px; }
+  .tail { position: absolute; left: 0; right: 0; top: 846px; text-align: center;
+    font-size: 20px; color: var(--faint); letter-spacing: 0.28em; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <svg class="strip" id="strip" width="1400" height="365" viewBox="-90 -90 7764 2160"></svg>
+  <div class="logo" id="logo">VB<b>超排</b></div>
+  <div class="logoline" id="logoline"></div>
+  <h1 class="main">
+    <span class="row" id="r1">从一句对话</span>
+    <span class="row" id="r2">到<span class="em">生产级引擎</span></span>
+  </h1>
+  <div class="url" id="urlwrap">
+    <span class="chip"><span class="play">▶</span>&nbsp; 在线体验 · <span class="num">106.54.241.140:8081</span></span>
+  </div>
+  <div class="tail" id="tail">AI&nbsp; VIBE&nbsp; CODING&nbsp; 全程打造&nbsp; ·&nbsp; 接受同款定制</div>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb" style="opacity:0"></div>
+</div>
+<script type="module">
+import { PLACED, GATE } from './vb-data.js';
+import { seg, outCubic, inOutCubic } from './shared.js';
+
+const NS = 'http://www.w3.org/2000/svg';
+const strip = document.getElementById('strip');
+const flip = document.createElementNS(NS, 'g');
+flip.setAttribute('transform', `translate(0 ${GATE}) scale(1 -1)`);
+strip.appendChild(flip);
+for (const p of PLACED) {
+  const poly = document.createElementNS(NS, 'polygon');
+  poly.setAttribute('points', p.pts);
+  poly.setAttribute('fill', p.color);
+  poly.setAttribute('fill-opacity', '0.5');
+  flip.appendChild(poly);
+}
+
+const $ = id => document.getElementById(id);
+
+window.film = {
+  duration: 4.4,
+  frame(t) {
+    strip.style.transform = `translate(calc(-50% + ${Math.sin(t * 0.35) * 34}px), -50%)`;
+    $('logo').style.opacity = seg(t, 0.25, 0.5);
+    $('logoline').style.width = inOutCubic(seg(t, 0.55, 0.5)) * 190 + 'px';
+    for (const [id, d] of [['r1', 0], ['r2', 1]]) {
+      const k = seg(t, 0.85 + d * 0.35, 0.55);
+      $(id).style.opacity = k;
+      $(id).style.transform = `translateY(${(1 - outCubic(k)) * 40}px)`;
+    }
+    const uk = seg(t, 2.0, 0.5);
+    const pulse = 1 + Math.sin(Math.max(0, t - 2.6) * 3.2) * 0.012 * seg(t, 2.6, 0.3);
+    $('urlwrap').style.opacity = uk;
+    $('urlwrap').style.transform =
+      `translateY(${(1 - outCubic(uk)) * 22}px) scale(${(lerp(uk, 0.95, 1) * pulse).toFixed(4)})`;
+    $('tail').style.opacity = seg(t, 2.9, 0.5);
+    $('fb').style.opacity = seg(t, 3.95, 0.45);
+  },
+};
+const lerp = (x, a, b) => a + (b - a) * x;
+</script>
+</body>
+</html>

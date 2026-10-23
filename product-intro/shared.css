@@ -1,0 +1,46 @@
+/* LUMEN 产品片 — 各画面共享的品牌基调 */
+:root {
+  --bg-0: #050508;
+  --bg-1: #0c0c16;
+  --ink: #f5f2ea;
+  --ink-dim: rgba(245, 242, 234, 0.62);
+  --ink-faint: rgba(245, 242, 234, 0.38);
+  --amber: #ffb35c;
+  --coral: #ff6f6f;
+  --violet: #8b5cf6;
+  --brand-grad: linear-gradient(135deg, var(--amber), var(--coral) 55%, var(--violet));
+}
+
+html, body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg-0);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  color: var(--ink);
+}
+
+.stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: radial-gradient(1300px 850px at 50% 32%, var(--bg-1), var(--bg-0) 72%);
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, 0.55) 100%);
+  pointer-events: none;
+}
+
+/* 镜头切换时页内自带的黑场淡入 */
+.fadeblack {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  opacity: 1;
+}

@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .hint { position: absolute; left: 0; right: 0; top: 292px; text-align: center;
+    font-size: 40px; font-weight: 400; color: #8a8578; letter-spacing: .5em; text-indent: .5em; }
+</style></head><body>
+<div class="stage" id="root"></div>
+<script>
+const root = document.getElementById('root');
+const stage = document.createElement('div'); stage.className = 'stage'; root.appendChild(stage);
+const ring = document.createElement('div'); ring.className = 'dashed-ring'; stage.appendChild(ring);
+const glow = document.createElement('div'); glow.className = 'coin-glow'; stage.appendChild(glow);
+const coin = makeCoin(stage, 1250, 480, 380);
+const hint = document.createElement('div'); hint.className = 'hint'; hint.textContent = '一 部 关 于 钱 的 短 片'; stage.appendChild(hint);
+const subs = makeSubs(root, [
+  [0.0, 5.4, '拼命，是最好的投资吗？', ['是最好的投资吗']],
+  [5.8, 10.1, '三个故事，三群人，三份账单。', ['三份账单']],
+]);
+window.film = {
+  duration: 10.2,
+  ready: document.fonts.ready,
+  frame(t) {
+    // 镜头呼吸：缓慢推近
+    stage.style.transform = `scale(${(1 + t * .004).toFixed(4)})`;
+    // 硬币入场 + 悬浮旋转
+    const ent = eOutBack(span(t, .3, 1.3));
+    const rotY = t * 66;
+    const bob = Math.sin(t * 1.5) * 16;
+    coin.set(rotY, 10 + Math.sin(t * .8) * 4, ent, clamp01(span(t, .3, .8)));
+    coin.el.style.left = (1250 - 190 + Math.sin(t * .35) * 22) + 'px';
+    coin.el.style.top = (480 - 190 + bob) + 'px';
+    // 虚线环 + 光晕
+    const ra = eOutCubic(span(t, .9, 2.2));
+    ring.style.left = 1250 - 250 + 'px'; ring.style.top = 480 + 210 - 62 + 'px';
+    ring.style.width = '500px'; ring.style.height = '124px';
+    ring.style.transform = `rotate(${t * 9}deg) scaleX(${ra})`;
+    ring.style.opacity = .55 * ra;
+    glow.style.left = 1250 - 340 + 'px'; glow.style.top = 480 - 340 + bob * .6 + 'px';
+    glow.style.width = glow.style.height = '680px';
+    glow.style.opacity = .8 * clamp01(span(t, .3, 1.2));
+    hint.style.opacity = .8 * (span(t, 2.6, 3.6) - span(t, 5.0, 5.8));
+    subs(t);
+    // 出场淡出（交给下一页）
+    root.style.opacity = 1 - span(t, 9.8, 10.15);
+  }
+};
+</script></body></html>

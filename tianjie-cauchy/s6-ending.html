@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .big{position:absolute;left:0;width:100%;text-align:center;}
+  .card{position:absolute;width:500px;height:140px;display:flex;align-items:center;
+    padding:0 44px;box-sizing:border-box;opacity:0;}
+  .card .fl{width:46%;text-align:left;font-size:44px;}
+  .card .rl{flex:1;text-align:right;font-size:28px;color:var(--muted);}
+  /* finale: the star track */
+  .cen{position:absolute;text-align:center;}
+  .nd{position:absolute;opacity:0;}
+  .dot{position:absolute;border-radius:50%;opacity:0;}
+  #pulse{position:absolute;top:618px;width:92px;height:4px;border-radius:4px;opacity:0;
+    background:linear-gradient(90deg,rgba(255,215,106,0),#ffd76a);
+    box-shadow:0 0 16px rgba(255,215,106,.85);}
+  #axisLine{position:absolute;left:120px;top:619px;height:2px;width:0;
+    background:linear-gradient(90deg,rgba(244,246,250,.10),rgba(232,182,76,.75));
+    box-shadow:0 0 10px rgba(232,182,76,.25);}
+  #axisArrow{position:absolute;left:1640px;top:611px;width:0;height:0;opacity:0;
+    border-top:10px solid transparent;border-bottom:10px solid transparent;
+    border-left:16px solid var(--gold-hi);filter:drop-shadow(0 0 6px rgba(255,215,106,.8));}
+  .ringE{position:absolute;border-radius:50%;border:2px solid #fff;opacity:0;}
+  #vpNeb{position:absolute;left:1360px;top:300px;width:560px;height:560px;border-radius:50%;
+    opacity:0;filter:blur(4px);
+    background:radial-gradient(circle,rgba(255,226,150,.30),rgba(232,182,76,.10) 42%,rgba(232,182,76,0) 68%);}
+  #shenChar{position:absolute;left:1440px;top:428px;width:400px;font-size:112px;line-height:1.2;
+    color:rgba(255,232,175,.92);text-shadow:0 0 46px rgba(255,215,106,.55);opacity:0;}
+  #shenLabel{position:absolute;left:1390px;top:572px;width:500px;font-size:26px;
+    letter-spacing:.08em;color:rgba(232,182,76,.85);opacity:0;}
+  #shenForm,#shenForm2{position:absolute;left:1320px;width:640px;opacity:0;
+    color:rgba(232,182,76,.40);filter:blur(.4px);
+    text-shadow:0 0 12px rgba(232,182,76,.18);}
+  #shenForm{top:668px;font-size:24px;}
+  #shenForm2{top:716px;font-size:20px;}
+  #finStar{position:absolute;left:1635px;top:615px;width:10px;height:10px;border-radius:50%;
+    background:#fff;box-shadow:0 0 18px 4px rgba(255,225,150,.9);opacity:0;}
+</style>
+</head>
+<body>
+  <div id="topc">
+    <div id="mf" class="big fx" style="top:100px;font-size:44px;opacity:0">
+      <span class="sym">(</span><span class="sym">Σ</span><span class="sym gold">a</span><sub class="sym gold">i</sub><span class="sym cyan">b</span><sub class="sym cyan">i</sub><span class="sym">)</span><sup class="sym">2</sup>
+      <span class="sym" style="margin:0 .12em">≤</span>
+      <span class="sym">(</span><span class="sym">Σ</span><span class="sym gold">a</span><sub class="sym gold">i</sub><sup class="sym gold">2</sup><span class="sym">)</span><span class="sym">(</span><span class="sym">Σ</span><span class="sym cyan">b</span><sub class="sym cyan">i</sub><sup class="sym cyan">2</sup><span class="sym">)</span>
+    </div>
+    <div class="big kai" style="top:230px;font-size:64px">
+      <span class="sym">内</span><span class="sym">积</span><span class="sym">，</span><span class="sym">不</span><span class="sym">超</span><span class="sym">过</span><span class="sym">模</span><span class="sym">长</span><span class="sym">之</span><span class="sym">积</span>
+    </div>
+    <div id="l2" class="big kai" style="top:360px;font-size:64px;color:var(--gold-hi)">
+      <span class="sym">投</span><span class="sym">影</span><span class="sym">，</span><span class="sym">永</span><span class="sym">不</span><span class="sym">超</span><span class="sym">过</span><span class="sym">本</span><span class="sym">体</span>
+    </div>
+  </div>
+  <!-- application cards -->
+  <div id="cards">
+    <div id="cA" class="card panel" style="left:200px;top:560px"><div class="fl fx">QM ≥ AM</div><div class="rl">均值不等式</div></div>
+    <div id="cB" class="card panel" style="left:750px;top:560px"><div class="fl fx">|ρ| ≤ 1</div><div class="rl">相关系数</div></div>
+    <div id="cC" class="card panel" style="left:1300px;top:560px"><div class="fl fx">cos θ</div><div class="rl">AI · 余弦相似度</div></div>
+  </div>
+  <!-- finale: the star track -->
+  <div id="stars" class="abs" style="inset:0"></div>
+  <div id="axisWrap" class="abs">
+    <div id="axisLine"></div>
+    <div id="axisArrow"></div>
+  </div>
+  <div id="pulse"></div>
+  <div id="gFan" class="abs">
+    <div class="dot" id="dFan" style="left:310px;top:610px;width:20px;height:20px;background:#c6d0df;box-shadow:0 0 14px rgba(198,208,223,.6)"></div>
+    <div class="nd cen kai" id="nFan" style="left:170px;top:534px;width:300px;font-size:42px;color:#a9b4c6">凡阶</div>
+    <div class="nd cen fx" id="fFan" style="left:20px;top:668px;width:600px;font-size:24px;color:var(--muted)">a²+b² ≥ 2ab &nbsp;·&nbsp; √(ab) ≤ (a+b)/2</div>
+  </div>
+  <div id="gDi" class="abs">
+    <div class="dot" id="dDi" style="left:728px;top:608px;width:24px;height:24px;background:var(--cyan);box-shadow:0 0 18px rgba(88,196,212,.7)"></div>
+    <div class="nd cen kai" id="nDi" style="left:590px;top:526px;width:300px;font-size:46px;color:var(--cyan-hi)">地阶</div>
+    <div class="nd cen fx" id="fDi" style="left:420px;top:668px;width:640px;font-size:24px;color:var(--muted)">H ≤ G ≤ A ≤ Q &nbsp;·&nbsp; |a+b| ≤ |a|+|b|</div>
+  </div>
+  <div id="gTian" class="abs">
+    <div id="beam" class="abs" style="left:1178px;top:330px;width:84px;height:290px;opacity:0;filter:blur(3px);
+      background:linear-gradient(180deg,rgba(255,215,106,0),rgba(255,215,106,.20))"></div>
+    <div class="dot" id="dTian" style="left:1205px;top:602px;width:30px;height:30px;background:var(--gold-hi);box-shadow:0 0 26px rgba(255,215,106,.85)"></div>
+    <div class="nd cen kai" id="nTian" style="left:1070px;top:466px;width:300px;font-size:64px;color:var(--gold-hi)">天阶</div>
+    <div id="nTianForm" class="cen fx" style="left:770px;top:356px;width:900px;font-size:44px;color:var(--gold-hi);opacity:0">
+      <span class="sym">(</span><span class="sym">Σ</span><span class="sym gold">a</span><sub class="sym gold">i</sub><span class="sym cyan">b</span><sub class="sym cyan">i</sub><span class="sym">)</span><sup class="sym">2</sup>
+      <span class="sym" style="margin:0 .12em">≤</span>
+      <span class="sym">(</span><span class="sym">Σ</span><span class="sym gold">a</span><sub class="sym gold">i</sub><sup class="sym gold">2</sup><span class="sym">)</span><span class="sym">(</span><span class="sym">Σ</span><span class="sym cyan">b</span><sub class="sym cyan">i</sub><sup class="sym cyan">2</sup><span class="sym">)</span>
+    </div>
+    <div class="nd cen fx" id="namesRow" style="left:870px;top:692px;width:700px;font-size:24px;color:rgba(232,182,76,.8)">Cauchy · 1821<span class="muted">　　</span>Bunyakovsky · 1859<span class="muted">　　</span>Schwarz · 1888</div>
+  </div>
+  <div id="ringHost" class="abs"></div>
+  <div id="burstHost" class="abs"></div>
+  <div id="vpGroup" class="abs" style="inset:0;transform-origin:1640px 620px">
+    <div id="vpNeb"></div>
+    <div class="dot" id="vpCore" style="left:1633px;top:613px;width:14px;height:14px;background:#fff;
+      box-shadow:0 0 24px 6px rgba(255,225,150,.95)"></div>
+    <div id="shenChar" class="kai cen">神</div>
+    <div id="shenLabel" class="kai cen">神阶 · Hölder 不等式</div>
+    <div id="shenForm" class="fx cen">Σ|a<sub>i</sub>b<sub>i</sub>| ≤ (Σ|a<sub>i</sub>|<sup>p</sup>)<sup>1/p</sup>(Σ|b<sub>i</sub>|<sup>q</sup>)<sup>1/q</sup></div>
+    <div id="shenForm2" class="fx cen">1/p + 1/q = 1</div>
+  </div>
+  <div id="finStar"></div>
+  <div id="flash" class="abs" style="inset:0;background:#fff;opacity:0"></div>
+  <div class="vign"></div>
+<script src="shared.js"></script>
+<script>
+var F = window.F;
+var $ = function (i) { return document.getElementById(i); };
+function flip(el, t, t0) {
+  var u = F.seg(t, t0, t0 + .75);
+  el.style.opacity = u;
+  el.style.transform = 'rotateX(' + (1 - F.eoc(u)) * 88 + 'deg) scale(' + F.lerp(.94, 1, F.eoc(u)) + ')';
+}
+/* starfield: twinkling dust across the whole stage */
+var STARS = (function () {
+  var r = F.rng(2023), els = [];
+  for (var i = 0; i < 70; i++) {
+    var e = document.createElement('div');
+    e.className = 'p'; e.style.background = '#e8eef8';
+    $('stars').appendChild(e);
+    els.push({ e: e, x: r() * 1920, y: r() * 1080, s: 1.4 + r() * 2.4, v: .4 + r() * 1.6, w: r() * 6.28, b: .10 + r() * .30 });
+  }
+  return els;
+})();
+/* expanding shock rings */
+var RINGS = [
+  { cx: 320,  cy: 620, t0: 13.05, dur: .8,  r: 85,  c: 'rgba(198,208,223,.7)' },
+  { cx: 740,  cy: 620, t0: 14.10, dur: .8,  r: 105, c: 'rgba(88,196,212,.7)' },
+  { cx: 1220, cy: 620, t0: 15.20, dur: .95, r: 185, c: 'rgba(255,215,106,.85)' },
+  { cx: 1220, cy: 620, t0: 15.34, dur: 1.05, r: 275, c: 'rgba(255,215,106,.55)' },
+  { cx: 1640, cy: 620, t0: 17.33, dur: .85, r: 85,  c: 'rgba(255,215,106,.8)' },
+  { cx: 1640, cy: 620, t0: 20.55, dur: .9,  r: 140, c: 'rgba(255,225,150,.8)' }
+];
+(function () {
+  for (var i = 0; i < RINGS.length; i++) {
+    var e = document.createElement('div');
+    e.className = 'ringE'; e.style.borderColor = RINGS[i].c;
+    $('ringHost').appendChild(e); RINGS[i].el = e;
+  }
+})();
+var burst = F.makeBurst($('burstHost'), 1220, 620, 26, 5, 'rgba(255,215,106,.95)', 330);
+/* traveling light dash along the axis */
+function pulse(t, t0, dur, x0, x1, accel) {
+  var u = F.seg(t, t0, t0 + dur);
+  var e = accel ? u * u : F.eic(u);
+  $('pulse').style.left = (F.lerp(x0, x1, e) - 96) + 'px';
+  $('pulse').style.opacity = F.seg(t, t0, t0 + .12) * (1 - F.seg(t, t0 + dur - .10, t0 + dur));
+}
+function nodeIn(t, d, n, f, t0) {
+  var uD = F.eob(F.seg(t, t0, t0 + .55));
+  d.style.opacity = F.seg(t, t0, t0 + .2);
+  d.style.transform = 'scale(' + Math.max(.001, uD) + ')';
+  var uN = F.seg(t, t0 + .15, t0 + .7);
+  n.style.opacity = uN;
+  n.style.transform = 'translateY(' + (1 - F.eoc(uN)) * 18 + 'px)';
+  f.style.opacity = F.seg(t, t0 + .4, t0 + .95);
+}
+window.film = {
+  duration: 21.5,
+  frame: function (t) {
+    /* ---- part 1: summary ---- */
+    $('mf').style.opacity = F.seg(t, .2, .6);
+    F.reveal($('mf'), t, .2, .05);
+    var l1 = document.querySelectorAll('#topc > div')[1];
+    F.reveal(l1, t, 1.6, .12);
+    F.reveal($('l2'), t, 2.9, .12);
+    flip($('cA'), t, 4.8); flip($('cB'), t, 6.6); flip($('cC'), t, 8.4);
+    /* clean exit: everything gone to black, no ghost layers */
+    var ex = F.eoc(F.seg(t, 10.3, 11.1));
+    $('topc').style.opacity = 1 - F.seg(t, 10.3, 11.1);
+    $('topc').style.transform = 'translateY(' + -26 * ex + 'px)';
+    $('cards').style.opacity = 1 - F.seg(t, 10.3, 11.1);
+    $('cards').style.transform = 'scale(' + F.lerp(1, .96, ex) + ')';
+    /* ---- finale: the star track ---- */
+    var sf = F.seg(t, 11.0, 11.9) * F.lerp(1, .32, F.seg(t, 17.25, 18.05)) * (1 - F.seg(t, 20.1, 20.7));
+    for (var i = 0; i < STARS.length; i++) {
+      var p = STARS[i];
+      p.e.style.opacity = sf * p.b * (.5 + .5 * Math.sin(t * p.v + p.w));
+      p.e.style.width = p.e.style.height = p.s + 'px';
+      p.e.style.left = p.x + 'px'; p.e.style.top = p.y + 'px';
+    }
+    /* the number line draws open */
+    var uA = F.eic(F.seg(t, 11.2, 12.4));
+    $('axisLine').style.width = (1520 * uA) + 'px';
+    $('axisArrow').style.opacity = F.seg(t, 12.15, 12.4);
+    if (t < 12.4) pulse(t, 11.2, 1.2, 150, 1545);
+    else if (t < 13.05) pulse(t, 12.7, .3, 150, 320);
+    else if (t < 14.1) pulse(t, 13.75, .35, 320, 740);
+    else if (t < 15.15) pulse(t, 14.8, .35, 740, 1220);
+    else if (t < 17.3) pulse(t, 16.8, .5, 1220, 1640, true);
+    else $('pulse').style.opacity = 0;
+    /* tiers ignite as the pulse reaches them */
+    nodeIn(t, $('dFan'), $('nFan'), $('fFan'), 13.0);
+    nodeIn(t, $('dDi'), $('nDi'), $('fDi'), 14.05);
+    var uT = F.eob(F.seg(t, 15.15, 15.7));
+    $('dTian').style.opacity = F.seg(t, 15.15, 15.35);
+    $('dTian').style.transform = 'scale(' + Math.max(.001, uT) + ')';
+    var br = .5 + .5 * Math.sin((t - 15.6) * 2.2);
+    if (t > 15.6) $('dTian').style.boxShadow = '0 0 ' + (22 + 18 * br) + 'px rgba(255,215,106,' + (.65 + .3 * br) + ')';
+    $('beam').style.opacity = F.seg(t, 15.2, 15.8) * (.5 + .3 * br);
+    var uN = F.seg(t, 15.3, 15.8);
+    $('nTian').style.opacity = uN;
+    $('nTian').style.transform = 'scale(' + F.lerp(.75, 1, F.eob(uN)) + ')';
+    $('nTianForm').style.opacity = F.seg(t, 15.45, 15.75);
+    F.reveal($('nTianForm'), t, 15.45, .05, .3);
+    $('namesRow').style.opacity = F.seg(t, 15.9, 16.4);
+    $('flash').style.opacity = .16 * F.seg(t, 15.18, 15.26) * (1 - F.seg(t, 15.26, 15.7));
+    burst.update(t, 15.2, .95);
+    /* the axis runs on, converging to a vanishing point */
+    var uC = F.eob(F.seg(t, 17.3, 17.8));
+    $('vpCore').style.opacity = F.seg(t, 17.3, 17.5);
+    $('vpCore').style.transform = 'scale(' + Math.max(.001, uC) + ')';
+    var uNeb = F.eoc(F.seg(t, 17.4, 18.25));
+    $('vpNeb').style.opacity = .95 * uNeb * F.lerp(1, .45, F.seg(t, 19.8, 20.4));
+    $('vpNeb').style.transform = 'scale(' + F.lerp(.25, 1, uNeb) + ')';
+    var cf = 1 - .92 * F.seg(t, 19.8, 20.4);
+    var uS = F.seg(t, 17.6, 18.4);
+    $('shenChar').style.opacity = uS * (.78 + .22 * Math.sin(t * 1.5)) * cf;
+    $('shenChar').style.transform = 'translateY(' + (1 - F.eoc(uS)) * 14 + 'px)';
+    $('shenLabel').style.opacity = F.seg(t, 18.0, 18.6) * (.8 + .2 * Math.sin(t * 1.5 + 1.2)) * cf;
+    $('shenForm').style.opacity = F.seg(t, 18.3, 19.0) * (.75 + .25 * Math.sin(t * 1.5 + 2.4)) * cf;
+    $('shenForm2').style.opacity = F.seg(t, 18.35, 19.0) * (.75 + .25 * Math.sin(t * 1.5 + 2.6)) * cf;
+    /* earlier tiers sink to silhouettes, then to nothing */
+    var sil = F.lerp(1, .22, F.seg(t, 17.25, 18.05)) * (1 - F.seg(t, 19.7, 20.35));
+    $('axisWrap').style.opacity = sil;
+    $('gFan').style.opacity = sil; $('gDi').style.opacity = sil; $('gTian').style.opacity = sil;
+    /* everything contracts into one star; it flares once, then goes out */
+    $('vpGroup').style.transform = 'scale(' + F.lerp(1, .16, F.eic(F.seg(t, 19.7, 20.45))) + ')';
+    var fl = Math.max(0, Math.sin(F.seg(t, 20.45, 20.85) * Math.PI));
+    $('finStar').style.opacity = F.seg(t, 20.0, 20.25) * (1 - F.seg(t, 20.95, 21.25)) * (.55 + .55 * fl);
+    $('finStar').style.transform = 'scale(' + (1 + 1.3 * fl) + ')';
+    for (var k = 0; k < RINGS.length; k++) {
+      var R = RINGS[k], u = F.seg(t, R.t0, R.t0 + R.dur), on = u > 0 && u < 1;
+      var sz = on ? F.lerp(10, R.r, F.eoc(u)) : 0;
+      R.el.style.width = R.el.style.height = sz + 'px';
+      R.el.style.left = (R.cx - sz / 2) + 'px'; R.el.style.top = (R.cy - sz / 2) + 'px';
+      R.el.style.opacity = on ? (1 - u) * .8 : 0;
+    }
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .hud { position: absolute; left: 0; right: 0; top: 44px; height: 170px; }
+  .phase { position: absolute; left: 150px; top: 34px; }
+  .density { position: absolute; left: 0; right: 0; top: 0; text-align: center; }
+  .density .big {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 128px; font-weight: 600; line-height: 1.05; color: var(--ink);
+    transition: none;
+  }
+  .density .big.done { color: var(--green); text-shadow: 0 0 46px rgba(46,160,108,0.35); }
+  .density .lab { font-size: 21px; color: var(--faint); letter-spacing: 0.5em; text-indent: 0.5em; margin-top: 6px; }
+  .stack { position: absolute; right: 150px; top: 30px; text-align: right;
+    font-family: var(--mono); font-size: 26px; color: var(--dim); line-height: 1.75; }
+  .stack b { color: var(--ink); font-weight: 500; }
+  .band { position: absolute; left: 0; top: 230px; width: 1920px; }
+  .cards { position: absolute; left: 210px; right: 210px; top: 812px;
+    display: flex; gap: 26px; }
+  .card {
+    flex: 1; border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(38,40,46,0.6); padding: 22px 28px; opacity: 0;
+  }
+  .card .v { font-family: var(--mono); font-size: 46px; color: var(--ink); }
+  .card .v em { font-style: normal; font-size: 22px; color: var(--dim); margin-left: 6px; }
+  .card .k { font-size: 17px; color: var(--faint); margin-top: 6px; letter-spacing: 0.14em; }
+  .card.hl .v { color: var(--green); }
+  .note { position: absolute; left: 0; right: 0; top: 1006px; text-align: center;
+    font-size: 16px; color: var(--faint); letter-spacing: 0.2em; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="hud">
+    <span class="chip phase" id="phaseChip"><span class="dot" id="phaseDot"></span><span id="phaseTxt">探索</span></span>
+    <div class="density">
+      <div class="big num" id="big">75.92%</div>
+      <div class="lab">布 料 利 用 率</div>
+    </div>
+    <div class="stack">
+      用布 <b class="num" id="wv">8,620</b> mm<br>
+      计时 <b class="num" id="tv">0.3</b> s<br>
+      已排 <b class="num" id="nv">0</b><span style="color:var(--faint)"> / 119</span>
+    </div>
+  </div>
+  <div class="band"><svg id="band" width="1920" height="539" viewBox="-90 -110 7764 2180"></svg></div>
+  <div class="cards">
+    <div class="card hl" id="cd1"><div class="v num">86.29<em>%</em></div><div class="k">布料利用率</div></div>
+    <div class="card" id="cd2"><div class="v num">7,584<em>mm</em></div><div class="k">用布长度</div></div>
+    <div class="card" id="cd3"><div class="v num">5.1<em>s</em></div><div class="k">求解时长</div></div>
+    <div class="card" id="cd4"><div class="v num">119<em>片</em></div><div class="k">已排裁片</div></div>
+  </div>
+  <div class="note" id="note">真实求解回放 · 5336#老六订单 · 110 片 / 7 码 · seed 0</div>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb" style="opacity:1"></div>
+</div>
+<script type="module">
+import { PLACED, CURVE, GATE } from './vb-data.js';
+import { seg, outCubic, lerp } from './shared.js';
+
+const NS = 'http://www.w3.org/2000/svg';
+const band = document.getElementById('band');
+
+// 布幅底板 + 顶部标尺（构建一次）
+const bg = document.createElementNS(NS, 'rect');
+bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+bg.setAttribute('width', 7584); bg.setAttribute('height', GATE);
+bg.setAttribute('fill', '#17181c'); bg.setAttribute('stroke', '#34363d'); bg.setAttribute('stroke-width', 8);
+band.appendChild(bg);
+for (let mm = 0; mm <= 7584; mm += 1000) {
+  const tick = document.createElementNS(NS, 'line');
+  tick.setAttribute('x1', mm); tick.setAttribute('x2', mm);
+  tick.setAttribute('y1', mm % 2000 ? -18 : -34); tick.setAttribute('y2', -2);
+  tick.setAttribute('stroke', '#3a3d45'); tick.setAttribute('stroke-width', mm % 2000 ? 5 : 8);
+  band.appendChild(tick);
+  if (mm % 2000 === 0 && mm > 0) {
+    const lab = document.createElementNS(NS, 'text');
+    lab.setAttribute('x', mm); lab.setAttribute('y', -52);
+    lab.setAttribute('text-anchor', 'middle');
+    lab.setAttribute('font-size', 58); lab.setAttribute('fill', '#5c626e');
+    lab.setAttribute('font-family', 'Consolas, monospace');
+    lab.textContent = mm >= 1000 ? (mm / 1000) + 'm' : '0';
+    band.appendChild(lab);
+  }
+}
+const gateLab = document.createElementNS(NS, 'text');
+gateLab.setAttribute('x', 16); gateLab.setAttribute('y', 90);
+gateLab.setAttribute('font-size', 64); gateLab.setAttribute('fill', '#454a53');
+gateLab.textContent = '门幅 1980mm';
+band.appendChild(gateLab);
+
+// 119 片真实布局（外层 g 飞入位移 / 内层 g 绕质心旋转缩放）
+const flip = document.createElementNS(NS, 'g');
+flip.setAttribute('transform', `translate(0 ${GATE}) scale(1 -1)`);
+band.appendChild(flip);
+const FLY_T0 = 0.55, FLY_D = 5.3;
+const anim = PLACED.map((p, i) => {
+  // 质心（外接 bbox 中心即可）
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const pr of p.pts.split(' ')) {
+    const [x, y] = pr.split(',').map(Number);
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const outer = document.createElementNS(NS, 'g');
+  const inner = document.createElementNS(NS, 'g');
+  const poly = document.createElementNS(NS, 'polygon');
+  poly.setAttribute('points', p.pts);
+  poly.setAttribute('fill', p.color); poly.setAttribute('fill-opacity', '0.85');
+  poly.setAttribute('stroke', p.color); poly.setAttribute('stroke-width', 6);
+  inner.appendChild(poly); outer.appendChild(inner); flip.appendChild(outer);
+  const r01 = (n) => { const s = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return s - Math.floor(s); };
+  return {
+    outer, inner, cx, cy,
+    a: FLY_T0 + FLY_D * Math.pow(i / 118, 0.92),
+    dx: (r01(1) - 0.5) * 1500,
+    dy: 1100 + r01(2) * 800,
+    rot: (r01(3) - 0.5) * 150,
+  };
+});
+
+const fb = document.getElementById('fb');
+const big = document.getElementById('big'), wv = document.getElementById('wv');
+const tv = document.getElementById('tv'), nv = document.getElementById('nv');
+const phaseTxt = document.getElementById('phaseTxt'), phaseDot = document.getElementById('phaseDot');
+const PHASES = { exploring: ['探索', '#1f77b4'], compressing: ['压缩', '#ff8c1a'], final: ['完成', '#2ea06c'] };
+const cards = ['cd1', 'cd2', 'cd3', 'cd4'].map(id => document.getElementById(id));
+let lastTxt = '';
+
+window.film = {
+  duration: 8.2,
+  frame(t) {
+    fb.style.opacity = 1 - seg(t, 0.1, 0.4);
+
+    // 裁片飞入（真实放置顺序）
+    let nPlaced = 0;
+    for (const a of anim) {
+      const k = outCubic(seg(t, a.a, 0.45));
+      if (k <= 0) { a.outer.style.display = 'none'; continue; }
+      if (k >= 1) {
+        nPlaced++;
+        a.outer.style.display = '';
+        a.outer.style.opacity = 1;
+        a.outer.setAttribute('transform', 'translate(0 0)');
+        a.inner.setAttribute('transform', 'translate(0 0)');
+        continue;
+      }
+      nPlaced++;
+      a.outer.style.display = '';
+      a.outer.style.opacity = k;
+      a.outer.setAttribute('transform', `translate(${a.dx * (1 - k)} ${a.dy * (1 - k)})`);
+      const r = a.rot * (1 - k), s = 1.2 - 0.2 * k;
+      a.inner.setAttribute('transform',
+        `translate(${a.cx} ${a.cy}) rotate(${r}) scale(${s}) translate(${-a.cx} ${-a.cy})`);
+    }
+
+    // HUD：真实优化曲线逐帧重放（u ∈ [0,1] 映射 elapsed 0.28→5.70）
+    const u = seg(t, FLY_T0, FLY_D);
+    const elapsed = lerp(CURVE[0].t, CURVE[CURVE.length - 1].t, u);
+    let idx = 0;
+    while (idx < CURVE.length - 1 && CURVE[idx + 1].t < elapsed) idx++;
+    const c = CURVE[idx];
+    const txt = c.d.toFixed(2) + '%';
+    if (txt !== lastTxt) { big.textContent = txt; lastTxt = txt; }
+    wv.textContent = Math.round(lerp(8620, 7584, u)).toLocaleString();
+    tv.textContent = elapsed.toFixed(1);
+    nv.textContent = nPlaced;
+    const [pname, pcol] = PHASES[c.p] || PHASES.exploring;
+    if (phaseTxt.textContent !== pname) {
+      phaseTxt.textContent = pname;
+      phaseDot.style.background = pcol;
+    }
+
+    // 定格：数字锁定绿色 + 成绩卡
+    const done = t >= FLY_T0 + FLY_D;
+    big.classList.toggle('done', done);
+    cards.forEach((cd, i) => {
+      const k = seg(t, 6.15 + i * 0.1, 0.45);
+      cd.style.opacity = k;
+      cd.style.transform = `translateY(${(1 - outCubic(k)) * 22}px)`;
+    });
+    document.getElementById('note').style.opacity = seg(t, 6.6, 0.5) * 0.9;
+  },
+};
+</script>
+</body>
+</html>

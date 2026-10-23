@@ -1,0 +1,121 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .fade { position: absolute; inset: 0; }
+  #coins .c { position: absolute; }
+  svg text { font-family: 'HanSerif', serif; }
+</style></head><body>
+<div class="stage" id="root"></div>
+<script>
+const root = document.getElementById('root');
+const stage = document.createElement('div'); stage.className = 'stage'; root.appendChild(stage);
+
+/* ── 场景A：硬币堆 + 房子线稿（local 4.2–20.3） ── */
+const A = document.createElement('div'); A.className = 'fade'; stage.appendChild(A);
+const coins = [];
+for (let i = 0; i < 8; i++) coins.push(makeCoin(A, 700, 660 - i * 51, 230));
+A.insertAdjacentHTML('beforeend', `
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+  <path id="houseP" d="M1050,620 V500 L1210,380 L1370,500 V620 H1050" fill="none" stroke="#d8b36a" stroke-width="5"
+        stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"
+        style="filter: drop-shadow(0 0 14px rgba(216,179,106,.5))"/>
+  <path id="doorP" d="M1150,620 V545 H1270 V620" fill="none" stroke="#9a783e" stroke-width="4" pathLength="1"
+        stroke-dasharray="1" stroke-dashoffset="1"/>
+</svg>`);
+
+/* ── 场景B：房价断崖图（local 20.4–40.0） ── */
+const B = document.createElement('div'); B.className = 'fade chart'; stage.appendChild(B);
+B.insertAdjacentHTML('beforeend', `
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+  <line class="axis" x1="420" y1="690" x2="1540" y2="690"/>
+  <line class="axis" x1="420" y1="200" x2="420" y2="690"/>
+  <line class="grid" x1="420" y1="581" x2="1520" y2="581"/>
+  <line class="grid" x1="420" y1="472" x2="1520" y2="472"/>
+  <line class="grid" x1="420" y1="363" x2="1520" y2="363"/>
+  <line class="grid" x1="420" y1="254" x2="1520" y2="254"/>
+  <text class="tick" x="470" y="740">2015</text><text class="tick" x="757" y="740">2018</text>
+  <text class="tick" x="1123" y="740">2021</text><text class="tick" x="1470" y="740">2024</text>
+  <text class="tick" x="330" y="592" text-anchor="end">1万</text><text class="tick" x="330" y="483" text-anchor="end">2万</text>
+  <text class="tick" x="330" y="374" text-anchor="end">3万</text><text class="tick" x="330" y="265" text-anchor="end">4万</text>
+  <line id="buyLine" x1="420" y1="254" x2="1520" y2="254" stroke="#9a783e" stroke-width="3"
+        stroke-dasharray="16 14" opacity="0"/>
+  <path id="riseGlowB" d="M420,559 L542,494 L664,363 L787,342 L909,320 L1031,276 L1153,254"
+        fill="none" stroke="#d8b36a" stroke-width="26" opacity=".07" stroke-linecap="round"
+        pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="riseGlowA" d="M420,559 L542,494 L664,363 L787,342 L909,320 L1031,276 L1153,254"
+        fill="none" stroke="#d8b36a" stroke-width="12" opacity=".2" stroke-linecap="round"
+        pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="riseP"   d="M420,559 L542,494 L664,363 L787,342 L909,320 L1031,276 L1153,254"
+        fill="none" stroke="#e8c96a" stroke-width="5" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="fallGlowB" d="M1153,254 L1276,385 L1398,494 L1520,559" fill="none" stroke="#9e3b34"
+        stroke-width="28" opacity=".09" stroke-linecap="round"
+        pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="fallGlowA" d="M1153,254 L1276,385 L1398,494 L1520,559" fill="none" stroke="#9e3b34"
+        stroke-width="14" opacity=".26" stroke-linecap="round"
+        pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="fallP"   d="M1153,254 L1276,385 L1398,494 L1520,559" fill="none" stroke="#c04a42"
+        stroke-width="6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <circle id="peakDot" cx="1153" cy="254" r="11" fill="#e8c96a" opacity="0"/>
+  <circle id="botDot"  cx="1520" cy="559" r="11" fill="#c04a42" opacity="0"/>
+  <text id="peakLab" class="lab" x="1085" y="205" opacity="0">4万/平</text>
+  <text id="botLab"  class="lab" x="1405" y="635" fill="#c04a42" opacity="0">1.2万/平</text>
+</svg>`);
+
+const subs = makeSubs(root, [
+  [0.4, 4.0, '那一年，行情好得不像话。'],
+  [4.2, 7.8, '工作随便挑，钱好像随便赚。'],
+  [8.0, 11.8, '工资在涨，胆子涨得更快。', ['胆子']],
+  [12.0, 15.8, '「再不上车，这辈子就买不起了。」'],
+  [16.0, 20.2, '掏空六个钱包，背上三十年房贷。', ['六个钱包', '三十年']],
+  [20.6, 24.2, '燕郊，四万一平，抢到就是赚到。'],
+  [24.4, 28.6, '三年后，同一套房，一万二。', ['一万二']],
+  [28.8, 32.6, '首付跌没了，还倒欠银行一百万。', ['倒欠一百万']],
+  [32.8, 36.2, '断供，法拍，征信黑名单。', ['断供']],
+  [36.4, 40.0, '2024年，全国法拍房挂拍76.8万套。', ['76.8万套']],
+]);
+const year = makeYear(root, '2021', '上车的代价', 0.2, 5.2, 40.1);
+
+window.film = {
+  duration: 40.1,
+  ready: document.fonts.ready,
+  frame(t) {
+    stage.style.transform = `scale(${(1 + t * .0007).toFixed(4)})`;
+    root.style.opacity = t < .3 ? t / .3 : 1;
+    year(t); subs(t);
+
+    /* 场景A */
+    const aA = win(t, 4.2, 20.3, .8, .6); A.style.opacity = aA;
+    if (aA > 0) {
+      coins.forEach((c, i) => {
+        const p = eOutBounce(span(t, 4.4 + i * .78, 5.0 + i * .78));
+        c.set(i * 18 + 90 + Math.sin(t * 1.1 + i) * 6, 68, p, p > 0 ? 1 : 0);
+        c.el.style.left = (700 - 115 + Math.sin(i * 1.7) * 16) + 'px';
+        c.el.style.top = (660 - i * 51 - 115 + (1 - p) * -60) + 'px';
+      });
+      document.getElementById('houseP').style.strokeDashoffset = 1 - eInOut(span(t, 11.6, 14.8));
+      document.getElementById('doorP').style.strokeDashoffset = 1 - eOutCubic(span(t, 13.8, 15.4));
+    }
+
+    /* 场景B：断崖图 + 冲击震屏 */
+    const aB = win(t, 20.4, 40.1, .7, .4); B.style.opacity = aB;
+    if (aB > 0) {
+      const rise = 1 - eInOut(span(t, 21.0, 27.2));
+      const fall = 1 - eInOut(span(t, 28.6, 32.0));
+      ['riseP', 'riseGlowA', 'riseGlowB'].forEach(id => document.getElementById(id).style.strokeDashoffset = rise);
+      ['fallP', 'fallGlowA', 'fallGlowB'].forEach(id => document.getElementById(id).style.strokeDashoffset = fall);
+      document.getElementById('buyLine').style.opacity = .8 * span(t, 29.0, 29.8);
+      const pop = (id, at) => { const p = eOutBack(span(t, at, at + .5));
+        const el = document.getElementById(id); el.setAttribute('r', 11 * p); el.style.opacity = span(t, at, at + .3); };
+      pop('peakDot', 29.6); pop('botDot', 31.2);
+      document.getElementById('peakLab').style.opacity = span(t, 30.0, 30.6);
+      document.getElementById('botLab').style.opacity = span(t, 31.6, 32.2);
+      // 断崖冲击：镜头抖动（衰减正弦）
+      if (t > 28.6 && t < 30.6) { const d = t - 28.6;
+        const s = Math.sin(d * 46) * 10 * Math.exp(-d * 4.5);
+        B.style.transform = `translate(${s}px,${s * .6}px)`; }
+      else B.style.transform = '';
+    }
+  }
+};
+</script></body></html>

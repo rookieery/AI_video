@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .strip {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.12; filter: blur(1px); pointer-events: none;
+  }
+  .mark {
+    position: absolute; left: 0; right: 0; top: 430px; margin: 0;
+    text-align: center; font-size: 150px; font-weight: 200;
+    letter-spacing: 0.18em; text-indent: 0.18em; color: var(--ink);
+  }
+  .mark span { display: inline-block; }
+  .mark .cn { font-weight: 300; }
+  .mark .accent { color: var(--green); font-weight: 600; }
+  .rule {
+    position: absolute; left: 50%; top: 636px; height: 3px; width: 0;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    transform: translateX(-50%); border-radius: 2px;
+  }
+  .sub {
+    position: absolute; left: 0; right: 0; top: 690px; text-align: center;
+    font-size: 30px; font-weight: 300; color: var(--dim);
+    letter-spacing: 0.52em; text-indent: 0.52em;
+  }
+  .chips {
+    position: absolute; left: 0; right: 0; top: 812px;
+    display: flex; justify-content: center; gap: 22px;
+  }
+  .chips .chip:nth-child(2) { transition: none; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <svg class="strip" id="strip" width="1150" height="300" viewBox="-90 -90 7764 2160"></svg>
+  <h1 class="mark" id="mark"><span>V</span><span>B</span><span class="cn">超</span><span class="cn accent">排</span></h1>
+  <div class="rule" id="rule"></div>
+  <p class="sub" id="sub">AI 驱动的牛仔裤智能排料引擎</p>
+  <div class="chips">
+    <span class="chip" id="c1">DXF 母版解析</span>
+    <span class="chip" id="c2">sparrow 实时求解</span>
+    <span class="chip" id="c3">PLT / DXF 一键导出</span>
+  </div>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb" style="opacity:1"></div>
+</div>
+<script type="module">
+import { PLACED, GATE } from './vb-data.js';
+import { seg, outCubic, inOutCubic, outBack } from './shared.js';
+
+// 背景真实排料条带（构建一次，frame 只平移）
+const strip = document.getElementById('strip');
+const flip = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+flip.setAttribute('transform', `translate(0 ${GATE}) scale(1 -1)`);
+strip.appendChild(flip);
+for (const p of PLACED) {
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  poly.setAttribute('points', p.pts);
+  poly.setAttribute('fill', p.color);
+  poly.setAttribute('fill-opacity', '0.5');
+  flip.appendChild(poly);
+}
+
+const fb = document.getElementById('fb');
+const letters = [...document.querySelectorAll('.mark span')];
+const rule = document.getElementById('rule');
+const sub = document.getElementById('sub');
+const chips = [document.getElementById('c1'), document.getElementById('c2'), document.getElementById('c3')];
+
+window.film = {
+  duration: 3.0,
+  frame(t) {
+    fb.style.opacity = 1 - seg(t, 0.05, 0.4);
+    strip.style.transform =
+      `translate(calc(-50% + ${Math.sin(t * 0.4) * 26 - 26}px), -50%)`;
+    letters.forEach((sp, i) => {
+      const x = outBack(seg(t, 0.25 + i * 0.13, 0.55));
+      sp.style.opacity = seg(t, 0.25 + i * 0.13, 0.2);
+      sp.style.transform = `translateY(${(1 - x) * 46}px)`;
+    });
+    rule.style.width = inOutCubic(seg(t, 1.05, 0.6)) * 460 + 'px';
+    sub.style.opacity = seg(t, 1.5, 0.5);
+    chips.forEach((c, i) => {
+      c.style.opacity = seg(t, 2.0 + i * 0.14, 0.4);
+      c.style.transform = `translateY(${(1 - outCubic(seg(t, 2.0 + i * 0.14, 0.5))) * 18}px)`;
+    });
+  },
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .title { position: absolute; left: 150px; top: 78px; font-size: 42px; font-weight: 300;
+    letter-spacing: 0.1em; color: var(--ink); }
+  .subtop { position: absolute; right: 150px; top: 92px; font-size: 19px; color: var(--faint); }
+  .chart { position: absolute; left: 170px; top: 380px; width: 980px; height: 440px; }
+  .grid { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line-soft); }
+  .grid .gl { position: absolute; left: -56px; top: -12px; font-family: var(--mono);
+    font-size: 17px; color: var(--faint); }
+  .bar { position: absolute; width: 168px; bottom: 0; border-radius: 8px 8px 3px 3px;
+    transform-origin: bottom center; }
+  .bar .bv { position: absolute; left: 0; right: 0; top: -58px; text-align: center;
+    font-family: var(--mono); font-size: 34px; color: var(--ink); }
+  .bar .bn { position: absolute; left: -30px; right: -30px; top: 470px; text-align: center;
+    font-size: 19px; color: var(--dim); line-height: 1.5; }
+  .bar .bn b { display: block; color: var(--ink); font-weight: 500; }
+  .dead { position: absolute; left: 0; height: 0; border-top: 2px dashed #d62728; opacity: 0.75; }
+  .dead .dl { position: absolute; right: 0; top: -40px; font-size: 18px; color: #e05c5c;
+    letter-spacing: 0.12em; }
+  .result { position: absolute; left: 1280px; top: 330px; width: 500px; }
+  .result .rb { font-family: var(--mono); font-size: 140px; font-weight: 600;
+    color: var(--green); line-height: 1; text-shadow: 0 0 60px rgba(46,160,108,0.3); }
+  .result .rb em { font-style: normal; font-size: 60px; }
+  .result .rl { font-size: 26px; color: var(--ink); margin-top: 14px; letter-spacing: 0.1em; }
+  .result .rows { margin-top: 34px; font-family: var(--mono); font-size: 21px;
+    color: var(--dim); line-height: 2.0; }
+  .result .rows b { color: var(--ink); font-weight: 500; }
+  .result .win { margin-top: 22px; font-size: 19px; color: var(--green); letter-spacing: 0.1em; }
+  .note { position: absolute; left: 0; right: 0; top: 1008px; text-align: center;
+    font-size: 16px; color: var(--faint); letter-spacing: 0.2em; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1 class="title" id="title">更长预算 · 更高利用率</h1>
+  <div class="subtop" id="subtop">同门幅 · 110 片 · 5336 直筒款</div>
+  <div class="chart" id="chart"></div>
+  <div class="result">
+    <div class="rb num" id="rb">86.29<em>%</em></div>
+    <div class="rl" id="rl">极限运行 · 右尾最优策略</div>
+    <div class="rows" id="rows">
+      策略 race <b>91.31%</b><br>
+      普通运行 5s <b>86.29%</b>
+    </div>
+    <div class="win" id="rwinline">▲ 越过 90% 行业生死线</div>
+  </div>
+  <div class="note" id="note">同总预算三臂对拍实测 · sparrow 引擎</div>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb" style="opacity:1"></div>
+</div>
+<script type="module">
+import { seg, outCubic, outQuint, lerp } from './shared.js';
+
+// 84–93% 坐标系：bottom=0 对应 84%，每 1% ≈ 48.9px
+const PCT0 = 84, PX = 440 / 9;
+const yOf = v => (v - PCT0) * PX;
+const chart = document.getElementById('chart');
+
+// 网格线 84/86/88/90/92
+for (let v = 84; v <= 92; v += 2) {
+  const g = document.createElement('div');
+  g.className = 'grid';
+  g.style.bottom = yOf(v) + 'px';
+  g.innerHTML = `<span class="gl">${v}</span>`;
+  chart.appendChild(g);
+}
+
+// 三根柱：普通 / race / 极限（真实对拍值）
+const BARS = [
+  { x: 60,  v: 86.29, name: '普通运行', t: '5 秒',  col: '#565b66', glow: '', start: 0.75 },
+  { x: 405, v: 91.31, name: '策略 race', t: '门杀续投', col: '#1f77b4', glow: '', start: 1.10 },
+  { x: 750, v: 91.71, name: '极限运行', t: '右尾最优', col: '#2ea06c', glow: '0 0 40px rgba(46,160,108,0.35)', start: 1.45 },
+];
+const barEls = BARS.map(b => {
+  const d = document.createElement('div');
+  d.className = 'bar';
+  d.style.left = b.x + 'px';
+  d.style.height = yOf(b.v) + 'px';
+  d.style.background = `linear-gradient(180deg, ${b.col}, ${b.col}99)`;
+  d.style.boxShadow = b.glow;
+  d.innerHTML = `<div class="bv num">${b.v.toFixed(2)}%</div><div class="bn"><b>${b.name}</b>${b.t}</div>`;
+  d.style.transform = 'scaleY(0)';
+  chart.appendChild(d);
+  return d;
+});
+
+// 90% 行业生死线
+const dead = document.createElement('div');
+dead.className = 'dead';
+dead.style.bottom = yOf(90) + 'px';
+dead.innerHTML = '<span class="dl">行业生死线 90%</span>';
+chart.appendChild(dead);
+
+const $ = id => document.getElementById(id);
+const fade = (node, k, dy = 0) => {
+  node.style.opacity = k;
+  if (dy) node.style.transform = `translateY(${(1 - outCubic(k)) * dy}px)`;
+};
+
+window.film = {
+  duration: 4.4,
+  frame(t) {
+    $('fb').style.opacity = 1 - seg(t, 0.1, 0.4);
+    fade($('title'), seg(t, 0.3, 0.5), 24);
+    $('subtop').style.opacity = seg(t, 0.55, 0.4);
+
+    // 柱条升起（值随高度计数）
+    barEls.forEach((el, i) => {
+      const b = BARS[i];
+      const k = outCubic(seg(t, b.start, 0.85));
+      el.style.transform = `scaleY(${k})`;
+      el.querySelector('.bv').textContent = lerp(84, b.v, k).toFixed(2) + '%';
+      el.querySelector('.bv').style.opacity = k;
+    });
+
+    // 90% 线画过
+    const dk = seg(t, 1.95, 0.55);
+    dead.style.width = outCubic(dk) * 980 + 'px';
+    dead.querySelector('.dl').style.opacity = seg(t, 2.35, 0.35);
+
+    // 右侧大数字：86.29 → 91.71
+    const rk = outQuint(seg(t, 2.45, 0.85));
+    $('rb').innerHTML = lerp(86.29, 91.71, rk).toFixed(2) + '<em>%</em>';
+    fade($('rl'), seg(t, 2.7, 0.45), 16);
+    $('rows').style.opacity = seg(t, 2.95, 0.45);
+    $('rwinline').style.opacity = seg(t, 3.25, 0.45);
+    $('note').style.opacity = seg(t, 3.5, 0.4) * 0.9;
+  },
+};
+</script>
+</body>
+</html>

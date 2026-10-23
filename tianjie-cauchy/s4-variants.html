@@ -1,0 +1,403 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  svg text{font-family:"Cambria Math","Times New Roman",serif;}
+  .op{position:absolute;left:0;width:100%;text-align:center;opacity:0;}
+  #fx{position:absolute;left:0;top:402px;width:100%;height:120px;font-size:58px;}
+  .tk{position:absolute;left:0;top:0;line-height:1.25;white-space:nowrap;will-change:transform,opacity,filter;}
+  .leq{margin:0 .14em;}
+  .tk.w{color:var(--white);} .tk.g{color:var(--gold);} .tk.c{color:var(--cyan);} .tk.hi{color:var(--gold-hi);}
+  #ul{position:absolute;left:0;top:476px;height:4px;border-radius:2px;opacity:0;transform-origin:left center;
+      background:linear-gradient(90deg,rgba(255,215,106,.08),#ffd76a 16%,#ffd76a 84%,rgba(255,215,106,.08));
+      box-shadow:0 0 16px rgba(255,215,106,.5);}
+  #cap{position:absolute;left:0;top:956px;width:100%;height:44px;}
+  #cap .cl{position:absolute;left:0;top:0;width:100%;text-align:center;font-size:32px;color:var(--muted);letter-spacing:.06em;}
+  #cap .c{display:inline-block;opacity:0;}
+  #stage{position:absolute;left:420px;top:540px;width:1080px;height:420px;}
+  #stamp{position:absolute;left:0;top:764px;width:100%;text-align:center;font-size:58px;color:var(--gold-hi);
+         letter-spacing:.12em;opacity:0;text-shadow:0 0 30px rgba(255,215,106,.45);}
+</style>
+</head>
+<body>
+  <div id="op0" class="op fx" style="top:50px;font-size:220px">Σ</div>
+  <div id="op1" class="op fx" style="top:20px;font-size:260px">∫</div>
+  <div id="op2" class="op fx" style="top:50px;font-size:220px">E</div>
+  <div id="op3" class="op fx" style="top:90px;font-size:160px"><span style="color:var(--gold-hi)">⟨</span> , <span style="color:var(--gold-hi)">⟩</span></div>
+
+  <div id="fx" class="fx"></div>
+  <div id="ul"></div>
+
+  <svg id="stage" viewBox="0 0 1080 420">
+    <line id="axis" stroke="rgba(255,255,255,.22)" stroke-width="3" opacity="0"/>
+    <path id="area" fill="rgba(232,182,76,.09)" opacity="0"
+          d="M90,330 C260,60 430,360 570,180 S880,50 1000,320 L1000,405 L90,405 Z"/>
+    <path id="curve" fill="none" stroke="rgba(88,196,212,.55)" stroke-width="5" opacity="0"
+          d="M90,330 C260,60 430,360 570,180 S880,50 1000,320"/>
+    <circle id="halo" r="18" fill="rgba(255,215,106,.22)" opacity="0"/>
+    <circle id="ride" r="7" fill="#ffd76a" opacity="0"/>
+    <line id="reg" stroke="rgba(255,215,106,.7)" stroke-width="3" opacity="0"/>
+    <g id="pool"></g>
+    <circle id="org" cx="180" cy="380" r="9" fill="#f4f6fa" opacity="0"/>
+    <line id="vu" stroke="#e8b64c" stroke-width="8" stroke-linecap="round" opacity="0"/>
+    <polygon id="vuh" fill="#e8b64c" opacity="0"/>
+    <line id="vv" stroke="#58c4d4" stroke-width="8" stroke-linecap="round" opacity="0"/>
+    <polygon id="vvh" fill="#58c4d4" opacity="0"/>
+    <path id="arc" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="3" opacity="0"/>
+    <text id="ulab" fill="#e8b64c" font-size="42" opacity="0">u</text>
+    <text id="vlab" fill="#58c4d4" font-size="42" opacity="0">v</text>
+    <text id="thlab" fill="rgba(255,255,255,.75)" font-size="34" opacity="0">θ</text>
+  </svg>
+
+  <div id="cap"></div>
+  <div id="stamp" class="fx">⟹&nbsp;|ρ|&nbsp;≤&nbsp;1</div>
+  <div id="burstHost" class="abs"></div>
+  <div id="ring" class="abs" style="border:3px solid var(--gold-hi);border-radius:50%;opacity:0"></div>
+  <div id="wflash" class="abs" style="inset:0;background:#fff;opacity:0"></div>
+  <div id="glow" class="abs" style="inset:0;background:radial-gradient(60% 42% at 50% 42%,rgba(232,182,76,.16),rgba(232,182,76,0));opacity:0"></div>
+  <div class="vign"></div>
+<script src="shared.js"></script>
+<script>
+var F = window.F, $ = function (i) { return document.getElementById(i); };
+var D = Math.PI / 180;
+
+/* ============ one pool of particles, four formations, never a cut ============ */
+var CURVE = $('curve'), CL = CURVE.getTotalLength();
+CURVE.setAttribute('stroke-dasharray', CL);
+var CS = [];
+for (var i = 0; i <= 160; i++) CS.push(CURVE.getPointAtLength(CL * i / 160));
+
+var r5 = F.rng(5), P = [];
+for (i = 0; i < 9; i++)                          /* the gold dots of the number line */
+  P.push({ g: 1, lx: 130 + i * 100 + (r5() - .5) * 30, ly: 210 + (r5() - .5) * 170,
+           r: 6 + r5() * 5, a: .3 + r5() * .3, ph: r5() * 6.28 });
+var r9 = F.rng(9);
+for (var j = 0; j < 55; j++) {                   /* the correlated cloud */
+  var cx = 100 + r9() * 880, cy = 210 - (cx - 540) * .26 + (r9() - .5) * 210;
+  var p = { g: 0, cx: cx, cy: Math.max(28, Math.min(392, cy)), r: 3 + r9() * 5,
+            a: .22 + r9() * .35, ph: r9() * 6.28, sa: 18 + r9() * 26, sp: r9() * 6.28, tv: .25 + r9() * .7 };
+  var best = 1e9;                                /* each dot is born on the curve */
+  for (var q = 0; q < CS.length; q++) {
+    var dd = (CS[q].x - cx) * (CS[q].x - cx) + (CS[q].y - p.cy) * (CS[q].y - p.cy);
+    if (dd < best) { best = dd; p.nx = CS[q].x; p.ny = CS[q].y; }
+  }
+  P.push(p);
+}
+for (i = 0; i < 9; i++) {                        /* where the dots land on the curve */
+  var pt = CURVE.getPointAtLength(CL * (i + .5) / 9);
+  P[i].tx = pt.x; P[i].ty = pt.y;
+}
+var NS = 'http://www.w3.org/2000/svg', pool = $('pool'), els = [];
+for (i = 0; i < P.length; i++) {
+  var c = document.createElementNS(NS, 'circle');
+  c.setAttribute('fill', P[i].g ? 'rgba(232,182,76,1)' : 'rgba(244,246,250,1)');
+  c.setAttribute('opacity', 0);
+  pool.appendChild(c); els.push(c);
+}
+/* trend line through the cloud + each dot's projection on it */
+var R0x = 110, R0y = 210 - (110 - 540) * .26, R1x = 950, R1y = 210 - (950 - 540) * .26;
+var RDX = R1x - R0x, RDY = R1y - R0y, RL2 = RDX * RDX + RDY * RDY, RL = Math.sqrt(RL2);
+var REG = $('reg');
+REG.setAttribute('x1', R0x); REG.setAttribute('y1', R0y);
+REG.setAttribute('x2', R1x); REG.setAttribute('y2', R1y);
+REG.setAttribute('stroke-dasharray', RL);
+/* the two vectors the cloud collapses into */
+var O = { x: 180, y: 380 }, LU = 560, LV = 430, AU = 24 * D;
+var dUx = Math.cos(AU), dUy = -Math.sin(AU), dVx = Math.cos(50 * D), dVy = -Math.sin(50 * D);
+function d2seg(px, py, dx, dy, L) {
+  var vx = px - O.x, vy = py - O.y;
+  var tt = Math.max(0, Math.min(L, vx * dx + vy * dy));
+  return (vx - dx * tt) * (vx - dx * tt) + (vy - dy * tt) * (vy - dy * tt);
+}
+for (j = 9; j < P.length; j++) {
+  p = P[j];
+  var tt = ((p.cx - R0x) * RDX + (p.cy - R0y) * RDY) / RL2;
+  p.px = R0x + RDX * tt; p.py = R0y + RDY * tt;
+  p.vu = d2seg(p.cx, p.cy, dUx, dUy, LU) < d2seg(p.cx, p.cy, dVx, dVy, LV);
+}
+
+/* ============ formulas: shared glyphs glide, the rest change clothes ============ */
+function T(h, c, leq) { return { h: h, c: c, leq: !!leq }; }
+var STG = [
+  [T('(', 'w'), T('Σ', 'w'), T('a', 'g'), T('<sub>i</sub>', 'g'), T('b', 'c'), T('<sub>i</sub>', 'c'),
+   T(')', 'w'), T('<sup>2</sup>', 'w'), T('≤', 'w', 1),
+   T('(', 'w'), T('Σ', 'w'), T('a', 'g'), T('<sub>i</sub>', 'g'), T('<sup>2</sup>', 'g'), T(')', 'w'),
+   T('(', 'w'), T('Σ', 'w'), T('b', 'c'), T('<sub>i</sub>', 'c'), T('<sup>2</sup>', 'c'), T(')', 'w')],
+  [T('(', 'w'), T('∫', 'w'), T('f', 'g'), T('·', 'w'), T('g', 'c'),
+   T(')', 'w'), T('<sup>2</sup>', 'w'), T('≤', 'w', 1),
+   T('(', 'w'), T('∫', 'w'), T('f', 'g'), T('<sup>2</sup>', 'g'), T(')', 'w'),
+   T('(', 'w'), T('∫', 'w'), T('g', 'c'), T('<sup>2</sup>', 'c'), T(')', 'w')],
+  [T('(', 'w'), T('E', 'w'), T('[', 'w'), T('X', 'g'), T('Y', 'c'), T(']', 'w'),
+   T(')', 'w'), T('<sup>2</sup>', 'w'), T('≤', 'w', 1),
+   T('E', 'w'), T('[', 'w'), T('X', 'g'), T('<sup>2</sup>', 'g'), T(']', 'w'), T('·', 'w'),
+   T('E', 'w'), T('[', 'w'), T('Y', 'c'), T('<sup>2</sup>', 'c'), T(']', 'w')],
+  [T('|', 'w'), T('⟨', 'hi'), T('u', 'g'), T(',', 'w'), T('v', 'c'), T('⟩', 'hi'), T('|', 'w'), T('≤', 'w', 1),
+   T('‖', 'w'), T('u', 'g'), T('‖', 'w'), T('·', 'w'), T('‖', 'w'), T('v', 'c'), T('‖', 'w')]
+];
+var TS = [5.9, 12.4, 19.1];                       /* when a formula hands over to the next */
+var PT = [3.1, 9.8, 16.2, 21.8];                  /* each stage's punch on the ≤ */
+var mr = document.createElement('div');           /* measure each row once, hidden */
+mr.className = 'fx';
+mr.style.cssText = 'position:absolute;visibility:hidden;left:0;top:0;display:inline-block;white-space:nowrap;font-size:58px;line-height:1.25;';
+document.body.appendChild(mr);
+var fxbox = $('fx'), rows = [];
+for (var s = 0; s < 4; s++) {
+  var toks = STG[s], mspans = [];
+  mr.innerHTML = '';
+  for (var k = 0; k < toks.length; k++) {
+    var sp = document.createElement('span');
+    if (toks[k].leq) sp.className = 'leq';
+    sp.innerHTML = toks[k].h;
+    mr.appendChild(sp); mspans.push(sp);
+  }
+  var x0 = (1920 - mr.offsetWidth) / 2, row = { x0: x0, w: mr.offsetWidth, toks: [] };
+  for (k = 0; k < toks.length; k++) {
+    var live = document.createElement('span');
+    live.className = 'tk ' + toks[k].c + (toks[k].leq ? ' leq' : '');
+    live.innerHTML = toks[k].h;
+    var xx = mspans[k].offsetLeft + x0;
+    live.style.left = xx + 'px';
+    fxbox.appendChild(live);
+    row.toks.push({ el: live, x: xx, key: toks[k].h + '|' + toks[k].c, leq: toks[k].leq });
+  }
+  rows.push(row);
+}
+for (s = 0; s < 3; s++) {                         /* a token with a twin glides from it */
+  var used = {};
+  for (k = 0; k < rows[s + 1].toks.length; k++) {
+    rows[s + 1].toks[k].mx = -1;
+    for (var m = 0; m < rows[s].toks.length; m++)
+      if (!used[m] && rows[s].toks[m].key === rows[s + 1].toks[k].key) {
+        used[m] = 1; rows[s + 1].toks[k].mx = m; break;
+      }
+  }
+  for (m = 0; m < rows[s].toks.length; m++) rows[s].toks[m].handoff = !!used[m];
+}
+
+/* ============ captions: chars roll through ============ */
+var CAP = ['数列 · 离散', '积分 · 函数是无穷维向量', '概率 · 相关系数', '内积空间 · 统一形态'];
+var CE = [0.35, 6.25, 12.75, 20.05], CX = [5.85, 12.35, 18.85];
+var capEls = [];
+(function () {
+  var host = $('cap');
+  for (var s2 = 0; s2 < 4; s2++) {
+    var arr = [], ch = CAP[s2].split(''), ln = document.createElement('div');
+    ln.className = 'cl'; host.appendChild(ln);
+    for (var k2 = 0; k2 < ch.length; k2++) {
+      var sp2 = document.createElement('span');
+      sp2.className = 'c'; sp2.textContent = ch[k2];
+      if (s2 === 3) sp2.style.color = 'var(--gold)';
+      ln.appendChild(sp2); arr.push(sp2);
+    }
+    capEls.push(arr);
+  }
+})();
+
+/* ============ operators: land from depth, leave in a blur ============ */
+var OE = [0.15, 6.05, 12.55, 19.85], OX = [5.75, 12.25, 18.75];
+var UTIP = { x: 420 + O.x + dUx * LU, y: 540 + O.y + dUy * LU };  /* u tip in page px */
+var burst = F.makeBurst($('burstHost'), UTIP.x, UTIP.y, 34, 21, 'rgba(255,215,106,.95)', 400);
+var TP = 21.8;                                    /* the finale punch */
+
+function setHead(pg, x, y, ux, uy) {
+  var bx = x - 26 * ux, by = y - 26 * uy, px = -uy, py = ux;
+  pg.setAttribute('points', x + ',' + y + ' ' + (bx + 11 * px) + ',' + (by + 11 * py) + ' ' + (bx - 11 * px) + ',' + (by - 11 * py));
+}
+
+window.film = {
+  duration: 23,
+  frame: function (t) {
+    /* --- operators --- */
+    for (var i1 = 0; i1 < 4; i1++) {
+      var oe = $('op' + i1), oo = 0, oy = 0, osc = 1, ob = 0;
+      var ue = F.seg(t, OE[i1], OE[i1] + .85);
+      if (ue > 0) {
+        oo = F.seg(t, OE[i1], OE[i1] + .1);
+        oy = F.lerp(34, 0, F.eic(ue));
+        osc = F.lerp(1.42, 1, F.eob(ue));
+        ob = 7 * (1 - ue);
+      }
+      if (i1 < 3) {
+        var xo = F.seg(t, OX[i1], OX[i1] + .5);
+        oo *= 1 - xo; oy -= 40 * xo; osc *= 1 - .16 * xo; ob += 8 * xo;
+      }
+      oe.style.opacity = oo.toFixed(3);
+      oe.style.transform = 'translateY(' + oy.toFixed(1) + 'px) scale(' + osc.toFixed(4) + ')';
+      oe.style.filter = ob > .05 ? 'blur(' + ob.toFixed(2) + 'px)' : 'none';
+    }
+    /* --- captions --- */
+    for (var s3 = 0; s3 < 4; s3++)
+      for (var k3 = 0; k3 < capEls[s3].length; k3++) {
+        var ce = capEls[s3][k3], cy2 = 0;
+        var uc = F.eic(F.seg(t, CE[s3] + k3 * .03, CE[s3] + k3 * .03 + .35));
+        var co = uc; cy2 = 14 * (1 - uc);
+        if (s3 < 3) {
+          var cxo = F.seg(t, CX[s3] + k3 * .018, CX[s3] + k3 * .018 + .3);
+          co *= 1 - cxo; cy2 -= 13 * cxo;
+        }
+        ce.style.opacity = co.toFixed(3);
+        ce.style.transform = 'translateY(' + cy2.toFixed(1) + 'px)';
+      }
+    /* --- formula tokens --- */
+    for (var s4 = 0; s4 < 4; s4++) {
+      var tsE = s4 < 3 ? TS[s4] : 1e9, ts0 = s4 > 0 ? TS[s4 - 1] : 0;
+      for (var k4 = 0; k4 < rows[s4].toks.length; k4++) {
+        var tk = rows[s4].toks[k4], el = tk.el;
+        var to = 0, ty = 0, tx2 = 0, tsc = 1, tbl = 0, trt = 0;
+        if (s4 === 0) {
+          var e0 = 1.0 + k4 * .03, u0 = F.eic(F.seg(t, e0, e0 + .5));
+          to = u0; ty = 26 * (1 - u0); tbl = 6 * (1 - u0);
+        } else if (tk.mx >= 0) {                  /* the twin glides over, no cut */
+          var ug = F.eic(F.seg(t, ts0, ts0 + 1.15));
+          tx2 = F.lerp(rows[s4 - 1].toks[tk.mx].x, tk.x, ug) - tk.x;
+          to = F.seg(t, ts0, ts0 + .1);
+        } else {
+          var e1 = ts0 + .18 + k4 * .028, u1 = F.eic(F.seg(t, e1, e1 + .5));
+          to = u1; ty = 26 * (1 - u1); tbl = 6 * (1 - u1);
+        }
+        if (s4 < 3) {
+          if (tk.handoff) to *= 1 - F.seg(t, tsE, tsE + .15);
+          else {
+            var ex = F.seg(t, tsE + .2 + k4 * .02, tsE + .7 + k4 * .02);
+            to *= 1 - ex; ty -= 22 * ex; trt = (k4 % 2 ? 6 : -6) * ex;
+          }
+        }
+        if (tk.leq) {                             /* the punch lands on the ≤ */
+          var pu = Math.sin(Math.PI * F.seg(t, PT[s4], PT[s4] + .55));
+          if (pu > 0) {
+            tsc = 1 + .32 * pu;
+            el.style.color = 'var(--gold-hi)';
+            el.style.textShadow = '0 0 ' + (26 * pu).toFixed(0) + 'px rgba(255,215,106,.9)';
+          } else { el.style.color = ''; el.style.textShadow = 'none'; }
+        }
+        el.style.opacity = to.toFixed(3);
+        el.style.transform = 'translate(' + tx2.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) rotate(' + trt.toFixed(1) + 'deg) scale(' + tsc.toFixed(4) + ')';
+        el.style.filter = tbl > .05 ? 'blur(' + tbl.toFixed(2) + 'px)' : 'none';
+      }
+    }
+    /* --- the underline sweeps at each punch --- */
+    var sNow = t < TS[0] ? 0 : t < TS[1] ? 1 : t < TS[2] ? 2 : 3;
+    var uu = F.eic(F.seg(t, PT[sNow], PT[sNow] + .65));
+    var uf = sNow < 3 ? 1 - F.seg(t, TS[sNow], TS[sNow] + .35) : 1;
+    var ul = $('ul');
+    ul.style.left = rows[sNow].x0 + 'px';
+    ul.style.width = rows[sNow].w + 'px';
+    ul.style.opacity = (F.seg(t, PT[sNow], PT[sNow] + .12) * uf).toFixed(3);
+    ul.style.transform = 'scaleX(' + uu.toFixed(4) + ')';
+    /* --- number line: opens out, hands over to the curve --- */
+    var au = F.eic(F.seg(t, 0, .85));
+    $('axis').setAttribute('x1', 540 - 450 * au); $('axis').setAttribute('x2', 540 + 450 * au);
+    $('axis').setAttribute('opacity', (.9 * (1 - F.seg(t, 7.0, 7.6))).toFixed(3));
+    /* --- the curve: drawn by the dots, then dissolves into the cloud --- */
+    var cu = F.eic(F.seg(t, 6.8, 7.9));
+    CURVE.setAttribute('stroke-dashoffset', (CL * (1 - cu)).toFixed(1));
+    CURVE.setAttribute('opacity', (.55 * F.seg(t, 6.8, 7.1) * (1 - .67 * F.seg(t, 11.9, 12.8)) * (1 - F.seg(t, 13.0, 13.8))).toFixed(3));
+    var ar = $('area'), aw = F.eic(F.seg(t, 8.2, 9.4));
+    ar.style.clipPath = 'inset(0 ' + ((1 - aw) * 100).toFixed(2) + '% 0 0)';
+    ar.setAttribute('opacity', (F.seg(t, 8.2, 8.6) * (1 - F.seg(t, 11.9, 13.2))).toFixed(3));
+    /* a point of light rides the curve, twice */
+    var rd = F.eic(F.seg(t, 8.0, 9.6)), rd2 = F.eic(F.seg(t, 10.4, 11.6));
+    var rp = rd > 0 && rd < 1 ? rd : (rd2 > 0 && rd2 < 1 ? rd2 : -1);
+    if (rp >= 0) {
+      var rpt = CURVE.getPointAtLength(CL * rp);
+      $('ride').setAttribute('cx', rpt.x); $('ride').setAttribute('cy', rpt.y);
+      $('ride').setAttribute('opacity', (rp === rd2 ? .65 : 1).toFixed(2));
+      $('halo').setAttribute('cx', rpt.x); $('halo').setAttribute('cy', rpt.y);
+      $('halo').setAttribute('r', 16 + 4 * Math.sin(t * 6));
+      $('halo').setAttribute('opacity', (rp === rd2 ? .14 : .22).toFixed(2));
+    } else { $('ride').setAttribute('opacity', 0); $('halo').setAttribute('opacity', 0); }
+    /* --- the trend line through the cloud --- */
+    REG.setAttribute('stroke-dashoffset', (RL * (1 - F.eic(F.seg(t, 14.6, 15.5)))).toFixed(1));
+    REG.setAttribute('opacity', (F.seg(t, 14.6, 14.85) * (1 - F.seg(t, 18.9, 19.4))).toFixed(3));
+    /* --- the two vectors grow, then v swings onto u --- */
+    var gu = F.eoc(F.seg(t, 18.9, 19.9));
+    var aV = F.lerp(50, 24, F.eic(F.seg(t, 20.9, 21.75))) * D;
+    var tux = O.x + dUx * LU * gu, tuy = O.y + dUy * LU * gu;
+    var tvx = O.x + Math.cos(aV) * LV * gu, tvy = O.y - Math.sin(aV) * LV * gu;
+    $('org').setAttribute('opacity', F.seg(t, 18.7, 19.0).toFixed(3));
+    $('vu').setAttribute('opacity', F.seg(t, 18.9, 19.15).toFixed(3));
+    $('vu').setAttribute('x1', O.x); $('vu').setAttribute('y1', O.y);
+    $('vu').setAttribute('x2', tux); $('vu').setAttribute('y2', tuy);
+    $('vuh').setAttribute('opacity', F.seg(t, 19.9, 20.1).toFixed(3));
+    setHead($('vuh'), tux, tuy, dUx, dUy);
+    $('vv').setAttribute('opacity', F.seg(t, 18.9, 19.15).toFixed(3));
+    $('vv').setAttribute('x1', O.x); $('vv').setAttribute('y1', O.y);
+    $('vv').setAttribute('x2', tvx); $('vv').setAttribute('y2', tvy);
+    $('vvh').setAttribute('opacity', F.seg(t, 19.9, 20.1).toFixed(3));
+    setHead($('vvh'), tvx, tvy, Math.cos(aV), -Math.sin(aV));
+    $('ulab').setAttribute('x', tux + 18); $('ulab').setAttribute('y', tuy - 4);
+    $('ulab').setAttribute('opacity', F.seg(t, 20.1, 20.4).toFixed(3));
+    $('vlab').setAttribute('x', tvx + 18); $('vlab').setAttribute('y', tvy - 4);
+    $('vlab').setAttribute('opacity', F.seg(t, 20.1, 20.4).toFixed(3));
+    var degV = aV / D, dAng = Math.max(0, degV - 24);
+    if (t > 20.2 && dAng > 2.5) {
+      var rr = 95, ax1 = O.x + rr * Math.cos(AU), ay1 = O.y - rr * Math.sin(AU);
+      var ax2 = O.x + rr * Math.cos(aV), ay2 = O.y - rr * Math.sin(aV);
+      $('arc').setAttribute('d', 'M' + ax1.toFixed(1) + ',' + ay1.toFixed(1) + ' A' + rr + ',' + rr + ' 0 0 0 ' + ax2.toFixed(1) + ',' + ay2.toFixed(1));
+      $('arc').setAttribute('opacity', (.75 * F.seg(t, 20.2, 20.6) * Math.min(1, dAng / 8)).toFixed(3));
+      var am = (AU + aV) / 2;
+      $('thlab').setAttribute('x', O.x + 134 * Math.cos(am) - 8);
+      $('thlab').setAttribute('y', O.y - 134 * Math.sin(am) + 12);
+      $('thlab').setAttribute('opacity', (.8 * F.seg(t, 20.3, 20.6) * (1 - F.seg(t, 21.5, 21.8))).toFixed(3));
+    } else { $('arc').setAttribute('opacity', 0); $('thlab').setAttribute('opacity', 0); }
+    /* --- the pool: line dots -> curve -> cloud -> vectors --- */
+    for (var i2 = 0; i2 < P.length; i2++) {
+      var pp = P[i2], px2, py2, pr = pp.r, po;
+      if (pp.g) {                                 /* the nine gold dots */
+        var d0 = 1.1 + i2 * .09;
+        var drop = F.eob(F.seg(t, d0, d0 + .75));
+        var bob = 4 * Math.sin(t * 1.3 + pp.ph) * F.seg(t, d0 + .9, d0 + 1.3) * (1 - F.seg(t, 5.6, 6.0));
+        var mg = F.eic(F.seg(t, 5.7 + i2 * .06, 6.9 + i2 * .06));
+        px2 = F.lerp(pp.lx, pp.tx, mg);
+        py2 = F.lerp(pp.ly + bob, pp.ty, mg);
+        var dis = F.seg(t, 6.95 + i2 * .05, 7.45 + i2 * .05);
+        po = F.seg(t, d0, d0 + .18) * pp.a * (1 - dis);
+        pr = pp.r * (1 - .85 * dis);
+      } else {                                    /* the cloud */
+        var j2 = i2 - 9, s0 = 12.0 + j2 * .02;
+        var uu2 = F.eic(F.seg(t, s0, s0 + .95));
+        var sw = Math.sin(uu2 * Math.PI) * pp.sa * Math.sin(pp.sp);
+        var kt = F.eic(F.seg(t, 16.6 + j2 * .004, 17.6 + j2 * .004)) * .24;
+        var bx2 = F.lerp(pp.cx, pp.px, kt), by2 = F.lerp(pp.cy, pp.py, kt);
+        var drf = 3 * (1 - F.seg(t, 18.2, 18.7));
+        px2 = F.lerp(pp.nx, bx2, uu2) - (RDY / RL) * sw + drf * Math.sin(t * .9 + pp.ph);
+        py2 = F.lerp(pp.ny, by2, uu2) + (RDX / RL) * sw + drf * Math.cos(t * .8 + pp.ph);
+        po = Math.min(1, uu2 * 1.6) * pp.a * (.85 + .15 * Math.sin(t * 2 + pp.ph));
+        var c0 = 18.7 + j2 * .018, cu2 = F.eic(F.seg(t, c0, c0 + 1.0));
+        if (cu2 > 0) {                            /* absorbed into a vector */
+          var Ln = pp.vu ? LU : LV, ang = pp.vu ? AU : aV;
+          var tgx = O.x + Math.cos(ang) * Ln * pp.tv * gu, tgy = O.y - Math.sin(ang) * Ln * pp.tv * gu;
+          px2 = F.lerp(px2, tgx, cu2); py2 = F.lerp(py2, tgy, cu2);
+          po *= 1 - F.seg(cu2, .6, 1);
+          pr = pp.r * (1 - .5 * F.seg(cu2, .5, 1));
+        }
+      }
+      var ee = els[i2];
+      ee.setAttribute('cx', px2.toFixed(1)); ee.setAttribute('cy', py2.toFixed(1));
+      ee.setAttribute('r', Math.max(0, pr).toFixed(1));
+      ee.setAttribute('opacity', Math.max(0, Math.min(1, po)).toFixed(3));
+    }
+    /* --- the finale: v meets u, the inequality bites, |ρ| ≤ 1 --- */
+    $('wflash').style.opacity = (.16 * F.seg(t, TP, TP + .06) * (1 - F.seg(t, TP + .06, TP + .6))).toFixed(3);
+    burst.update(t, TP, 1.15);
+    var ru2 = F.eoc(F.seg(t, TP + .05, TP + .95));
+    var ring = $('ring');
+    if (ru2 > 0 && ru2 < 1) {
+      var rs = F.lerp(50, 820, ru2);
+      ring.style.width = ring.style.height = rs + 'px';
+      ring.style.left = (UTIP.x - rs / 2) + 'px';
+      ring.style.top = (UTIP.y - rs / 2) + 'px';
+      ring.style.opacity = ((1 - ru2) * .85).toFixed(3);
+    } else ring.style.opacity = 0;
+    var su = F.eob(F.seg(t, TP + .05, TP + .5));
+    var st = $('stamp');
+    st.style.opacity = F.seg(t, TP + .05, TP + .18).toFixed(3);
+    st.style.transform = 'scale(' + F.lerp(.4, 1, su).toFixed(4) + ') rotate(' + F.lerp(-6, -3, su).toFixed(1) + 'deg)';
+    $('glow').style.opacity = (F.seg(t, 21.2, 21.8) * (.7 + .3 * Math.sin(t * 2.4))).toFixed(3);
+  }
+};
+</script>
+</body>
+</html>

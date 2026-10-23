@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .lamp-mini { position: absolute; left: 470px; top: 390px; width: 300px; height: 240px; }
+  .lamp-mini path, .lamp-mini line {
+    fill: none; stroke: rgba(245, 242, 234, 0.9); stroke-width: 4; stroke-linecap: round;
+    stroke-dasharray: 100; stroke-dashoffset: 100;
+  }
+  .lamp-glow {
+    position: absolute; left: 620px; top: 500px; width: 300px; height: 300px;
+    border-radius: 50%; transform: translate(-50%, -50%);
+    filter: blur(46px); background: #ffb35c; opacity: 0;
+  }
+  .orbit { position: absolute; inset: 0; }
+  .orbit i {
+    position: absolute; left: 0; top: 0; width: 16px; height: 16px; border-radius: 50%;
+    opacity: 0;
+  }
+  .count { position: absolute; left: 1035px; top: 355px; opacity: 0; }
+  .count .label {
+    font-size: 25px; font-weight: 300; color: var(--ink-faint);
+    letter-spacing: 0.5em; margin: 0 0 6px 8px;
+  }
+  .count .num {
+    font-size: 208px; font-weight: 200; line-height: 1;
+    background: var(--brand-grad); -webkit-background-clip: text; background-clip: text;
+    color: transparent; font-variant-numeric: tabular-nums;
+  }
+  .count .unit { font-size: 56px; font-weight: 300; color: var(--ink-dim); margin-left: 14px; }
+  .caption {
+    position: absolute; left: 0; right: 0; top: 895px; margin: 0; text-align: center;
+    font-size: 30px; font-weight: 300; color: var(--ink-dim);
+    letter-spacing: 0.3em; text-indent: 0.3em; opacity: 0;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="lamp-glow" id="glow"></div>
+  <svg class="lamp-mini" viewBox="0 0 400 320">
+    <path d="M 80 260 A 120 120 0 1 1 320 260" pathLength="100"/>
+    <line x1="46" y1="292" x2="354" y2="292" pathLength="100"/>
+  </svg>
+  <div class="orbit" id="orbit"></div>
+  <div class="count" id="count">
+    <p class="label">全光谱光源</p>
+    <span class="num" id="num">0</span><span class="unit">万色</span>
+  </div>
+  <p class="caption" id="caption">从晨光到暮色,还原每一种心情</p>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb"></div>
+</div>
+<script type="module">
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const seg = (t, a, l) => clamp01((t - a) / l);
+const outCubic = x => 1 - Math.pow(1 - x, 3);
+const outExpo = x => x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
+const outBack = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+
+const strokes = [...document.querySelectorAll('.lamp-mini path, .lamp-mini line')];
+const glow = document.getElementById('glow');
+const num = document.getElementById('num');
+const count = document.getElementById('count');
+const caption = document.getElementById('caption');
+const fb = document.getElementById('fb');
+
+const CX = 620, CY = 520, R = 285;
+const orbit = document.getElementById('orbit');
+const dots = [];
+for (let i = 0; i < 12; i++) {
+  const el = document.createElement('i');
+  orbit.appendChild(el);
+  dots.push(el);
+}
+
+window.film = {
+  duration: 3.5,
+  frame(t) {
+    const hue = (t * 70) % 360;
+    glow.style.background = `hsl(${hue}, 90%, 62%)`;
+    glow.style.opacity = 0.55 + 0.15 * Math.sin(t * 2.2);
+
+    strokes.forEach((el, i) => {
+      el.style.strokeDashoffset = 100 * (1 - outCubic(seg(t, 0.1 + i * 0.25, 0.6)));
+    });
+
+    dots.forEach((el, i) => {
+      const ang = ((i * 30 - 90) + t * (16 + (i % 4) * 7)) * Math.PI / 180;
+      const x = CX + R * Math.cos(ang), y = CY + R * Math.sin(ang);
+      const s = clamp01(seg(t, 0.35 + i * 0.04, 0.5));
+      const h = (i * 30 + hue) % 360;
+      el.style.left = `${x - 8}px`;
+      el.style.top = `${y - 8}px`;
+      el.style.background = `hsl(${h}, 92%, 62%)`;
+      el.style.boxShadow = `0 0 22px hsla(${h}, 92%, 62%, 0.9)`;
+      el.style.transform = `scale(${s})`;
+      el.style.opacity = s;
+    });
+
+    const cp = outBack(seg(t, 0.5, 0.7));
+    count.style.opacity = clamp01(seg(t, 0.5, 0.3));
+    count.style.transform = `scale(${0.92 + 0.08 * cp})`;
+    num.textContent = Math.round(outExpo(seg(t, 0.6, 1.7)) * 1600);
+
+    caption.style.opacity = outCubic(seg(t, 2.45, 0.6));
+
+    fb.style.opacity = 1 - clamp01(t / 0.35);
+  }
+};
+</script>
+</body>
+</html>

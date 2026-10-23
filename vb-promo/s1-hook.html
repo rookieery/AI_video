@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap { position: absolute; inset: 0; }
+  .pc { position: absolute; will-change: transform; }
+  .pc svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .pc polygon { fill: none; stroke-width: 2.5; }
+  .doc {
+    position: absolute; left: 0; right: 0; top: 128px; text-align: center;
+  }
+  .ask {
+    position: absolute; left: 0; right: 0; top: 460px; text-align: center;
+    font-size: 96px; font-weight: 300; color: var(--ink); letter-spacing: 0.14em;
+  }
+  .ask .em { color: var(--green); font-weight: 600; }
+  .count {
+    position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+    font-size: 44px; font-weight: 300; color: var(--dim); letter-spacing: 0.3em;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="wrap" id="pieces"></div>
+  <div class="doc"><span class="chip"><span class="dot"></span><span>母版 · 5336#老六订单 · 直筒牛仔裤</span></span></div>
+  <h1 class="count" id="count">110 片裁片 · 7 个尺码</h1>
+  <h1 class="ask" id="ask">怎么排，<span class="em">最省布</span>？</h1>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb" style="opacity:1"></div>
+</div>
+<script type="module">
+import { PIECES } from './vb-data.js';
+import { seg, outCubic, inOutCubic, hash01, lerp } from './shared.js';
+
+// 挑 10 类裁片各一片，环布中圈文字四周（确定性散点）
+const byLabel = new Map(PIECES.map(p => [p.label, p]));
+const labels = [...byLabel.keys()];
+const SLOTS = [
+  { x: 180,  y: 210, s: 0.62, r: -14 }, { x: 1350, y: 170,  s: 0.50, r: 10 },
+  { x: 1560, y: 420, s: 0.55, r: -6 },  { x: 240,  y: 560,  s: 0.46, r: 16 },
+  { x: 1420, y: 720, s: 0.60, r: 8 },   { x: 520,  y: 820,  s: 0.52, r: -10 },
+  { x: 950,  y: 120, s: 0.42, r: 4 },   { x: 880,  y: 880,  s: 0.48, r: -4 },
+  { x: 90,   y: 800,  s: 0.40, r: 22 },  { x: 1690, y: 640,  s: 0.44, r: -18 },
+];
+const host = document.getElementById('pieces');
+const items = labels.map((lab, i) => {
+  const p = byLabel.get(lab);
+  const w = p.x1 - p.x0, h = p.y1 - p.y0, slot = SLOTS[i % SLOTS.length];
+  const div = document.createElement('div');
+  div.className = 'pc';
+  const scale = slot.s * 420 / Math.max(w, h * 1.6); // 按片幅归一视觉尺寸
+  div.style.width = w * scale + 'px';
+  div.style.height = h * scale + 'px';
+  div.innerHTML = `<svg viewBox="${p.x0} ${p.y0} ${w} ${h}"><polygon points="${p.pts}" stroke="${p.color}"/></svg>`;
+  host.appendChild(div);
+  return { div, slot, i, phase: hash01(i) * Math.PI * 2 };
+});
+
+const fb = document.getElementById('fb');
+const count = document.getElementById('count');
+const ask = document.getElementById('ask');
+
+window.film = {
+  duration: 3.2,
+  frame(t) {
+    // 开场黑场退去
+    fb.style.opacity = 1 - seg(t, 0.05, 0.45);
+    // 散落漂移 + 末段向中心收拢（预示求解）
+    const tight = inOutCubic(seg(t, 1.7, 1.3)) * 0.34;
+    for (const it of items) {
+      const dx = Math.sin(t * (0.5 + hash01(it.i + 7) * 0.4) + it.phase) * 14;
+      const dy = Math.cos(t * (0.4 + hash01(it.i + 3) * 0.4) + it.phase * 2) * 10;
+      const cx = lerp(it.slot.x, 760, tight), cy = lerp(it.slot.y, 470, tight);
+      const rot = it.slot.r + Math.sin(t * 0.35 + it.phase) * 4 - tight * it.slot.r * 0.7;
+      it.div.style.transform =
+        `translate(${cx + dx}px, ${cy + dy}px) rotate(${rot}deg) scale(${lerp(0.92, 1, outCubic(seg(t, 0.1 + it.i * 0.06, 0.6)))})`;
+      it.div.style.opacity = outCubic(seg(t, 0.15 + it.i * 0.07, 0.7)) * 0.55;
+    }
+    // 文案两拍
+    count.style.opacity = seg(t, 0.55, 0.4) * (1 - seg(t, 1.85, 0.3));
+    ask.style.opacity = seg(t, 2.0, 0.45);
+    // 收尾快速压黑（切 S2）
+    fb.style.opacity = Math.max(fb.style.opacity, seg(t, 2.95, 0.25));
+  },
+};
+</script>
+</body>
+</html>

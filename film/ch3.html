@@ -1,0 +1,189 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .fade { position: absolute; inset: 0; }
+  svg text { font-family: 'HanSerif', serif; }
+  #jar { position: absolute; }
+  #jarAll { transform-origin: 1630px 612px; transform-box: view-box; }
+  #jar .glowj { position: absolute; left: 1462px; top: 258px; width: 340px; height: 380px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,201,106,.15) 0%, transparent 65%); opacity: 0; }
+  .jnum { position: absolute; left: 1440px; top: 678px; width: 380px; text-align: center;
+    font-weight: 900; font-size: 62px; color: #f0d68a; font-variant-numeric: tabular-nums;
+    filter: drop-shadow(0 0 26px rgba(232,201,106,.28)); opacity: 0; }
+  .jlab { position: absolute; left: 1440px; top: 772px; width: 380px; text-align: center;
+    font-size: 30px; color: #8a8578; letter-spacing: .24em; text-indent: .24em; opacity: 0; }
+  .stamp { position: absolute; left: 1580px; top: 828px; width: 150px; height: 150px;
+    border: 5px solid #d8b36a; border-radius: 20px; background: #141009;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 46px; color: #e8c96a; letter-spacing: .12em; text-indent: .12em; opacity: 0; }
+  .chip { position: absolute; width: 176px; height: 62px; border: 3px solid #5a5445; border-radius: 12px;
+    background: #141009; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 30px; color: #8a8578; letter-spacing: .12em; text-indent: .12em; opacity: 0; }
+</style></head><body>
+<div class="stage" id="root"></div>
+<script>
+const root = document.getElementById('root');
+const stage = document.createElement('div'); stage.className = 'stage'; root.appendChild(stage);
+
+/* ── 双曲线对比图 ── */
+const chart = document.createElement('div'); chart.className = 'fade chart'; stage.appendChild(chart);
+chart.insertAdjacentHTML('beforeend', `
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+  <line class="axis" x1="380" y1="660" x2="1400" y2="660"/>
+  <line class="axis" x1="380" y1="200" x2="380" y2="660"/>
+  <line class="grid" x1="380" y1="522" x2="1380" y2="522"/><line class="grid" x1="380" y1="384" x2="1380" y2="384"/>
+  <line class="grid" x1="380" y1="246" x2="1380" y2="246"/>
+  <text class="tick" x="380" y="710" text-anchor="middle">2019</text>
+  <text class="tick" x="665.7" y="710" text-anchor="middle">2021</text>
+  <text class="tick" x="951.4" y="710" text-anchor="middle">2023</text>
+  <text class="tick" x="1380" y="710" text-anchor="middle">2026</text>
+  <text class="tick" x="330" y="533" text-anchor="end">30万</text>
+  <text class="tick" x="330" y="395" text-anchor="end">60万</text>
+  <text class="tick" x="330" y="257" text-anchor="end">90万</text>
+  <line id="cross21" x1="665.7" y1="200" x2="665.7" y2="660" stroke="#9a783e" stroke-width="3"
+        stroke-dasharray="10 12" opacity="0"/>
+  <path id="buyP" d="M380,568 L522.9,407 L665.7,246 L808.6,393.2 L951.4,503.6 L1094.3,568 L1237.1,591 L1380,600.2"
+        fill="none" stroke="#8a8578" stroke-width="5" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="savGlowB" d="M380,614 L522.9,591 L665.7,558.8 L808.6,503.6 L951.4,439.2 L1094.3,365.6 L1237.1,310.4 L1380,246"
+        fill="none" stroke="#e8c96a" stroke-width="30" opacity=".07" stroke-linecap="round"
+        pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="savGlowA" d="M380,614 L522.9,591 L665.7,558.8 L808.6,503.6 L951.4,439.2 L1094.3,365.6 L1237.1,310.4 L1380,246"
+        fill="none" stroke="#e8c96a" stroke-width="15" opacity=".2" stroke-linecap="round"
+        pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <path id="savP" d="M380,614 L522.9,591 L665.7,558.8 L808.6,503.6 L951.4,439.2 L1094.3,365.6 L1237.1,310.4 L1380,246"
+        fill="none" stroke="#e8c96a" stroke-width="6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+  <text id="buyLab" x="830" y="480" opacity="0" fill="#8a8578" class="lab">杠杆买房者</text>
+  <text id="savLab" x="1170" y="200" opacity="0" class="lab">躺平攒钱者</text>
+</svg>`);
+
+/* ── 右侧存钱罐：五拍（登场 → 逐枚投币 → 十万 → 底气 → 风吹不走） ── */
+const jar = document.createElement('div'); jar.id = 'jar'; jar.className = 'fade'; stage.appendChild(jar);
+jar.insertAdjacentHTML('beforeend', `<div class="glowj"></div>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+<defs><clipPath id="jcl"><path d="M1526,318 L1526,560 Q1526,604 1570,604 L1690,604 Q1734,604 1734,560 L1734,318 Z"/></clipPath></defs>
+<g id="jarAll">
+  <rect id="jfill" x="1526" y="604" width="208" height="0" clip-path="url(#jcl)" fill="rgba(216,179,106,.18)"/>
+  <line id="jsurf" x1="1528" x2="1732" y1="604" y2="604" stroke="rgba(232,201,106,.6)" stroke-width="3" opacity="0"/>
+  <path id="jbody" pathLength="100" fill="none" stroke="#d8b36a" stroke-width="5" stroke-dasharray="100"
+    d="M1520,318 L1520,560 Q1520,610 1570,610 L1690,610 Q1740,610 1740,560 L1740,318"/>
+  <rect id="jlid" pathLength="100" fill="#141009" stroke="#d8b36a" stroke-width="5" stroke-dasharray="100"
+    x="1496" y="282" width="288" height="46" rx="14"/>
+  <ellipse id="jslot" cx="1640" cy="298" rx="44" ry="11" fill="#0a0908" stroke="#9a783e" stroke-width="4" opacity="0"/>
+</g>
+${[0, 1, 2, 3].map(k => `<path id="w${k}" fill="none" stroke="rgba(216,179,106,.6)" stroke-width="4"
+  stroke-linecap="round" stroke-dasharray="3 26" opacity="0"
+  d="${['M-80,250 Q500,208 1020,250 T2010,232', 'M-80,436 Q560,472 1100,424 T2050,462',
+        'M-80,646 Q480,606 1000,654 T2010,616', 'M-80,824 Q540,786 1060,832 T2030,794'][k]}"/>`).join('')}
+</svg>
+<div class="jnum">¥ <span id="jknum">0</span></div>
+<div class="jlab" id="jlab">人均存款</div>
+<div class="stamp" id="stamp">底气</div>
+<div class="chip" id="chip0">风 口</div>
+<div class="chip" id="chip1">杠 杆</div>`);
+const jarAll = jar.querySelector('#jarAll'), jbody = jar.querySelector('#jbody'), jlid = jar.querySelector('#jlid'),
+      jslot = jar.querySelector('#jslot'), jfill = jar.querySelector('#jfill'), jsurf = jar.querySelector('#jsurf'),
+      glowj = jar.querySelector('.glowj'), jnum = jar.querySelector('.jnum'), jknum = jar.querySelector('#jknum'),
+      jlab = jar.querySelector('#jlab'), stamp = jar.querySelector('#stamp'),
+      chips = [jar.querySelector('#chip0'), jar.querySelector('#chip1')],
+      wEls = [0, 1, 2, 3].map(k => jar.querySelector('#w' + k));
+const jarCoins = [];
+for (let i = 0; i < 8; i++) jarCoins.push(makeCoin(jar, 0, 0, 84));
+const CT = i => 9.3 + i * .9;
+
+const subs = makeSubs(root, [
+  [0.2, 3.9, '同一片天空下，还有第三种人。'],
+  [4.1, 7.7, '行情好时，他们没有上头：'],
+  [7.9, 11.5, '不掏钱包，不加杠杆，不追风口。'],
+  [11.7, 15.5, '行情差时，他们手里有粮：', ['手里有粮']],
+  [15.7, 19.5, '房租照付，饭照吃，觉照睡。'],
+  [19.7, 23.9, '2024年，全国人均存款突破十万。', ['十万']],
+  [24.1, 27.9, '别人在还债，他们在攒底气。', ['攒底气']],
+  [28.1, 31.9, '不追风口的人，不会被风吹走。', ['被风吹走']],
+]);
+const year = makeYear(root, '2026', '躺平者的账本', 0.1, 5.2, 32.1);
+
+window.film = {
+  duration: 32.1,
+  ready: document.fonts.ready,
+  frame(t) {
+    stage.style.transform = `scale(${(1 + t * .0006).toFixed(4)})`;
+    root.style.opacity = t < .3 ? t / .3 : 1;
+    year(t); subs(t);
+
+    const aC = win(t, 5.4, 32.0, .7, .4); chart.style.opacity = aC;
+    if (aC > 0) {
+      document.getElementById('buyP').style.strokeDashoffset = 1 - eInOut(span(t, 5.8, 12.3));
+      const gs = 1 - eInOut(span(t, 13.8, 20.3));
+      ['savP', 'savGlowA', 'savGlowB'].forEach(id => document.getElementById(id).style.strokeDashoffset = gs);
+      document.getElementById('cross21').style.opacity = .7 * span(t, 11.5, 12.2);
+      document.getElementById('buyLab').style.opacity = span(t, 11.5, 12.2);
+      document.getElementById('savLab').style.opacity = span(t, 20.1, 20.8);
+    }
+
+    const aJ = win(t, 7.9, 32.0, .6, .4); jar.style.opacity = aJ;
+    if (aJ > 0) {
+      /* 拍① 罐子登场：描边 → 盖子 → 投币口 */
+      jbody.style.strokeDashoffset = (100 - 100 * eInOut(span(t, 7.95, 8.45))).toFixed(1);
+      jlid.style.strokeDashoffset = (100 - 100 * eInOut(span(t, 8.3, 8.65))).toFixed(1);
+      jslot.style.opacity = span(t, 8.55, 8.8).toFixed(2);
+      let fill = 0, jig = 0;
+      jarCoins.forEach((c, i) => {                                /* 拍② 逐枚投币：每枚只落一次 */
+        const T0 = CT(i), I0 = T0 + .72;
+        if (t < T0 - .2) { c.set(0, 0, 1, 0); return; }
+        const ap = span(t, T0 - .2, T0), p = span(t, T0, T0 + .72), q = span(t, T0 + .72, T0 + .94);
+        const jp = span(t, I0, I0 + .42);
+        if (jp > 0 && jp < 1) jig += Math.sin(jp * 6.283) * (1 - jp) * .032;   // 落罐瞬间轻弹
+        fill += eOutCubic(span(t, I0, I0 + .5));                              // 液面阶梯上涨
+        if (q >= 1) { c.set(0, 0, 1, 0); return; }
+        if (p < 1) {                                              // 预备 → 重力加速下坠
+          const e = eInQuad(p);
+          c.set(90 * e, 12 - 8 * e, 1 - .1 * e, p > 0 ? 1 : ap);
+          c.el.style.left = (1598 + Math.sin(p * 5 + i * 1.3) * 6 * (1 - p)).toFixed(1) + 'px';
+          c.el.style.top = (118 + 136 * e).toFixed(1) + 'px';
+        } else {                                                  // 入槽：侧立没入
+          c.set(90 + 35 * q, 4, .55 + .1 * (1 - q), 1 - q);
+          c.el.style.left = (1598 + Math.sin(q * 3) * 2).toFixed(1) + 'px';
+          c.el.style.top = (254 + q * 22).toFixed(1) + 'px';
+        }
+      });
+      const aW = span(t, 28.3, 28.9) * (1 - span(t, 31.0, 31.6));
+      const fh = 262 * fill / 8, wamp = (1.5 + 3.5 * aW) * (fill > 0 ? 1 : 0);
+      jfill.setAttribute('y', (604 - fh).toFixed(1)); jfill.setAttribute('height', fh.toFixed(1));
+      jsurf.setAttribute('y1', (604 - fh + Math.sin(t * 2.1) * wamp).toFixed(1));
+      jsurf.setAttribute('y2', (604 - fh + Math.sin(t * 2.1 + .8) * wamp).toFixed(1));
+      jsurf.style.opacity = fill > 0 ? '.65' : '0';
+      const idle = Math.sin(t * .8) * .35 * span(t, 9.6, 10.2);   // 微呼吸
+      const gust = Math.sin((t - 28.35) * 5.4) * 2.6 * span(t, 28.35, 29.0) * (1 - span(t, 30.1, 30.8));
+      jarAll.style.transform = `rotate(${(idle + gust).toFixed(2)}deg) scale(${(1 - .55 * jig).toFixed(3)},${(1 + jig).toFixed(3)})`;
+      const gBase = .30 * span(t, 8.6, 9.2) + (.10 + .07 * Math.sin(t * 1.25)) * span(t, 12.8, 13.4);
+      const gPow = (.16 + .12 * Math.sin(t * 1.7)) * span(t, 24.3, 24.9) * (1 - span(t, 27.8, 28.3));
+      glowj.style.opacity = Math.min(.6, gBase + gPow).toFixed(2);
+      /* 拍③ 十万计数 */
+      jknum.textContent = Math.round(eOutExpo(span(t, 19.9, 23.4)) * 100000).toLocaleString('en-US');
+      jnum.style.opacity = span(t, 19.9, 20.4).toFixed(2);
+      jlab.style.opacity = span(t, 20.3, 20.8).toFixed(2);
+      if (t > 23.35) {
+        jlab.textContent = '人均存款 · 突破十万'; jlab.style.color = '#e8c96a';
+        jlab.style.transform = `scale(${(1.14 - .14 * eOutExpo(span(t, 23.35, 23.75))).toFixed(3)})`;
+      } else { jlab.textContent = '人均存款'; jlab.style.color = '#8a8578'; jlab.style.transform = 'scale(1)'; }
+      /* 拍④ 「底气」盖章 */
+      stamp.style.opacity = span(t, 24.6, 24.85).toFixed(2);
+      stamp.style.transform = `rotate(-6deg) scale(${(1.7 - .7 * eOutExpo(span(t, 24.6, 25.25))).toFixed(3)})`;
+      /* 拍⑤ 风线扫过 + 纸片吹走 */
+      wEls.forEach((w, k) => {
+        w.style.opacity = (win(t, 28.3 + k * .5, 28.3 + k * .5 + 1.6, .2, .3) * .5).toFixed(2);
+        w.style.strokeDashoffset = (-(t * 300 + k * 90)).toFixed(0);
+      });
+      [[chips[0], 28.55, 30.15, 402], [chips[1], 29.45, 31.05, 636]].forEach(([el, s0, s1, Y], k) => {
+        const p = span(t, s0, s1);
+        if (p <= 0 || p >= 1) { el.style.opacity = 0; return; }
+        el.style.left = (-300 + p * 2450) + 'px';
+        el.style.top = (Y - p * 90 + Math.sin(p * 9.2 + k) * 46) + 'px';
+        el.style.transform = `rotate(${(p * 660 + k * 140).toFixed(0)}deg)`;
+        el.style.opacity = Math.min(1, p * 5, (1 - p) * 4).toFixed(2);
+      });
+    }
+  }
+};
+</script></body></html>

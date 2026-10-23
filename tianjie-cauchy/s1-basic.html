@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .big{position:absolute;left:0;width:100%;text-align:center;}
+  .bar{position:absolute;border-radius:10px 10px 4px 4px;opacity:0;}
+  .cv{position:absolute;width:200px;text-align:center;font-size:40px;opacity:0;}
+  .gline{position:absolute;height:0;border-top:2px dashed rgba(255,215,106,.55);opacity:0;}
+  .ring{position:absolute;border:3px solid var(--gold-hi);border-radius:50%;opacity:0;}
+  #blade{position:absolute;left:954px;top:540px;width:12px;opacity:0;
+    background:linear-gradient(180deg,rgba(255,215,106,0),rgba(255,215,106,.95) 18%,rgba(255,215,106,.95) 82%,rgba(255,215,106,0));
+    box-shadow:0 0 26px 6px rgba(255,215,106,.5);}
+</style>
+</head>
+<body>
+ <div id="st1g">
+  <div id="stL" style="position:absolute;inset:0">
+  <!-- left column: the reasoning chain -->
+  <div id="F1" class="big fx" style="top:240px;width:1050px;font-size:52px">
+    <span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><span class="sym cyan">b</span><sub class="sym cyan">1</sub><span class="sym">+</span><span class="sym gold">a</span><sub class="sym gold">2</sub><span class="sym cyan">b</span><sub class="sym cyan">2</sub><span class="sym">)</span><sup class="sym">2</sup>
+    <span class="sym" style="margin:0 .1em">≤</span>
+    <span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><sup class="sym gold">2</sup><span class="sym">+</span><span class="sym gold">a</span><sub class="sym gold">2</sub><sup class="sym gold">2</sup><span class="sym">)</span><span class="sym">(</span><span class="sym cyan">b</span><sub class="sym cyan">1</sub><sup class="sym cyan">2</sup><span class="sym">+</span><span class="sym cyan">b</span><sub class="sym cyan">2</sub><sup class="sym cyan">2</sup><span class="sym">)</span>
+  </div>
+  <div id="chipA" class="abs chip fx" style="left:230px;top:465px;font-size:46px;opacity:0;color:var(--gold);transform:translateY(30px)">a = (3, 4)</div>
+  <div id="chipB" class="abs chip fx" style="left:570px;top:465px;font-size:46px;opacity:0;color:var(--cyan);transform:translateY(30px)">b = (5, 12)</div>
+  <div id="F2" class="big fx" style="top:675px;width:1050px;font-size:52px;opacity:0">
+    <span class="sym">(</span><span class="sym gold">3</span><span class="sym">·</span><span class="sym cyan">5</span><span class="sym">+</span><span class="sym gold">4</span><span class="sym">·</span><span class="sym cyan">12</span><span class="sym">)</span><sup class="sym">2</sup>
+    <span class="sym" style="margin:0 .1em">≤</span>
+    <span class="sym">(</span><span class="sym gold">9</span><span class="sym">+</span><span class="sym gold">16</span><span class="sym">)</span><span class="sym">(</span><span class="sym cyan">25</span><span class="sym">+</span><span class="sym cyan">144</span><span class="sym">)</span>
+  </div>
+  </div>
+  <div id="stR" style="position:absolute;inset:0">
+  <!-- right column: result cards above the bar chart -->
+  <div id="cardL" class="abs panel fx" style="left:1120px;top:360px;width:360px;height:130px;text-align:center;font-size:43px;opacity:0;transform:translateY(30px)">
+    <div style="margin-top:36px;color:var(--gold)">(15+48)<sup>2</sup> = <span id="cvL">0</span></div>
+  </div>
+  <div id="cardR" class="abs panel fx" style="left:1510px;top:360px;width:360px;height:130px;text-align:center;font-size:43px;opacity:0;transform:translateY(30px)">
+    <div style="margin-top:36px;color:var(--cyan)">25 × 169 = <span id="cvR">0</span></div>
+  </div>
+  <!-- bar chart: axis line first, then everything together -->
+  <div id="axis" class="abs" style="left:1120px;top:845px;width:0;border-top:2px solid rgba(255,255,255,.3);opacity:0"></div>
+  <div id="barL" class="bar" style="left:1200px;width:200px;background:linear-gradient(180deg,rgba(232,182,76,.85),rgba(232,182,76,.35))"></div>
+  <div id="barR" class="bar" style="left:1590px;width:200px;background:linear-gradient(180deg,rgba(88,196,212,.85),rgba(88,196,212,.3))"></div>
+  <div id="cvLb" class="cv fx" style="left:1200px;color:var(--gold-hi)">0</div>
+  <div id="cvRb" class="cv fx" style="left:1590px;color:var(--cyan-hi)">0</div>
+  <div id="gl1" class="gline" style="left:1300px;width:390px"></div>
+  <div id="gl2" class="gline" style="left:1330px;width:360px"></div>
+  <div id="gnum" class="fx" style="position:absolute;left:1295px;width:400px;top:554px;text-align:center;font-size:40px;color:var(--gold-hi);opacity:0">256</div>
+  <div id="labL" class="abs" style="left:1110px;top:865px;width:380px;text-align:center;font-size:28px;color:var(--muted);opacity:0">交叉项 (a·b)<sup>2</sup></div>
+  <div id="labR" class="abs" style="left:1500px;top:865px;width:380px;text-align:center;font-size:28px;color:var(--muted);opacity:0">自家模长 ‖a‖<sup>2</sup>‖b‖<sup>2</sup></div>
+  </div>
+ </div>
+ <div id="riseHost" class="abs"></div>
+ <div id="blade"></div>
+ <div id="F3" class="big fx" style="top:340px;font-size:54px;opacity:0">
+   <span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><span class="sym cyan">b</span><sub class="sym cyan">1</sub><span class="sym">+⋯+</span><span class="sym gold">a</span><sub class="sym gold">n</sub><span class="sym cyan">b</span><sub class="sym cyan">n</sub><span class="sym">)</span><sup class="sym">2</sup>
+   <span class="sym" style="margin:0 .1em">≤</span>
+   <span class="sym">(</span><span class="sym gold">a</span><sub class="sym gold">1</sub><sup class="sym gold">2</sup><span class="sym">+⋯+</span><span class="sym gold">a</span><sub class="sym gold">n</sub><sup class="sym gold">2</sup><span class="sym">)</span><span class="sym">(</span><span class="sym cyan">b</span><sub class="sym cyan">1</sub><sup class="sym cyan">2</sup><span class="sym">+⋯+</span><span class="sym cyan">b</span><sub class="sym cyan">n</sub><sup class="sym cyan">2</sup><span class="sym">)</span>
+ </div>
+ <div id="f4glow" class="abs" style="left:460px;top:430px;width:1000px;height:340px;border-radius:50%;opacity:0;background:radial-gradient(closest-side,rgba(255,215,106,.2),rgba(255,215,106,.07) 55%,transparent 75%)"></div>
+ <div id="F4" class="big fx" style="top:560px;font-size:68px;opacity:0">
+   <span class="sym">(</span><span class="sym">Σ</span><span class="sym gold">a</span><sub class="sym gold">i</sub><span class="sym cyan">b</span><sub class="sym cyan">i</sub><span class="sym">)</span><sup class="sym">2</sup>
+   <span class="sym" style="margin:0 .12em">≤</span>
+   <span class="sym">(</span><span class="sym">Σ</span><span class="sym gold">a</span><sub class="sym gold">i</sub><sup class="sym gold">2</sup><span class="sym">)</span><span class="sym">(</span><span class="sym">Σ</span><span class="sym cyan">b</span><sub class="sym cyan">i</sub><sup class="sym cyan">2</sup><span class="sym">)</span>
+ </div>
+ <div id="flash" class="abs" style="inset:0;background:#fff;opacity:0"></div>
+ <div id="ring1" class="ring"></div>
+ <div id="ring2" class="ring"></div>
+ <div id="ring3" class="ring"></div>
+ <div id="burstHost" class="abs"></div>
+ <div class="vign"></div>
+<script src="shared.js"></script>
+<script>
+var F = window.F;
+var $ = function (i) { return document.getElementById(i); };
+function fadeUp(el, t, t0, dur) {
+  var u = F.seg(t, t0, t0 + (dur || .6));
+  el.style.opacity = u;
+  el.style.transform = 'translateY(' + (1 - F.eoc(u)) * 30 + 'px)';
+}
+/* finale: rising motes, center burst, expanding rings, F3 scatter offsets */
+var rise = F.makeRise($('riseHost'), 960, 320, 660, 26, 37, 'rgba(255,215,106,.85)');
+var burst = F.makeBurst($('burstHost'), 960, 540, 30, 41, 'rgba(255,215,106,.95)', 580);
+function ringFx(el, t, t0, size, cx, cy) {
+  var u = F.seg(t, t0, t0 + .9), s = F.lerp(80, size, F.eoc(u));
+  el.style.width = el.style.height = s + 'px';
+  el.style.left = (cx - s / 2) + 'px';
+  el.style.top = (cy - s / 2) + 'px';
+  el.style.opacity = (u > 0 && u < 1) ? (1 - u) * .8 : 0;
+}
+var f3syms = $('F3').querySelectorAll('.sym');
+var rr = F.rng(53), f3in = [];
+for (var i = 0; i < f3syms.length; i++) f3in.push({ dx: (rr() - .5) * 1700, dy: (rr() - .5) * 950, s: 1.25 + rr() * .85 });
+window.film = {
+  duration: 24,
+  frame: function (t) {
+    rise.update(t);
+    /* phase 1: left column, one item after another */
+    F.reveal($('F1'), t, .4, .09);
+    fadeUp($('chipA'), t, 3.3); fadeUp($('chipB'), t, 3.8);
+    $('F2').style.opacity = F.seg(t, 4.8, 5.2);
+    F.reveal($('F2'), t, 5.0, .09);
+    /* phase 2: the chart's axis line draws in first, on its own */
+    var ax = F.eoc(F.seg(t, 7.6, 8.5));
+    $('axis').style.width = 750 * ax + 'px';
+    $('axis').style.opacity = F.seg(t, 7.6, 7.9);
+    /* phase 3: the rest of the right column, all at the same moment */
+    fadeUp($('cardL'), t, 9.0); fadeUp($('cardR'), t, 9.0);
+    var u = F.eoc(F.seg(t, 9.0, 11.6));   /* one clock: counters and bars together */
+    $('cvL').textContent = F.fmt(3969 * u); $('cvR').textContent = F.fmt(4225 * u);
+    $('barL').style.opacity = F.seg(t, 9.0, 9.3);
+    $('barR').style.opacity = F.seg(t, 9.0, 9.3);
+    var hL = 250 * u, hR = 266 * u;
+    $('barL').style.height = hL + 'px'; $('barL').style.top = (845 - hL) + 'px';
+    $('barR').style.height = hR + 'px'; $('barR').style.top = (845 - hR) + 'px';
+    $('cvLb').style.opacity = F.seg(t, 9.0, 9.3);
+    $('cvRb').style.opacity = F.seg(t, 9.0, 9.3);
+    $('cvLb').style.top = (845 - hL - 56) + 'px'; $('cvLb').textContent = F.fmt(3969 * u);
+    $('cvRb').style.top = (845 - hR - 56) + 'px'; $('cvRb').textContent = F.fmt(4225 * u);
+    /* tail: gap 256 follows the instant the bars are grown */
+    var topL = 845 - hL, topR = 845 - hR;
+    $('gl1').style.top = topR + 'px'; $('gl1').style.opacity = .8 * F.seg(t, 12.0, 12.6);
+    $('gl2').style.top = topL + 'px'; $('gl2').style.opacity = .8 * F.seg(t, 12.2, 12.8);
+    $('gnum').style.opacity = F.seg(t, 12.6, 13.1) * (.8 + .2 * Math.sin(t * 5));
+    $('gnum').style.top = (topR - 50) + 'px';
+    fadeUp($('labL'), t, 13.6); fadeUp($('labR'), t, 14.0);
+    /* act 1: a light blade splits the stage; the columns exit to their sides */
+    var bu = F.eoc(F.seg(t, 17.0, 17.5));
+    $('blade').style.top = (540 - 540 * bu) + 'px';
+    $('blade').style.height = (1080 * bu) + 'px';
+    $('blade').style.opacity = F.seg(t, 17.0, 17.2) * (1 - F.seg(t, 17.8, 18.3));
+    var ex = F.seg(t, 17.35, 18.25), exq = ex * ex;
+    $('stL').style.opacity = $('stR').style.opacity = 1 - ex;
+    $('stL').style.transform = 'translateX(' + (-700 * exq) + 'px)';
+    $('stR').style.transform = 'translateX(' + (700 * exq) + 'px)';
+    /* act 2: full-screen energy event at dead center */
+    $('flash').style.opacity = .18 * F.seg(t, 18.3, 18.38) * (1 - F.seg(t, 18.38, 18.9));
+    ringFx($('ring1'), t, 18.35, 860, 960, 540);
+    ringFx($('ring2'), t, 18.5, 1180, 960, 540);
+    burst.update(t, 18.35, 1.0);
+    $('riseHost').style.opacity = F.seg(t, 18.2, 19.4);
+    /* act 3: F3 assembles from scattered pieces */
+    var f3 = $('F3');
+    f3.style.opacity = F.seg(t, 19.2, 19.4) * (1 - .55 * F.seg(t, 21.7, 22.3));
+    for (var i = 0; i < f3syms.length; i++) {
+      var t0 = 19.2 + i * .03;
+      var u3 = F.eoc(F.seg(t, t0, t0 + .5));
+      f3syms[i].style.opacity = F.seg(t, t0, t0 + .22);
+      f3syms[i].style.transform = 'translate(' + f3in[i].dx * (1 - u3) + 'px,' + f3in[i].dy * (1 - u3) + 'px) scale(' + (f3in[i].s + (1 - f3in[i].s) * u3) + ')';
+    }
+    /* act 4: F4 lands with overshoot from the burst point */
+    var f4 = $('F4');
+    f4.style.opacity = F.seg(t, 20.7, 21.0);
+    f4.style.transform = 'scale(' + F.lerp(.25, 1, F.eob(F.seg(t, 20.7, 21.6))) + ')';
+    F.reveal(f4, t, 20.78, .03, .3);
+    ringFx($('ring3'), t, 21.5, 940, 960, 590);
+    /* act 5: breathing glow hold */
+    $('f4glow').style.opacity = F.seg(t, 20.9, 21.4) * (.8 + .2 * Math.sin(t * 3.2));
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,518 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  .fade { position: absolute; inset: 0; }
+  #stat .big { position: absolute; left: 0; right: 0; top: 330px; text-align: center;
+    font-weight: 900; font-size: 240px; color: #c04a42; line-height: 1;
+    filter: drop-shadow(0 0 38px rgba(158,59,52,.35)); }
+  #stat .cap { position: absolute; left: 0; right: 0; top: 610px; text-align: center;
+    font-size: 42px; color: #cdc6b6; letter-spacing: .1em; }
+  #shop .floor { position: absolute; left: 260px; top: 788px; width: 1400px; height: 130px;
+    background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(232,201,106,.32) 0%, rgba(232,201,106,.10) 45%, transparent 72%); }
+  #shop .hang { position: absolute; inset: 0; transform-origin: 960px 60px; }
+  #shop .wires { position: absolute; inset: 0; }
+  #shop .board { position: absolute; left: 560px; top: 330px; width: 800px; height: 260px;
+    border: 4px solid #9a783e; border-radius: 26px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 60px rgba(216,179,106,.07); }
+  #shop .board::after { content: ''; position: absolute; left: 26px; right: 26px; top: 273px;
+    height: 2px; background: #9a783e; }
+  #shop .txt { font-weight: 900; font-size: 110px; color: #fff3d6; letter-spacing: .08em; }
+  #shop .txt span { display: inline-block; }
+  #shop .bulb { position: absolute; top: 268px; width: 11px; height: 11px; border-radius: 50%;
+    background: #f6e3a5; }
+  #shop .front { position: absolute; inset: 0; }
+  #shop .front .draw { fill: none; stroke: #9a783e; stroke-width: 4; stroke-linecap: round;
+    stroke-dasharray: 100; }
+  #shop .open { position: absolute; left: 865px; top: 545px; width: 190px; height: 74px;
+    border: 3px solid #9a783e; border-radius: 14px; background: #141009;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 42px; color: #e8c96a; letter-spacing: .12em; text-indent: .12em; }
+  #shop .cupwrap { position: absolute; left: 230px; top: 428px; width: 240px; height: 400px;
+    transform-origin: 120px 372px; }
+  #shop .cupglow { position: absolute; left: -40px; top: 140px; width: 320px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,201,106,.15) 0%, transparent 65%); }
+  #shop .side { position: absolute; inset: 0; }
+  #bowlG { transform-origin: 1570px 560px; transform-box: view-box; }
+  #chainG { transform-origin: 1572px 755px; transform-box: view-box; }
+  #shop .steam { stroke-dasharray: 14 34; }
+  #shop .lab { position: absolute; width: 260px; text-align: center;
+    font-size: 40px; color: var(--gold); letter-spacing: .3em; text-indent: .3em; opacity: 0; }
+  #shut .num { position: absolute; left: 0; right: 0; top: 92px; text-align: center;
+    font-weight: 900; font-size: 150px; color: #f0d68a; font-variant-numeric: tabular-nums;
+    filter: drop-shadow(0 0 30px rgba(232,201,106,.3)); }
+  #shut .cap { position: absolute; left: 0; right: 0; top: 262px; text-align: center;
+    font-size: 40px; color: #cdc6b6; letter-spacing: .14em; }
+  #shut .sign { position: absolute; left: 610px; top: 330px; width: 700px; height: 160px;
+    border: 4px solid #5a5445; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 84px; color: #6b6250; }
+  #shut .door { position: absolute; left: 710px; top: 530px; width: 500px; height: 230px;
+    border: 4px solid #605a49; background: #0a0908; overflow: hidden; }
+  #shut .curtain { position: absolute; left: 0; top: 0; width: 100%;
+    background: repeating-linear-gradient(180deg, #46423a 0px, #3a362f 9px, #2e2b25 18px);
+    border-bottom: 6px solid #9a783e; }
+  /* ── 骗局四幕（28.9–46.3） ── */
+  .tag { position: absolute; top: 250px; width: 190px; height: 64px;
+    border: 3px solid #9a783e; border-radius: 12px; background: #141009;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 32px; color: #e8c96a; letter-spacing: .1em; text-indent: .1em; }
+  .banner { position: absolute; left: 750px; top: 232px; width: 420px; height: 84px;
+    border: 4px solid #9a783e; border-radius: 14px; background: #141009;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 40px; color: #e8c96a; letter-spacing: .1em; text-indent: .1em; }
+  .spark { position: absolute; font-weight: 900; font-size: 36px; color: #e8c96a; opacity: 0;
+    text-shadow: 0 0 14px rgba(232,201,106,.7); }
+  .cnt { position: absolute; left: 300px; top: 210px; width: 660px; text-align: center;
+    font-weight: 900; font-size: 126px; line-height: 1.1; color: #f0d68a;
+    font-variant-numeric: tabular-nums;
+    filter: drop-shadow(0 0 30px rgba(232,201,106,.3)); }
+  .cnt .unit { font-size: 66px; }
+  .zlab { position: absolute; width: 400px; text-align: center; font-size: 40px;
+    letter-spacing: .22em; text-indent: .22em; opacity: 0; }
+  .divid { position: absolute; left: 959px; top: 380px; width: 2px; height: 420px;
+    background: linear-gradient(180deg, transparent, rgba(154,120,62,.5), transparent); }
+  .pb { position: absolute; left: 250px; top: 360px; width: 560px; height: 300px;
+    border: 4px solid #9a783e; border-radius: 18px; background: rgba(16,12,7,.92); text-align: center; }
+  .pb .t { margin-top: 34px; font-size: 32px; color: #8a8578; letter-spacing: .3em; text-indent: .3em; }
+  .pb .v { margin-top: 24px; font-weight: 900; font-size: 80px; color: #f0d68a;
+    font-variant-numeric: tabular-nums; }
+  .pb .s { margin-top: 16px; font-size: 30px; color: #8a8578; letter-spacing: .4em; text-indent: .4em; }
+  #bagG { transform-origin: 1430px 782px; transform-box: view-box; }
+  #sprG { transform-origin: 530px 352px; transform-box: view-box; }
+  svg text { font-family: 'HanSerif', serif; }
+</style></head><body>
+<div class="stage" id="root"></div>
+<script>
+const root = document.getElementById('root');
+const stage = document.createElement('div'); stage.className = 'stage'; root.appendChild(stage);
+
+/* ── 21.3% 数字卡（5.3–8.3） ── */
+const stat = document.createElement('div'); stat.id = 'stat'; stat.className = 'fade'; stage.appendChild(stat);
+stat.insertAdjacentHTML('beforeend', `<div class="big">21.3%</div>
+  <div class="cap">16–24岁 · 城镇调查失业率（2023.6 峰值）</div>`);
+
+/* ── 开店场景：霓虹招牌 → 画出店面 → 商品登场（8.3–20.3） ── */
+const shop = document.createElement('div'); shop.id = 'shop'; shop.className = 'fade'; stage.appendChild(shop);
+const floorGlow = document.createElement('div'); floorGlow.className = 'floor'; shop.appendChild(floorGlow);
+
+/* 挂线 + 招牌（逐字点亮 + 灯串） */
+const hang = document.createElement('div'); hang.className = 'hang'; shop.appendChild(hang);
+hang.insertAdjacentHTML('beforeend', `<svg class="wires" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <path d="M700,58 L905,328 M1220,58 L1015,328" stroke="#9a783e" stroke-width="4" fill="none"/>
+  <circle cx="700" cy="58" r="7" fill="#d8b36a"/><circle cx="1220" cy="58" r="7" fill="#d8b36a"/></svg>`);
+const board = document.createElement('div'); board.className = 'board'; hang.appendChild(board);
+board.insertAdjacentHTML('beforeend', `<div class="txt"><span>创</span><span>业</span><span>·</span><span>奶</span><span>茶</span><span>店</span></div>`);
+const chars = [...board.querySelectorAll('.txt span')];
+const bulbs = [];
+for (let i = 0; i < 12; i++) { const b = document.createElement('div'); b.className = 'bulb';
+  b.style.left = (28 + i * 66.6) + 'px'; board.appendChild(b); bulbs.push(b); }
+
+/* 店面线稿：雨棚 → 门 → 窗 → 柜台，逐笔画出 */
+const front = document.createElement('div'); front.className = 'front'; shop.appendChild(front);
+front.insertAdjacentHTML('beforeend', `<svg width="1920" height="1080" viewBox="0 0 1920 1080">
+<defs>
+  <linearGradient id="warm" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="rgba(232,201,106,.5)"/><stop offset="1" stop-color="rgba(232,201,106,.03)"/></linearGradient>
+  <pattern id="stripes" width="120" height="100" patternUnits="userSpaceOnUse"><rect width="60" height="100" fill="#9a783e"/></pattern>
+  <clipPath id="awn"><path d="M600,414 Q960,398 1320,414 L1320,458 Q1260,490 1200,458 Q1140,490 1080,458 Q1020,490 960,458 Q900,490 840,458 Q780,490 720,458 Q660,490 600,458 Z"/></clipPath>
+</defs>
+<g id="fr-fills" opacity="0">
+  <rect x="600" y="394" width="720" height="100" fill="url(#stripes)" opacity=".22" clip-path="url(#awn)"/>
+  <rect x="812" y="474" width="296" height="326" fill="#0d0a07" opacity=".85"/>
+  <rect x="633" y="498" width="149" height="194" fill="url(#warm)"/>
+  <rect x="1138" y="498" width="149" height="194" fill="url(#warm)"/>
+</g>
+<path class="draw" pathLength="100" id="fr-awn" d="M600,414 Q960,398 1320,414 L1320,458 Q1260,490 1200,458 Q1140,490 1080,458 Q1020,490 960,458 Q900,490 840,458 Q780,490 720,458 Q660,490 600,458 Z"/>
+<path class="draw" pathLength="100" id="fr-posts" d="M585,458 L585,800 M1335,458 L1335,800"/>
+<path class="draw" pathLength="100" id="fr-door" d="M810,800 L810,470 L1110,470 L1110,800 M1088,616 L1088,664"/>
+<path class="draw" pathLength="100" id="fr-wins" d="M625,700 L625,490 L790,490 L790,700 Z M1130,700 L1130,490 L1295,490 L1295,700 Z"/>
+<path class="draw" pathLength="100" id="fr-ctr" d="M610,700 L1310,700 M625,732 L790,732 M1130,732 L1295,732"/>
+</svg>`);
+
+/* 营业中木牌 */
+const openS = document.createElement('div'); openS.className = 'open'; openS.textContent = '营业中'; shop.appendChild(openS);
+
+/* 奶茶杯：茶汤 + 奶盖 + 珍珠 + 上浮气泡 + 金吸管 */
+const cup = document.createElement('div'); cup.className = 'cupwrap'; shop.appendChild(cup);
+cup.insertAdjacentHTML('beforeend', `<div class="cupglow"></div>
+<svg width="240" height="400" viewBox="0 0 240 400" style="position:absolute;inset:0">
+<defs><linearGradient id="tea" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#c89a52"/><stop offset=".4" stop-color="#a5763a"/><stop offset="1" stop-color="#6e4c22"/></linearGradient></defs>
+<path d="M12,92 L28,352 Q31,372 52,372 L188,372 Q209,372 212,352 L228,92" fill="url(#tea)" stroke="#d8b36a" stroke-width="4"/>
+<path id="cream" d="M16,100 L31,152 Q120,168 209,152 L224,100 Z" fill="#e6d8ba" opacity="0"/>
+<g id="pearls"></g><g id="bub"></g>
+<g transform="rotate(16 152 46)"><rect x="140" y="0" width="26" height="86" rx="5" fill="#d8b36a"/><rect x="146" y="2" width="7" height="84" fill="#f2e2b0" opacity=".75"/></g>
+<ellipse cx="120" cy="92" rx="108" ry="20" fill="#1c150d" stroke="#d8b36a" stroke-width="4"/>
+</svg>`);
+const pearlG = cup.querySelector('#pearls'), bubG = cup.querySelector('#bub');
+const pearlEls = [[75, 330, 15], [120, 342, 15], [165, 330, 14], [98, 356, 12], [144, 358, 12]].map(([x, y, r]) => {
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', r);
+  c.setAttribute('fill', '#2e211a'); c.setAttribute('stroke', '#57422d'); c.setAttribute('stroke-width', '2');
+  pearlG.appendChild(c); return c; });
+const bubEls = [];
+for (let k = 0; k < 5; k++) { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('r', 5 + k % 3 * 2); c.setAttribute('fill', '#e6d8ba'); c.setAttribute('fill-opacity', '0');
+  bubG.appendChild(c); bubEls.push(c); }
+
+/* 右侧图标：小餐馆（热汤碗）+ 加盟连锁（链环） */
+const side = document.createElement('div'); side.className = 'side'; shop.appendChild(side);
+side.insertAdjacentHTML('beforeend', `<svg width="1920" height="1080" viewBox="0 0 1920 1080">
+<g id="bowlG" opacity="0">
+  <path d="M1494,528 Q1500,606 1570,612 Q1640,606 1646,528" fill="#241a0e" stroke="#d8b36a" stroke-width="5"/>
+  <ellipse cx="1570" cy="528" rx="78" ry="21" fill="#14100a" stroke="#d8b36a" stroke-width="5"/>
+  <path d="M1540,612 L1536,632 M1600,612 L1604,632 M1528,632 L1612,632" fill="none" stroke="#d8b36a" stroke-width="4"/>
+  <g fill="none" stroke="rgba(232,201,106,.65)" stroke-width="5" stroke-linecap="round">
+    <path class="steam" d="M1524,486 q9,-15 0,-30 q-9,-15 0,-30"/>
+    <path class="steam" d="M1570,478 q9,-15 0,-30 q-9,-15 0,-30"/>
+    <path class="steam" d="M1616,486 q9,-15 0,-30 q-9,-15 0,-30"/>
+  </g>
+</g>
+<g id="chainG" opacity="0" fill="none" stroke-width="7">
+  <ellipse cx="1500" cy="742" rx="52" ry="33" stroke="#d8b36a"/>
+  <ellipse id="chainMid" cx="1572" cy="770" rx="52" ry="33" stroke="#e8c96a"/>
+  <ellipse cx="1644" cy="742" rx="52" ry="33" stroke="#d8b36a"/>
+</g>
+</svg>
+<div class="lab" id="lab1" style="left:1440px; top:660px;">小餐馆</div>
+<div class="lab" id="lab2" style="left:1440px; top:830px;">加盟连锁</div>`);
+const bowlG = side.querySelector('#bowlG'), chainG = side.querySelector('#chainG'),
+      chainMid = side.querySelector('#chainMid'), lab1 = side.querySelector('#lab1'), lab2 = side.querySelector('#lab2'),
+      steamPs = [...side.querySelectorAll('.steam')];
+
+/* 金币从杯口冒出 —— 为后面"钱进骗子口袋"埋伏笔 */
+const shopCoins = [0, 1, 2].map(k => makeCoin(shop, 350, 505, 72));
+
+/* ── 关店：计数 + 招牌 + 卷帘（20.5–28.7） ── */
+const shut = document.createElement('div'); shut.id = 'shut'; shut.className = 'fade'; stage.appendChild(shut);
+shut.insertAdjacentHTML('beforeend', `<div class="num">0</div><div class="cap">家奶茶店 · 一年内闭店</div>
+  <div class="sign">创业 · 奶茶店</div>
+  <div class="door"><div class="curtain"></div></div>`);
+const shutNum = shut.querySelector('.num'), curtain = shut.querySelector('.curtain');
+
+/* ── 骗局四幕（28.9–46.3）：鱼钩 → 割韭菜 → 5000亿 → 清零/家散 ── */
+const bz = (a, b, c, d, u) => { const v = 1 - u;
+  return v * v * v * a + 3 * v * v * u * b + 3 * v * u * u * c + u * u * u * d; };
+
+/* 第一幕：鱼钩与饵（28.9–33.1）—— 话术为饵，鱼群上钩 */
+const hooks = document.createElement('div'); hooks.id = 'hooks'; hooks.className = 'fade'; stage.appendChild(hooks);
+const HX = [760, 960, 1160], TAGS = ['月入十万', '包教包会', '稳赚不赔'];
+hooks.insertAdjacentHTML('beforeend', `<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+${HX.map((x, k) => `<g id="hk${k}"><path id="hp${k}" pathLength="100" fill="none" stroke="#d8b36a" stroke-width="5" stroke-dasharray="100"
+  d="M0,-40 L0,118 Q0,156 33,156 Q63,156 63,124 L63,106 L56,113"/>
+  <circle id="hg${k}" cx="33" cy="136" r="17" fill="rgba(232,201,106,.22)"/>
+  <circle id="hc${k}" cx="33" cy="136" r="7" fill="#f2d68c"/></g>`).join('')}
+${[0, 1, 2, 3, 4, 5].map(i => `<g id="fh${i}" opacity="0"><g id="ft${i}">
+  <path d="M0,0 L-11,-7 M0,0 L-11,7" fill="none" stroke="#d8b36a" stroke-width="3" stroke-linecap="round"/></g>
+  <path d="M0,0 Q10,-8 26,0 Q10,8 0,0 Z" fill="#171208" stroke="#d8b36a" stroke-width="3"/>
+  <circle cx="18" cy="-2" r="1.8" fill="#e8c96a"/></g>`).join('')}
+</svg>`);
+TAGS.forEach((s, k) => { const d = document.createElement('div'); d.className = 'tag'; d.textContent = s;
+  d.style.left = (HX[k] - 62) + 'px'; hooks.appendChild(d); });
+const hpEls = HX.map((_, k) => hooks.querySelector('#hp' + k)),
+      hgEls = HX.map((_, k) => hooks.querySelector('#hg' + k)),
+      hcEls = HX.map((_, k) => hooks.querySelector('#hc' + k)),
+      hkEls = HX.map((_, k) => hooks.querySelector('#hk' + k)),
+      tagEls = [...hooks.querySelectorAll('.tag')],
+      fhEls = [0, 1, 2, 3, 4, 5].map(i => hooks.querySelector('#fh' + i)),
+      ftEls = [0, 1, 2, 3, 4, 5].map(i => hooks.querySelector('#ft' + i));
+const FISH = [[200, 1140, 700, 560, 1.5, 30.1], [1760, 1140, 818, 640, 1.25, 30.4],
+  [-90, 920, 908, 576, 1.35, 30.7], [1850, 970, 1012, 660, 1.65, 31.0],
+  [230, 1180, 1108, 586, 1.3, 31.3], [1720, 1180, 1218, 648, 1.5, 31.6]];
+
+/* 第二幕：镰刀割韭菜（32.9–37.7）—— 快招公司收割 */
+const leeks = document.createElement('div'); leeks.id = 'leeks'; leeks.className = 'fade'; stage.appendChild(leeks);
+const LX = [480, 600, 720, 840, 960, 1080, 1200];
+leeks.insertAdjacentHTML('beforeend', `<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+<path id="lkG" pathLength="100" fill="none" stroke="#9a783e" stroke-width="4" stroke-dasharray="100" d="M320,762 H1330"/>
+${LX.map((x, i) => `<g id="lk${i}"><g id="lkb${i}">
+  <path d="M-8,0 L-6,-30 L6,-30 L8,0 Z" fill="#cfc9b8" stroke="#d8b36a" stroke-width="3"/>
+  <path d="M0,-28 C-4,-90 -28,-136 -44,-182" fill="none" stroke="#d8b36a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M0,-28 C-2,-100 -12,-160 -7,-212" fill="none" stroke="#d8b36a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M0,-28 C2,-100 12,-158 20,-204" fill="none" stroke="#d8b36a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M0,-28 C4,-90 26,-134 46,-174" fill="none" stroke="#d8b36a" stroke-width="5" stroke-linecap="round"/>
+</g></g>`).join('')}
+<path id="lkR" d="M830,92 V232 M1090,92 V232" stroke="#9a783e" stroke-width="3" opacity="0"/>
+<path id="lkT" d="M1290,585 Q1000,640 620,655 Q400,660 300,690" fill="none"
+  stroke="rgba(232,201,106,.16)" stroke-width="46" opacity="0"/>
+<g id="scy" opacity="0">
+  <path d="M1750,640 Q1500,530 1290,585" fill="none" stroke="#d8b36a" stroke-width="11" stroke-linecap="round"/>
+  <path d="M1740,632 Q1505,540 1300,584" fill="none" stroke="#f2d68c" stroke-width="3" stroke-linecap="round"/>
+  <path d="M1750,640 L1836,752 M1796,700 l32,-16" fill="none" stroke="#9a783e" stroke-width="9" stroke-linecap="round"/>
+</g>
+</svg>`);
+const banner = document.createElement('div'); banner.className = 'banner'; banner.textContent = '快招 · 包教包会'; leeks.appendChild(banner);
+const lkGEls = LX.map((_, i) => ({ g: leeks.querySelector('#lk' + i), b: leeks.querySelector('#lkb' + i) }));
+const sparks = [];
+for (let i = 0; i < 14; i++) { const s = document.createElement('div'); s.className = 'spark'; s.textContent = '¥';
+  leeks.appendChild(s); sparks.push(s); }
+
+/* 第三幕：金币流 + 5000亿 + 钱袋（37.5–41.8） */
+const flow = document.createElement('div'); flow.id = 'flow'; flow.className = 'fade'; stage.appendChild(flow);
+flow.insertAdjacentHTML('beforeend', `<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+<path id="fpR" d="M450,655 C790,320 1160,320 1425,505" fill="none" stroke="#9a783e" stroke-width="3"
+  stroke-dasharray="2 16" pathLength="100" opacity="0"/>
+<g id="bagG">
+  <path d="M1398,506 Q1394,538 1374,560 Q1306,610 1316,694 Q1328,776 1430,782 Q1532,776 1544,694 Q1554,610 1486,560 Q1466,538 1462,506"
+    fill="#191309" stroke="#d8b36a" stroke-width="5"/>
+  <path d="M1398,506 Q1408,486 1390,478 M1462,506 Q1452,486 1470,478" fill="none" stroke="#d8b36a" stroke-width="4"/>
+  <path d="M1388,528 H1472" stroke="#9a783e" stroke-width="6"/>
+  <path id="bagY" d="M1412,656 L1430,688 L1448,656 M1418,700 H1442 M1430,688 V752"
+    fill="none" stroke="#e8c96a" stroke-width="7" stroke-linecap="round" opacity="0"/>
+  <path id="bagW" d="M1352,700 q10,26 34,34 M1508,700 q-10,26 -34,34" fill="none"
+    stroke="rgba(232,201,106,.55)" stroke-width="3" opacity="0"/>
+</g>
+${[0, 1, 2].map(k => `<circle id="rip${k}" cx="1428" cy="500" r="14" fill="none" stroke="#e8c96a" stroke-width="3" opacity="0"/>`).join('')}
+</svg>
+<div class="cnt">¥<span id="cnum">0</span><span class="unit">亿</span></div>
+<div class="zlab" id="zcap" style="left:1290px; top:826px; width:280px; color:var(--gold);">骗子的口袋</div>`);
+const bagG = flow.querySelector('#bagG'), bagY = flow.querySelector('#bagY'), bagW = flow.querySelector('#bagW'),
+      fpR = flow.querySelector('#fpR'), cnum = flow.querySelector('#cnum'), zcap = flow.querySelector('#zcap'),
+      ripEls = [0, 1, 2].map(k => flow.querySelector('#rip' + k));
+const flowCoins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(() => makeCoin(flow, 0, 0, 76));
+const FP = [450, 655, 790, 320, 1160, 320, 1425, 505];
+
+/* 第四幕：清零与家散（41.6–46.3）—— 左右对照 */
+const zero = document.createElement('div'); zero.id = 'zero'; zero.className = 'fade'; stage.appendChild(zero);
+zero.insertAdjacentHTML('beforeend', `
+<div class="divid" id="dvd"></div>
+<div class="pb"><div class="t">存折 · 积蓄</div><div class="v">¥ <span id="pbv">386,500</span></div><div class="s" id="pbs">余 额</div></div>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
+<g id="sprG">
+  <path id="spS" pathLength="100" fill="none" stroke="#9db06e" stroke-width="6" stroke-dasharray="100" d="M530,352 C530,322 518,300 528,264"/>
+  <path id="sp1" pathLength="100" fill="none" stroke="#9db06e" stroke-width="6" stroke-dasharray="100" d="M528,270 Q490,258 480,226 Q518,222 528,264"/>
+  <path id="sp2" pathLength="100" fill="none" stroke="#9db06e" stroke-width="6" stroke-dasharray="100" d="M528,270 Q566,258 576,226 Q538,222 528,264"/>
+</g>
+<g id="hL"><path id="hwL" pathLength="100" fill="none" stroke="#d8b36a" stroke-width="5" stroke-dasharray="100"
+  d="M1150,780 L1150,520 L1400,400 M1290,780 V660 H1380 V780"/></g>
+<g id="hR"><path id="hwR" pathLength="100" fill="none" stroke="#d8b36a" stroke-width="5" stroke-dasharray="100"
+  d="M1650,780 L1650,520 L1400,400 M1470,610 H1560 V690 H1470 Z M1515,610 V690 M1470,650 H1560"/></g>
+<path id="hcr" pathLength="100" fill="none" stroke="#c04a42" stroke-width="5" stroke-dasharray="100"
+  d="M1400,402 L1388,468 L1416,540 L1390,622 L1418,700 L1400,778"/>
+</svg>
+<div class="zlab" id="zl1" style="left:330px; top:766px; color:var(--gold);">还能从头再来</div>
+<div class="zlab" id="zl2" style="left:1150px; top:836px; width:500px; color:#8a8578;">连重来的机会都没有</div>`);
+const dvd = zero.querySelector('#dvd'), pbv = zero.querySelector('#pbv'), pbs = zero.querySelector('#pbs'),
+      pbvBox = zero.querySelector('.pb .v'), sprG = zero.querySelector('#sprG'),
+      spS = zero.querySelector('#spS'), sp1 = zero.querySelector('#sp1'), sp2 = zero.querySelector('#sp2'),
+      hLG = zero.querySelector('#hL'), hRG = zero.querySelector('#hR'),
+      hwL = zero.querySelector('#hwL'), hwR = zero.querySelector('#hwR'), hcr = zero.querySelector('#hcr'),
+      zl1 = zero.querySelector('#zl1'), zl2 = zero.querySelector('#zl2');
+
+const subs = makeSubs(root, [
+  [0.3, 3.9, '行情急转直下，工作说没就没。'],
+  [4.1, 8.1, '青年失业率，一度冲上21.3%。', ['21.3%']],
+  [8.3, 12.3, '有人不信命：「我命由我不由天。」'],
+  [12.5, 16.3, '打工没岗位，那就自己当老板。'],
+  [16.5, 20.3, '奶茶店、小餐馆、加盟连锁……'],
+  [20.5, 24.3, '「零基础小白，轻松月入十万。」'],
+  [24.5, 28.7, '一年之内，19.7万家奶茶店拉下卷帘门。', ['19.7万家']],
+  [28.9, 32.7, '行情越差，骗子越多。', ['骗子越多']],
+  [32.9, 37.3, '「快招」公司包教包会，专割着急翻身的创业者。'],
+  [37.5, 41.5, '三年，5000亿，进了骗子的口袋。', ['5000亿']],
+  [41.6, 46.2, '有人积蓄清零，还能从头再来；家散了的，连重来的机会都没有。', ['连重来的机会都没有']],
+]);
+const year = makeYear(root, '2024', '创业者的寒冬', 0.1, 5.2, 46.4);
+
+window.film = {
+  duration: 46.4,
+  ready: document.fonts.ready,
+  frame(t) {
+    stage.style.transform = `scale(${(1 + t * .0005).toFixed(4)})`;
+    root.style.opacity = t < .3 ? t / .3 : 1;
+    year(t); subs(t);
+
+    /* 数字卡 */
+    const aS = win(t, 5.3, 8.3, .5, .5); stat.style.opacity = aS;
+    if (aS > 0) stat.querySelector('.big').style.transform = `scale(${.9 + .1 * eOutBack(span(t, 5.3, 6.1))})`;
+
+    /* 开店场景 */
+    const aN = win(t, 8.3, 20.3, .9, .4);
+    const die = t > 19.0 ? .22 + .78 * Math.abs(Math.sin(t * 17)) : 1;
+    shop.style.opacity = (aN * die).toFixed(3);
+    if (aN > 0) {
+      const amb = mulberry32(42 + (t * 22 | 0))() * .35 + .65;   // 环境电流波动
+      const ent = eOutBack(span(t, 8.3, 9.4));
+      const mount = eInOut(span(t, 12.5, 13.5));                 // 招牌上移，装到店门上方
+      board.style.transform = `translateY(${(-163 * mount).toFixed(1)}px) scale(${((.92 + .08 * ent) * (1 - .15 * mount)).toFixed(3)})`;
+      hang.style.transform = `rotate(${((1 - mount) * Math.sin(t * .85) * .9).toFixed(3)}deg)`;
+      hang.querySelector('.wires').style.opacity = (win(t, 8.3, 13.2, .6, .5) * (1 - span(t, 12.4, 13.1))).toFixed(2);
+      chars.forEach((s, i) => {                                   // 逐字点亮：先抽搐，再稳亮
+        const on = 8.65 + i * .32; let b;
+        if (t < on) b = .05;
+        else if (t < on + .6) b = mulberry32(i * 131 + (t * 30 | 0))() < .5 ? .08 : 1;
+        else b = 1;
+        b *= amb;
+        s.style.color = `rgba(255,243,214,${b.toFixed(2)})`;
+        s.style.textShadow = `0 0 ${18 * b}px rgba(255,226,150,${(.9 * b).toFixed(2)}), 0 0 ${46 * b}px rgba(232,201,106,${(.75 * b).toFixed(2)}), 0 0 ${110 * b}px rgba(216,179,106,${(.5 * b).toFixed(2)})`;
+      });
+      board.style.borderColor = `rgba(154,120,62,${(.4 + .5 * amb).toFixed(2)})`;
+      bulbs.forEach((b, i) => {                                   // 灯串追逐
+        const g = Math.pow(Math.max(0, Math.sin(t * 5 - i * .7)), 2);
+        b.style.opacity = t > 9.2 ? (.25 + .75 * g).toFixed(2) : 0;
+        b.style.boxShadow = `0 0 ${(6 + 14 * g).toFixed(0)}px rgba(246,227,165,${(.3 + .6 * g).toFixed(2)})`;
+      });
+      const glow = span(t, 14.9, 15.9);                           // 店面亮灯程度
+      floorGlow.style.opacity = (span(t, 8.8, 9.8) * (.3 + .4 * glow)).toFixed(2);
+      front.style.opacity = win(t, 12.7, 20.3, .5, .4);
+      [['fr-awn', 12.7, 13.7], ['fr-posts', 13.3, 14.1], ['fr-door', 13.9, 14.7],
+       ['fr-wins', 14.2, 15.0], ['fr-ctr', 14.8, 15.3]].forEach(([id, a, b2]) =>
+        front.querySelector('#' + id).style.strokeDashoffset = (100 - 100 * eOutCubic(span(t, a, b2))).toFixed(1));
+      front.querySelector('#fr-fills').style.opacity = glow.toFixed(2);
+      openS.style.transform = `scaleX(${eOutBack(span(t, 15.3, 15.9)).toFixed(3)})`;   // 营业中翻牌
+      openS.style.textShadow = `0 0 ${(10 + 8 * Math.sin(t * 4)).toFixed(0)}px rgba(232,201,106,.8)`;
+      const aC = win(t, 16.6, 20.3, .5, .4);                      // 奶茶杯
+      cup.style.opacity = aC.toFixed(2);
+      if (aC > 0) {
+        cup.style.transform = `translateY(${(Math.sin(t * 1.25) * 5).toFixed(1)}px) scale(${eOutBack(span(t, 16.6, 17.5)).toFixed(3)})`;
+        cup.querySelector('#cream').style.opacity = (.96 * span(t, 16.9, 17.6)).toFixed(2);
+        pearlEls.forEach((c, i) => c.setAttribute('cy', [330, 342, 330, 356, 358][i] + Math.sin(t * 2 + i * 1.7) * 2));
+        bubEls.forEach((c, k) => { const p = (t * .32 + k * .21) % 1;
+          c.setAttribute('cx', 45 + (k * 53) % 140 + Math.sin(p * 8 + k * 2) * 10);
+          c.setAttribute('cy', 320 - p * 160);
+          c.setAttribute('fill-opacity', (.42 * (1 - p * p)).toFixed(2)); });
+      }
+      const aB = win(t, 17.0, 20.3, .45, .4), aCh = win(t, 17.8, 20.3, .45, .4);   // 碗 + 链环
+      bowlG.style.opacity = aB.toFixed(2); chainG.style.opacity = aCh.toFixed(2);
+      if (aB > 0) {
+        bowlG.style.transform = `scale(${eOutBack(span(t, 17.0, 17.9)).toFixed(3)})`;
+        steamPs.forEach((p, k) => p.style.strokeDashoffset = -(t * 38 + k * 18));
+      }
+      if (aCh > 0) {
+        chainG.style.transform = `scale(${eOutBack(span(t, 17.8, 18.7)).toFixed(3)})`;
+        chainMid.style.strokeOpacity = (.6 + .4 * Math.sin(t * 3)).toFixed(2);
+      }
+      const l1 = span(t, 17.3, 18.0), l2 = span(t, 18.1, 18.8);   // 标签浮现
+      lab1.style.opacity = l1.toFixed(2); lab1.style.transform = `translateY(${((1 - eOutCubic(l1)) * 18).toFixed(1)}px)`;
+      lab2.style.opacity = l2.toFixed(2); lab2.style.transform = `translateY(${((1 - eOutCubic(l2)) * 18).toFixed(1)}px)`;
+      shopCoins.forEach((c, k) => {                               // 金币从杯口冒出
+        if (t < 17.9) { c.set(0, 0, 1, 0); return; }
+        const p = ((t - 17.9) * .42 + k / 3) % 1, vis = Math.sin(p * Math.PI);
+        c.set(Math.sin(p * 6.28 + k * 2.1) * 55, 12, .8 + .2 * vis, Math.min(1, vis * 2.2));
+        c.el.style.left = (314 + Math.sin(p * 5.2 + k * 2.1) * 44).toFixed(1) + 'px';
+        c.el.style.top = (469 - p * 150).toFixed(1) + 'px';
+      });
+    }
+
+    /* 关店 */
+    const aH = win(t, 20.5, 28.7, .5, .4); shut.style.opacity = aH;
+    if (aH > 0) {
+      const n = Math.round(eOutExpo(span(t, 24.7, 27.6)) * 197000);
+      shutNum.textContent = n.toLocaleString('en-US');
+      const drop = eOutBounce(span(t, 24.9, 26.6));
+      curtain.style.height = (drop * 100) + '%';
+    }
+
+    /* 骗局四幕 */
+    const a1 = win(t, 28.9, 33.6, .5, .8); hooks.style.opacity = a1;
+    if (a1 > 0) {
+      const HKIN = [[29.3, 30.1], [30.4, 31.1], [30.9, 31.6]];
+      hkEls.forEach((g, k) => {                                   // 鱼钩：垂线 + 描边画出 + 摆动
+        g.setAttribute('transform', `translate(${HX[k]},70) rotate(${(Math.sin(t * 1.1 + k * 1.9) * (2.4 - k * .5) * span(t, 29.4 + k * .4, 30.4 + k * .4)).toFixed(2)})`);
+        hpEls[k].style.strokeDashoffset = (100 - 100 * eOutCubic(span(t, HKIN[k][0], HKIN[k][1]))).toFixed(1);
+        hgEls[k].style.opacity = hcEls[k].style.opacity = span(t, HKIN[k][1] - .05, HKIN[k][1] + .3).toFixed(2);
+        hgEls[k].setAttribute('r', (14 + 5 * Math.sin(t * 5 + k * 2)).toFixed(1));
+      });
+      tagEls.forEach((d, k) => {                                  // 话术牌逐个翻出
+        d.style.opacity = span(t, 30.8 + k * .28, 31.0 + k * .28);
+        d.style.transform = `scaleX(${eOutBack(span(t, 30.8 + k * .28, 31.35 + k * .28)).toFixed(3)})`;
+      });
+      FISH.forEach((f, i) => {                                    // 鱼群游向饵料，仰头摆尾
+        if (t < f[5]) { fhEls[i].setAttribute('opacity', 0); return; }
+        const e = eOutCubic(span(t, f[5], f[5] + 1.0));
+        const x = f[0] + (f[2] - f[0]) * e + Math.cos(t * .9 + i * 1.3) * 20 * e;
+        const y = f[1] + (f[3] - f[1]) * e + Math.sin(t * 1.3 + i * 2.1) * 12 * e;
+        const bx = HX.reduce((a, b) => Math.abs(b - x) < Math.abs(a - x) ? b : a);
+        fhEls[i].setAttribute('opacity', Math.min(1, span(t, f[5], f[5] + .5)).toFixed(2));
+        fhEls[i].setAttribute('transform',
+          `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(Math.atan2(206 - y, bx + 33 - x) * 57.3 + Math.sin(t * 5 + i) * 9).toFixed(1)}) scale(${f[4]})`);
+        ftEls[i].setAttribute('transform', `scale(${(.65 + .35 * Math.abs(Math.sin(t * 9 + i * 2))).toFixed(2)},1)`);
+      });
+    }
+
+    const a2 = win(t, 32.1, 37.7, .6, .7); leeks.style.opacity = a2;
+    if (a2 > 0) {
+      leeks.querySelector('#lkG').style.strokeDashoffset = (100 - 100 * eOutCubic(span(t, 32.2, 32.8))).toFixed(1);
+      leeks.querySelector('#lkR').style.opacity = span(t, 32.45, 32.7).toFixed(2);
+      const bn = eOutBack(span(t, 32.5, 33.15));                 // 横幅落下
+      banner.style.opacity = span(t, 32.5, 32.75).toFixed(2);
+      banner.style.transform = `translateY(${((1 - bn) * -46).toFixed(1)}px)`;
+      const SU = 35.2, SD = 36.3, SW0 = 1290, SW1 = 290;         // 挥镰区间（右→左）
+      LX.forEach((x, i) => {
+        const { g, b } = lkGEls[i];
+        const grow = Math.max(.02, eOutBack(span(t, 32.5 + i * .13, 33.15 + i * .13)));
+        const cutT = SU + (SW0 - x) / (SW0 - SW1) * (SD - SU);   // 镰刀扫到该株的时刻
+        const fall = eInQuad(span(t, cutT, cutT + .38));
+        g.setAttribute('transform', `translate(${x},762)`);
+        b.setAttribute('transform', `rotate(${(Math.sin(t * 1.3 + i * 1.7) * 1.6 * (1 - fall) - 78 * fall).toFixed(1)}) scale(1,${grow.toFixed(3)})`);
+        b.style.opacity = (1 - .72 * fall).toFixed(2);
+        for (let j = 0; j < 2; j++) {                            // ¥ 火星飞向右侧
+          const s = sparks[i * 2 + j], q = (t - cutT) / .7;
+          if (q < 0 || q > 1) { s.style.opacity = 0; continue; }
+          s.style.left = (x + 46 + q * (200 + j * 150) + j * 34) + 'px';
+          s.style.top = (612 - Math.sin(q * Math.PI) * (110 + j * 60) - q * 50) + 'px';
+          s.style.opacity = ((1 - q) * .95).toFixed(2);
+        }
+      });
+      const u = span(t, 34.9, 36.45), scy = leeks.querySelector('#scy');
+      scy.style.opacity = (u <= 0 || u >= 1) ? 0 : Math.min(1, u * 5, (1 - u) * 5).toFixed(2);
+      leeks.querySelector('#lkT').style.opacity = (4 * u * (1 - u) * .9).toFixed(2);
+      const sx = 240 * (1 - eOutCubic(span(t, 34.9, 35.5))) - 1000 * eInOut(span(t, 35.2, 36.35));
+      scy.setAttribute('transform', `translate(${sx.toFixed(1)},${(46 * eInOut(u)).toFixed(1)}) rotate(${(16 - 34 * eInOut(u)).toFixed(1)},1750,640)`);
+    }
+
+    const a3 = win(t, 37.3, 41.8, .6, .7); flow.style.opacity = a3;
+    if (a3 > 0) {
+      fpR.style.opacity = (.42 * span(t, 37.7, 38.3) * (1 - span(t, 41.2, 41.6))).toFixed(2);
+      const fill = eInOut(span(t, 38.0, 41.2));                  // 钱袋鼓起程度
+      bagG.style.transform = `scale(${(1 + .13 * fill).toFixed(4)})`;
+      bagY.style.opacity = Math.min(1, fill * 3).toFixed(2); bagW.style.opacity = fill.toFixed(2);
+      cnum.textContent = Math.round(eOutExpo(span(t, 38.0, 41.3)) * 5000).toLocaleString('en-US');
+      const zc = span(t, 38.4, 39.0);
+      zcap.style.opacity = zc.toFixed(2);
+      zcap.style.transform = `translateY(${((1 - eOutCubic(zc)) * 18).toFixed(1)}px)`;
+      flowCoins.forEach((c, i) => {                              // 金币沿贝塞尔光流进袋，一镜到底
+        if (t < 38.05) { c.set(0, 0, 1, 0); return; }
+        const p = ((t - 38.05) * .3 + i / 12) % 1;
+        const vis = Math.min(1, p * 7, (1 - p) * 4.5);
+        c.set(p * 580 + i * 137, 16 - p * 12, (.5 + .6 * p) * (1 - .3 * span(p, .85, 1)), vis);
+        c.el.style.left = (bz(FP[0], FP[2], FP[4], FP[6], p) - 38).toFixed(1) + 'px';
+        c.el.style.top = (bz(FP[1], FP[3], FP[5], FP[7], p) - 38).toFixed(1) + 'px';
+      });
+      ripEls.forEach((r, k) => {                                 // 袋口进币涟漪
+        if (t < 38.35) { r.style.opacity = 0; return; }
+        const pp = ((t - 38.35) * 3.2 + k / 3) % 1;
+        r.setAttribute('r', (12 + pp * 44).toFixed(1));
+        r.style.opacity = ((1 - pp) * .35 * fill).toFixed(2);
+      });
+    }
+
+    const a4 = win(t, 41.4, 46.3, .6, .5); zero.style.opacity = a4;
+    if (a4 > 0) {
+      dvd.style.transform = `scaleX(${eOutCubic(span(t, 41.8, 42.4)).toFixed(3)})`;
+      const bal = Math.round(386500 * (1 - eInOut(span(t, 42.3, 44.0))));   // 余额倒数清零
+      pbv.textContent = bal.toLocaleString('en-US');
+      pbvBox.style.color = bal === 0 ? '#c04a42' : '#f0d68a';
+      pbs.textContent = bal === 0 ? '清 零' : '余 额';
+      spS.style.strokeDashoffset = (100 - 100 * eOutCubic(span(t, 43.95, 44.4))).toFixed(1);   // 嫩芽
+      [sp1, sp2].forEach((p, k) => {
+        p.style.opacity = span(t, 44.15 + k * .15, 44.3 + k * .15).toFixed(2);
+        p.style.strokeDashoffset = (100 - 100 * eOutBack(span(t, 44.15 + k * .15, 44.6 + k * .15))).toFixed(1);
+      });
+      sprG.style.transform = `rotate(${(Math.sin(t * 1.4) * 3 * span(t, 44.7, 45.1)).toFixed(2)}deg)`;
+      hwL.style.strokeDashoffset = (100 - 100 * eOutCubic(span(t, 42.1, 43.0))).toFixed(1);   // 房子
+      hwR.style.strokeDashoffset = (100 - 100 * eOutCubic(span(t, 42.3, 43.2))).toFixed(1);
+      hcr.style.strokeDashoffset = (100 - 100 * eOutCubic(span(t, 43.5, 44.1))).toFixed(1);
+      const sep = eInOut(span(t, 44.2, 45.4));                   // 裂开分离
+      hLG.setAttribute('transform', `translate(${(-30 * sep).toFixed(1)},0) rotate(${(-3.5 * sep).toFixed(1)},1400,780)`);
+      hRG.setAttribute('transform', `translate(${(30 * sep).toFixed(1)},0) rotate(${(3 * sep).toFixed(1)},1400,780)`);
+      hwL.style.stroke = hwR.style.stroke = `rgba(216,179,106,${(1 - .62 * sep).toFixed(2)})`;
+      hcr.style.opacity = (1 - .75 * sep).toFixed(2);
+      const z1 = span(t, 44.5, 45.0), z2 = span(t, 44.9, 45.4);
+      zl1.style.opacity = z1.toFixed(2); zl1.style.transform = `translateY(${((1 - eOutCubic(z1)) * 18).toFixed(1)}px)`;
+      zl2.style.opacity = z2.toFixed(2); zl2.style.transform = `translateY(${((1 - eOutCubic(z2)) * 18).toFixed(1)}px)`;
+    }
+  }
+};
+</script></body></html>

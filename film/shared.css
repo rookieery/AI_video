@@ -1,0 +1,58 @@
+/* 《拼命，是最好的投资吗？》共享样式 —— OpenFilm 版 */
+@font-face { font-family: 'HanSerif'; src: url('assets/fonts/SourceHanSerifCN-Regular.otf'); font-weight: 400; }
+@font-face { font-family: 'HanSerif'; src: url('assets/fonts/SourceHanSerifCN-Bold.otf');     font-weight: 700; }
+@font-face { font-family: 'HanSerif'; src: url('assets/fonts/SourceHanSerifCN-Heavy.otf');    font-weight: 900; }
+
+:root {
+  --gold: #d8b36a; --gold-hi: #e8c96a; --gold-deep: #9a783e;
+  --ivory: #e9e2d3; --quote: #c8c0b0; --gray: #8a8578; --red: #9e3b34;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; font-family: 'HanSerif', serif; }
+.stage { position: absolute; inset: 0; }
+
+/* ── 字幕（逐字浮现） ─────────────────────── */
+.sub { position: absolute; left: 0; right: 0; bottom: 96px; text-align: center;
+  font-weight: 700; font-size: 66px; line-height: 1.5; color: var(--ivory);
+  text-shadow: 0 2px 24px rgba(0,0,0,.85); will-change: transform, filter, opacity; }
+.sub .ch { display: inline-block; opacity: 0; will-change: transform, filter; }
+.sub .ch.gold {
+  background: linear-gradient(180deg, #f6e3a5 0%, var(--gold-hi) 45%, #c89b4e 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 18px rgba(216,179,106,.55));
+}
+.sub .ch.q { color: var(--quote); }
+
+/* ── 年份章节卡 ───────────────────────────── */
+.yearcard { position: absolute; left: 0; right: 0; top: 200px; text-align: center; }
+.yearcard .num {
+  font-weight: 900; font-size: 330px; line-height: 1; letter-spacing: .02em;
+  background: linear-gradient(178deg, #f6e6b0 0%, #e8c96a 35%, #b0863f 72%, #8a6430 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 42px rgba(216,179,106,.28)) drop-shadow(0 14px 28px rgba(0,0,0,.6));
+}
+.yearcard .sub-t { margin-top: 26px; font-size: 62px; font-weight: 400; color: var(--ivory); letter-spacing: .34em; text-indent: .34em; }
+.yearcard .rule { margin: 34px auto 0; height: 2px; width: 840px;
+  background: linear-gradient(90deg, transparent, var(--gold-deep) 18%, var(--gold-hi) 50%, var(--gold-deep) 82%, transparent); }
+.corner { position: absolute; left: 72px; top: 60px; }
+.corner .y { font-weight: 900; font-size: 58px; color: var(--gold); letter-spacing: .04em; }
+.corner .s { margin-top: 6px; font-size: 34px; color: var(--gray); letter-spacing: .18em; }
+.corner .l { margin-top: 14px; width: 140px; height: 2px; background: var(--gold-deep); }
+
+/* ── CSS 3D 硬币 ─────────────────────────── */
+.coin { position: absolute; transform-style: preserve-3d; }
+.coin .slice, .coin .face { position: absolute; border-radius: 50%; inset: 0;
+  background: radial-gradient(circle at 38% 32%, #e2c078 0%, #c49a4e 38%, #8a6631 78%, #6d5326 100%); }
+.coin .face { display: flex; align-items: center; justify-content: center;
+  color: #f2d68c; font-weight: 700; box-shadow: inset 0 0 0 7px rgba(120,92,48,.9), inset 0 0 28px rgba(60,44,20,.55); }
+.coin .face.back { transform: rotateY(180deg); }
+.coin-glow { position: absolute; border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,201,106,.5) 0%, rgba(232,201,106,.14) 45%, transparent 70%); }
+.dashed-ring { position: absolute; border-radius: 50%; border: 3px dashed rgba(216,179,106,.55); }
+
+/* ── 图表 ─────────────────────────────────── */
+.chart { position: absolute; }
+.chart .axis { stroke: rgba(154,120,62,.75); stroke-width: 2.5; }
+.chart .grid { stroke: rgba(154,120,62,.16); stroke-width: 1.5; }
+.chart .tick { fill: #8a8578; font-size: 34px; font-family: 'HanSerif', serif; }
+.chart .lab { fill: #e8c96a; font-size: 40px; font-weight: 700; font-family: 'HanSerif', serif; }

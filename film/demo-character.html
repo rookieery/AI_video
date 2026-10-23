@@ -1,0 +1,237 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+<style>
+  /* 演示：参考抖音「 Nico 」暗夜线稿风 —— 发光线条人物 + 清单本动画 */
+  html, body { font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #02050a; }
+  #root { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; transform-origin: 50% 46%; will-change: transform; }
+  #scene svg { position: absolute; inset: 0; }
+  .toptext { position: absolute; left: 0; right: 0; text-align: center; letter-spacing: .1em; text-indent: .1em;
+    color: #e8eef6; will-change: opacity, filter; }
+  #line1 { top: 54px; font-size: 58px; font-weight: 700;
+    text-shadow: 0 0 26px rgba(159,199,232,.35), 0 2px 12px rgba(0,0,0,.7); }
+  #line2 { top: 140px; font-size: 42px; font-weight: 400; color: #aebfd2; }
+  .pad { position: absolute; left: 1562px; top: 288px; width: 272px; will-change: opacity, transform; }
+  .pad .card { position: relative; border-radius: 14px; padding: 56px 24px 30px;
+    background: linear-gradient(180deg, #0e1a28 0%, #0b1420 100%);
+    border: 1.5px solid rgba(159,199,232,.38);
+    box-shadow: 0 18px 50px rgba(0,0,0,.65), 0 0 34px rgba(127,180,224,.12); }
+  .pad .rings { position: absolute; top: -13px; left: 0; right: 0; display: flex; justify-content: center; gap: 24px; }
+  .pad .rings i { width: 12px; height: 26px; border: 2.5px solid rgba(159,199,232,.55);
+    border-bottom: none; border-radius: 8px 8px 0 0; }
+  .pad h3 { margin: 0 0 18px; font-size: 33px; font-weight: 700; color: #dfe9f4;
+    letter-spacing: .18em; text-indent: .18em; text-align: center; }
+  .pad .item { display: flex; align-items: center; gap: 13px; margin: 19px 0;
+    font-size: 24px; color: #66788c; will-change: opacity, transform; }
+  .pad .box { flex: 0 0 auto; width: 30px; height: 30px; border: 2px solid #55677a;
+    border-radius: 7px; position: relative; will-change: transform; }
+  .pad .box svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+  .pad .pen { position: absolute; right: -36px; bottom: -18px; width: 150px; height: 12px; border-radius: 6px;
+    transform: rotate(24deg); opacity: .85;
+    background: linear-gradient(90deg, #33506e, #9fc7e8 55%, #33506e); box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+  #caption { position: absolute; left: 0; right: 0; bottom: 32px; text-align: center; font-size: 26px;
+    letter-spacing: .14em; text-indent: .14em; color: rgba(154,170,190,.6); opacity: 0; }
+  #vignette { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 44%, transparent 52%, rgba(0,0,0,.62) 100%); }
+</style></head><body>
+<div id="root">
+  <div id="scene"></div>
+  <div id="vignette"></div>
+  <div class="toptext" id="line1">晚上十一点四十七。</div>
+  <div class="toptext" id="line2">他们说：改完这一版，就回家。</div>
+  <div class="pad" id="pad">
+    <div class="card">
+      <div class="rings"><i></i><i></i><i></i><i></i><i></i></div>
+      <h3>今晚清单</h3>
+      <div class="item"><div class="box"><svg viewBox="0 0 30 30"><path d="M7 15.5 L13 21.5 L23 9" fill="none" stroke="#9fd0ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>改完第三版方案</span></div>
+      <div class="item"><div class="box"><svg viewBox="0 0 30 30"><path d="M7 15.5 L13 21.5 L23 9" fill="none" stroke="#9fd0ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>回妈的电话</span></div>
+      <div class="item"><div class="box"><svg viewBox="0 0 30 30"><path d="M7 15.5 L13 21.5 L23 9" fill="none" stroke="#9fd0ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>预约拖了半年的体检</span></div>
+      <div class="item"><div class="box"><svg viewBox="0 0 30 30"><path d="M7 15.5 L13 21.5 L23 9" fill="none" stroke="#9fd0ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>十二点前睡觉</span></div>
+      <div class="pen"></div>
+    </div>
+  </div>
+  <div id="caption">演示镜头 · 纯代码（SVG）绘制的动画人物 —— demo-character.html</div>
+</div>
+<script>
+const root = document.getElementById('root');
+const scene = document.getElementById('scene');
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; };
+const rnd = mulberry32(7);
+const LINE = '#a9cdea';
+
+const svg = svgEl('svg', { viewBox: '0 0 1920 1080' }, scene);
+const defs = svgEl('defs', {}, svg);
+defs.innerHTML = `
+  <radialGradient id="bgGrad" cx="50%" cy="42%" r="75%">
+    <stop offset="0%" stop-color="#081120"/><stop offset="100%" stop-color="#02050a"/></radialGradient>
+  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#050b14"/><stop offset="100%" stop-color="#0d1e33"/></linearGradient>
+  <radialGradient id="moonGlow">
+    <stop offset="0%" stop-color="rgba(207,226,242,.5)"/><stop offset="100%" stop-color="rgba(207,226,242,0)"/></radialGradient>
+  <radialGradient id="cityGlow" cx="50%" cy="100%" r="80%">
+    <stop offset="0%" stop-color="rgba(38,74,116,.55)"/><stop offset="100%" stop-color="rgba(38,74,116,0)"/></radialGradient>
+  <linearGradient id="screenGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="rgba(58,110,168,.34)"/><stop offset="100%" stop-color="rgba(24,52,86,.5)"/></linearGradient>`;
+svgEl('rect', { width: 1920, height: 1080, fill: 'url(#bgGrad)' }, svg);
+
+/* ── 大窗：夜空 / 月亮 / 星 / 两层楼群 / 百叶 ── */
+const WX = 380, WY = 170, WW = 1160, WH = 450;
+const winG = svgEl('g', {}, svg);
+svgEl('rect', { x: WX, y: WY, width: WW, height: WH, fill: 'url(#skyGrad)' }, winG);
+svgEl('circle', { cx: 1360, cy: 258, r: 92, fill: 'url(#moonGlow)' }, winG);
+const moon = svgEl('circle', { cx: 1360, cy: 258, r: 24, fill: '#cfe2f2', opacity: .92 }, winG);
+const stars = [];
+for (let i = 0; i < 14; i++) stars.push({
+  sp: .5 + rnd() * 1.6, ph: rnd() * 6.28,
+  n: svgEl('circle', { cx: (WX + 30 + rnd() * (WW - 60)).toFixed(0), cy: (WY + 18 + rnd() * 170).toFixed(0),
+    r: (1.2 + rnd() * 1.6).toFixed(1), fill: '#bcd6ec' }, winG) });
+{ // 远景剪影
+  let d = `M ${WX} ${WY + WH} `, x = WX;
+  while (x < WX + WW) { const w = 50 + rnd() * 110, h = 60 + rnd() * 230;
+    d += `L ${x.toFixed(0)} ${(WY + WH - h).toFixed(0)} L ${(x + w).toFixed(0)} ${(WY + WH - h).toFixed(0)} `; x += w; }
+  svgEl('path', { d: d + `L ${WX + WW} ${WY + WH} Z`, fill: '#0a1420', opacity: .85 }, winG); }
+svgEl('rect', { x: WX, y: WY + WH - 210, width: WW, height: 210, fill: 'url(#cityGlow)' }, winG);
+const flick = []; // 会呼吸的亮窗
+{ let x = WX + 26;
+  while (x < WX + WW - 110) {
+    const w = 70 + rnd() * 95, h = 150 + rnd() * 260, top = WY + WH - h;
+    svgEl('rect', { x: x.toFixed(0), y: top.toFixed(0), width: w.toFixed(0), height: h.toFixed(0),
+      fill: '#0d1926', stroke: 'rgba(169,205,234,.16)', 'stroke-width': 2 }, winG);
+    const cols = Math.floor((w - 18) / 26), rows = Math.floor((h - 24) / 32);
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) if (rnd() < .3)
+      flick.push({ base: .22 + rnd() * .6, sp: .5 + rnd() * 2, ph: rnd() * 6.28,
+        n: svgEl('rect', { x: (x + 10 + c * 26).toFixed(0), y: (top + 12 + r * 32).toFixed(0),
+          width: 11, height: 15, fill: '#9fc7e8', opacity: 0 }, winG) });
+    x += w + 34 + rnd() * 40; } }
+const blinds = svgEl('g', { stroke: 'rgba(169,205,234,.09)', 'stroke-width': 3 }, winG);
+for (let y = WY + 16; y < WY + WH; y += 27) svgEl('line', { x1: WX + 6, y1: y, x2: WX + WW - 6, y2: y }, blinds);
+svgEl('rect', { x: WX, y: WY, width: WW, height: WH, fill: 'none',
+  stroke: 'rgba(169,205,234,.42)', 'stroke-width': 9 }, winG);
+for (const mx of [WX + WW / 3, WX + WW * 2 / 3])
+  svgEl('line', { x1: mx, y1: WY, x2: mx, y2: WY + WH, stroke: 'rgba(169,205,234,.28)', 'stroke-width': 5 }, winG);
+svgEl('line', { x1: 0, y1: 880, x2: 1920, y2: 880, stroke: 'rgba(169,205,234,.16)', 'stroke-width': 3 }, svg);
+
+/* ── 线稿人物：正面坐姿，肩-肘-手三段由 t 驱动 ── */
+function makeWorker(X, ph) {
+  const g = svgEl('g', { transform: `translate(${X},0)`,
+    filter: 'drop-shadow(0 0 7px rgba(127,180,224,.35))' }, svg);
+  const u = { ph };
+  u.chair = svgEl('path', { fill: 'none', stroke: 'rgba(159,199,232,.4)',
+    'stroke-width': 5, 'stroke-linecap': 'round' }, g); // 椅背弧（头后）
+  u.torso = svgEl('path', { d: 'M -95 615 Q 0 580 95 615 L 84 772 L -84 772 Z',
+    fill: '#081019', stroke: LINE, 'stroke-width': 5, 'stroke-linejoin': 'round' }, g);
+  svgEl('path', { d: 'M -26 602 L 0 660 M 26 602 L 0 660', // 挂绳工牌
+    stroke: 'rgba(159,199,232,.55)', 'stroke-width': 3, fill: 'none' }, g);
+  svgEl('rect', { x: -19, y: 658, width: 38, height: 46, rx: 5, fill: '#0e1b29',
+    stroke: 'rgba(159,199,234,.5)', 'stroke-width': 2.5 }, g);
+  svgEl('line', { x1: 0, y1: 585, x2: 0, y2: 610, stroke: LINE, 'stroke-width': 5 }, g); // 颈
+  u.head = svgEl('circle', { r: 45, fill: '#081019', stroke: LINE, 'stroke-width': 5 }, g);
+  svgEl('line', { x1: -214, y1: 770, x2: 214, y2: 770, // 桌面
+    stroke: 'rgba(169,205,234,.55)', 'stroke-width': 10, 'stroke-linecap': 'round' }, g);
+  svgEl('line', { x1: -190, y1: 776, x2: -190, y2: 880, stroke: 'rgba(169,205,234,.3)', 'stroke-width': 5 }, g);
+  svgEl('line', { x1: 190, y1: 776, x2: 190, y2: 880, stroke: 'rgba(169,205,234,.3)', 'stroke-width': 5 }, g);
+  svgEl('ellipse', { cx: 0, cy: 886, rx: 235, ry: 9, fill: 'rgba(0,0,0,.42)' }, g);
+  svgEl('rect', { x: -172, y: 750, width: 344, height: 15, rx: 7, fill: '#0c1725',
+    stroke: 'rgba(169,205,234,.4)', 'stroke-width': 2.5 }, g); // 键盘
+  svgEl('rect', { x: -34, y: 760, width: 68, height: 9, rx: 4, fill: '#0e1b29',
+    stroke: 'rgba(169,205,234,.4)', 'stroke-width': 2 }, g); // 底座
+  svgEl('rect', { x: -102, y: 628, width: 204, height: 138, rx: 9, fill: '#0b1626',
+    stroke: 'rgba(169,205,234,.5)', 'stroke-width': 4 }, g); // 显示器
+  u.screen = svgEl('rect', { x: -88, y: 640, width: 176, height: 112, rx: 5, fill: 'url(#screenGrad)' }, g);
+  u.bars = [];
+  for (let i = 0; i < 4; i++) u.bars.push(svgEl('rect', { x: -74, y: 652 + i * 25,
+    height: 11, rx: 5, fill: '#8fc4ee', opacity: 0 }, g));
+  u.armL = svgEl('path', { fill: 'none', stroke: LINE, 'stroke-width': 5.5,
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+  u.armR = svgEl('path', { fill: 'none', stroke: LINE, 'stroke-width': 5.5,
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+  u.handL = svgEl('circle', { r: 11, fill: '#0a1420', stroke: LINE, 'stroke-width': 4.5 }, g);
+  u.handR = svgEl('circle', { r: 11, fill: '#0a1420', stroke: LINE, 'stroke-width': 4.5 }, g);
+  return u;
+}
+const A = makeWorker(700, 0), B = makeWorker(1220, 2.4);
+const BARS = [[1.2, 130], [2.6, 84], [4.4, 150], [6.6, 56]]; // [屏幕行出现时间, 最长px]
+
+function poseWorker(u, t, stretchAt) {
+  const ph = u.ph;
+  const bob = Math.sin(t * 1.35 + ph) * 3;                       // 头轻晃
+  let lift = 0;                                                   // B 的周期性伸懒腰
+  if (stretchAt != null) { const c = (t + stretchAt) % 7.5;
+    if (c > 3 && c < 4.6) lift = Math.sin(Math.PI * (c - 3) / 1.6); }
+  const hl = { x: -150 + Math.sin(t * 7 + ph) * 2, y: 746 - Math.abs(Math.sin(t * 9.5 + ph)) * 5 };
+  const hr = { x: 150 + Math.sin(t * 7 + ph + 2) * 2, y: 746 - Math.abs(Math.sin(t * 9.5 + ph + 1.7)) * 5 };
+  const hx = hr.x + (122 - hr.x) * lift, hy = hr.y + (428 - hr.y) * lift; // 抬手目标
+  const eL = { x: (-88 + hl.x) / 2 - 26, y: (622 + hl.y) / 2 - 6 };
+  const eR = { x: (88 + hx) / 2 + 26, y: (622 + hy) / 2 - 6 - lift * 40 };
+  u.armL.setAttribute('d', `M -88 622 L ${eL.x.toFixed(1)} ${eL.y.toFixed(1)} L ${hl.x.toFixed(1)} ${hl.y.toFixed(1)}`);
+  u.armR.setAttribute('d', `M 88 622 L ${eR.x.toFixed(1)} ${eR.y.toFixed(1)} L ${hx.toFixed(1)} ${hy.toFixed(1)}`);
+  u.handL.setAttribute('cx', hl.x.toFixed(1)); u.handL.setAttribute('cy', hl.y.toFixed(1));
+  u.handR.setAttribute('cx', hx.toFixed(1)); u.handR.setAttribute('cy', hy.toFixed(1));
+  u.head.setAttribute('cx', (lift * 9).toFixed(1)); u.head.setAttribute('cy', (540 + bob).toFixed(1));
+  u.chair.setAttribute('d', `M -66 ${(524 + bob).toFixed(1)} A 82 82 0 0 1 66 ${(524 + bob).toFixed(1)}`);
+  u.screen.setAttribute('opacity', (.8 + Math.sin(t * 2.2 + ph) * .12).toFixed(3));
+  u.bars.forEach((b, i) => { const [t0, wMax] = BARS[i];
+    const w = clamp01((t - t0 - ph * .4) / 2.4) * wMax;
+    b.setAttribute('width', Math.max(0, w).toFixed(1));
+    b.setAttribute('opacity', w < 1 ? 0 : (.5 + .28 * Math.sin(t * 3 + i * 1.8 + ph)).toFixed(3)); });
+}
+
+/* ── 清单本 / 文案 ── */
+const pad = document.getElementById('pad');
+const line1 = document.getElementById('line1'), line2 = document.getElementById('line2');
+const caption = document.getElementById('caption');
+const items = [...pad.querySelectorAll('.item')].map(n => ({
+  n, box: n.querySelector('.box'), tick: n.querySelector('.box svg'), txt: n.querySelector('span') }));
+const PAD = [
+  { in: 1.8, check: 5.2 },
+  { in: 2.4, check: 8.4 },
+  { in: 3.0, check: 11.2 },
+  { in: 3.6, check: null },        // 最后一项永远没打勾 —— 留白
+];
+const mix = (a, b, p) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * p)).join(',')})`;
+const GRAY = [102, 120, 140], BLUE = [159, 208, 255];
+
+window.film = {
+  duration: 14,
+  ready: document.fonts.ready,
+  frame(t) {
+    scene.style.transform = `scale(${(1 + t * .0032).toFixed(4)})`; // 缓慢推近
+    for (const s of stars) s.n.setAttribute('opacity', (.25 + .3 * Math.sin(t * s.sp + s.ph)).toFixed(3));
+    for (const f of flick) f.n.setAttribute('opacity', (f.base * (.72 + .28 * Math.sin(t * f.sp + f.ph))).toFixed(3));
+    moon.setAttribute('opacity', (.88 + Math.sin(t * .7) * .05).toFixed(3));
+    poseWorker(A, t, null);
+    poseWorker(B, t, 1.3);
+    const out = 1 - span(t, 12.5, 13.2);
+    const e1 = eOutCubic(span(t, .9, 1.9)), e2 = eOutCubic(span(t, 2.2, 3.2));
+    line1.style.opacity = (e1 * out).toFixed(3);
+    line1.style.filter = e1 < 1 ? `blur(${((1 - e1) * 8).toFixed(1)}px)` : '';
+    line2.style.opacity = (e2 * out).toFixed(3);
+    line2.style.filter = e2 < 1 ? `blur(${((1 - e2) * 8).toFixed(1)}px)` : '';
+    const pin = eOutBack(span(t, 1.7, 2.5));
+    pad.style.opacity = (Math.min(pin, 1) * out).toFixed(3);
+    pad.style.transform = `translateX(${((1 - Math.min(pin, 1)) * 56).toFixed(1)}px) rotate(-1.2deg)`;
+    items.forEach((it, i) => {
+      const { in: tIn, check: tc } = PAD[i];
+      const en = eOutCubic(span(t, tIn, tIn + .55));
+      it.n.style.opacity = en.toFixed(3);
+      it.n.style.transform = `translateX(${((1 - en) * 36).toFixed(1)}px)`;
+      if (tc == null) { it.tick.style.opacity = 0; return; }
+      const pop = Math.sin(Math.PI * span(t, tc, tc + .5));
+      const glow = 1 - span(t, tc, tc + 1.1);
+      it.box.style.transform = `scale(${(1 + .28 * pop).toFixed(3)})`;
+      it.box.style.borderColor = mix([85, 103, 122], BLUE, span(t, tc, tc + .7));
+      it.box.style.background = `rgba(111,179,255,${(.16 * span(t, tc, tc + .7)).toFixed(3)})`;
+      it.box.style.boxShadow = `0 0 ${(18 * glow).toFixed(1)}px rgba(111,179,255,${(.75 * glow).toFixed(3)})`;
+      it.tick.style.opacity = span(t, tc + .12, tc + .38).toFixed(3);
+      const cp = eOutCubic(span(t, tc, tc + .8));
+      it.txt.style.color = mix(GRAY, BLUE, cp);
+      it.txt.style.textShadow = `0 0 ${(14 * cp).toFixed(1)}px rgba(111,179,255,${(.5 * cp).toFixed(3)})`;
+    });
+    caption.style.opacity = (.55 * span(t, 3, 4) * (1 - span(t, 13.1, 13.7))).toFixed(3);
+    root.style.opacity = (span(t, 0, .7) * (1 - span(t, 13.5, 13.98))).toFixed(3);
+  }
+};
+</script></body></html>

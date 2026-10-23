@@ -1,0 +1,233 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .big{position:absolute;left:0;width:1200px;text-align:center;}
+  .cgrp{display:inline-block;opacity:0;}
+  .mblock{position:absolute;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:34px;transform:scaleY(0);transform-origin:bottom;}
+  svg text{font-family:"Cambria Math","Times New Roman",serif;}
+</style>
+</head>
+<body>
+  <div id="F1" class="big fx" style="top:80px;font-size:44px">
+    <span class="sym">f(t)</span><span class="sym"> = </span><span class="sym">(</span><span class="sym gold">3</span><span class="sym">t−</span><span class="sym cyan">5</span><span class="sym">)</span><sup class="sym">2</sup>
+    <span class="sym"> + </span><span class="sym">(</span><span class="sym gold">4</span><span class="sym">t−</span><span class="sym cyan">12</span><span class="sym">)</span><sup class="sym">2</sup>
+  </div>
+  <div id="F0" class="big" style="top:190px;font-size:30px;color:var(--muted);opacity:0">以 a = (3,4)，b = (5,12) 为例</div>
+  <div id="blk">
+    <div id="b1" class="mblock" style="left:180px;top:770px;width:300px;height:130px;background:linear-gradient(180deg,rgba(232,182,76,.5),rgba(232,182,76,.15))">(3t−5)²</div>
+    <div id="b2" class="mblock" style="left:560px;top:770px;width:300px;height:130px;background:linear-gradient(180deg,rgba(88,196,212,.5),rgba(88,196,212,.15))">(4t−12)²</div>
+    <div id="bline" class="abs" style="left:150px;top:906px;width:0;border-top:2px solid rgba(232,182,76,.5);box-shadow:0 0 14px rgba(232,182,76,.3)"></div>
+    <div id="bcap" class="big" style="top:936px;font-size:30px;color:var(--muted);opacity:0">每项都是平方 · 恒非负</div>
+  </div>
+  <div id="F2" class="big fx" style="top:290px;font-size:40px;opacity:0">
+    <span class="sym">= (</span><span class="sym gold">9+16</span><span class="sym">)</span><span class="sym">t</span><sup class="sym">2</sup>
+    <span class="sym"> − 2(</span><span class="sym gold">15</span><span class="sym">+</span><span class="sym cyan">48</span><span class="sym">)t + (</span><span class="sym cyan">25+144</span><span class="sym">)</span>
+  </div>
+  <div id="F3" class="big fx" style="top:400px;font-size:48px;opacity:0">
+    = <span class="sym gold" id="k25">25</span><span class="sym">t</span><sup class="sym">2</sup>
+    <span class="sym"> − </span><span class="sym" id="k126">126</span><span class="sym">t + </span><span class="sym cyan" id="k169">169</span>
+  </div>
+  <div id="mp" class="big fx" style="top:490px;font-size:30px;opacity:0">
+    <span class="gold">Σaᵢ² = 25</span><span class="muted"> · </span><span>Σaᵢbᵢ = 63（×2 = 126）</span><span class="muted"> · </span><span class="cyan">Σbᵢ² = 169</span>
+  </div>
+  <!-- parabola -->
+  <div id="pp" class="abs panel" style="left:1240px;top:120px;width:560px;height:560px;opacity:0">
+    <svg width="560" height="560" viewBox="0 0 880 880">
+      <line x1="110" y1="30" x2="110" y2="800" stroke="rgba(255,255,255,.25)" stroke-width="2"/>
+      <line x1="110" y1="800" x2="860" y2="800" stroke="rgba(255,255,255,.25)" stroke-width="2"/>
+      <g id="pclip">
+        <path id="pcur" fill="none" stroke="#8ce0ec" stroke-width="5"/>
+      </g>
+      <line id="vdrop" x1="478" y1="766" x2="478" y2="800" stroke="rgba(255,255,255,.4)" stroke-width="2" stroke-dasharray="6 6" opacity="0"/>
+      <circle id="vdot" cx="478" cy="766" r="9" fill="#ffd76a" opacity="0"/>
+      <text id="vlab" x="320" y="840" fill="#7a8699" font-size="30" opacity="0">顶点 (2.52, 10.24)</text>
+      <line id="sdrop" stroke="rgba(255,255,255,.3)" stroke-width="2" stroke-dasharray="5 6" opacity="0"/>
+      <circle id="sdot" r="10" fill="#ffd76a" opacity="0"/>
+      <text x="840" y="845" fill="#7a8699" font-size="30">t</text>
+      <text x="40" y="50" fill="#7a8699" font-size="30">f(t)</text>
+    </svg>
+    <div id="fv" class="fx" style="position:absolute;right:20px;top:14px;font-size:30px;color:#ffd76a;opacity:0"></div>
+  </div>
+  <div id="dl" class="big fx" style="top:580px;font-size:40px;opacity:0">
+    <span class="sym">Δ</span><span class="sym"> = </span><span class="sym">126</span><sup class="sym">2</sup><span class="sym"> − 4·</span><span class="sym gold">25</span><span class="sym">·</span><span class="sym cyan">169</span><span class="sym"> = −1024 < 0</span>
+  </div>
+  <div id="dl2" class="big fx" style="top:660px;font-size:42px;opacity:0">Δ = −4 × <span class="gold-hi">256</span></div>
+  <!-- 256 callback: axis draws, bars grow, then the gap line sweeps -->
+  <div id="mini" class="abs panel" style="left:1300px;top:720px;width:240px;height:230px;opacity:0">
+    <div id="maxis" class="abs" style="left:20px;top:180px;width:0;border-top:2px solid rgba(255,255,255,.3)"></div>
+    <div id="mbar1" class="abs" style="left:60px;top:180px;width:44px;height:0;background:rgba(232,182,76,.5);border-radius:6px 6px 0 0"></div>
+    <div id="mbar2" class="abs" style="left:150px;top:180px;width:44px;height:0;background:rgba(88,196,212,.5);border-radius:6px 6px 0 0"></div>
+    <div id="mgap" class="abs" style="left:60px;top:32px;width:0;border-top:2px dashed rgba(255,215,106,.6)"></div>
+  </div>
+  <div id="fly256" class="abs fx" style="left:0;top:0;font-size:42px;color:var(--gold-hi);opacity:0">256</div>
+  <svg id="thread" class="abs" style="inset:0" width="1920" height="1080" viewBox="0 0 1920 1080">
+    <line id="tl" stroke="rgba(255,215,106,.5)" stroke-width="3" opacity="0"/>
+    <line id="ta" stroke="rgba(255,215,106,.55)" stroke-width="3" opacity="0"/>
+    <line id="tb" stroke="rgba(244,246,250,.45)" stroke-width="3" opacity="0"/>
+    <line id="tc" stroke="rgba(140,224,236,.55)" stroke-width="3" opacity="0"/>
+  </svg>
+  <!-- conclusion: 万流归宗 — the key numbers fly home into the theorem -->
+  <div id="ccglow" class="abs" style="left:410px;top:330px;width:1100px;height:360px;border-radius:50%;opacity:0;background:radial-gradient(closest-side,rgba(255,215,106,.16),rgba(255,215,106,.05) 55%,transparent 75%)"></div>
+  <div id="cc" class="big fx" style="top:470px;width:100%;font-size:58px;opacity:0">
+    <span class="cgrp" id="gD">Δ ≤ 0</span><span class="cgrp" id="gImp" style="margin:0 .3em">⟹</span>
+    <span class="cgrp" id="gAB">(Σ<span class="gold">a</span><sub class="gold">i</sub><span class="cyan">b</span><sub class="cyan">i</sub>)<sup>2</sup></span>
+    <span class="cgrp" id="gLe" style="margin:0 .18em">≤</span>
+    <span class="cgrp" id="gA2">(Σ<span class="gold">a</span><sub class="gold">i</sub><sup class="gold">2</sup>)</span>
+    <span class="cgrp" id="gB2">(Σ<span class="cyan">b</span><sub class="cyan">i</sub><sup class="cyan">2</sup>)</span>
+  </div>
+  <div id="fly25" class="abs fx" style="font-size:46px;color:var(--gold-hi);opacity:0">25</div>
+  <div id="fly126" class="abs fx" style="font-size:44px;opacity:0">126</div>
+  <div id="fly169" class="abs fx" style="font-size:46px;color:var(--cyan-hi);opacity:0">169</div>
+  <div id="qed" class="fx" style="position:absolute;top:474px;font-size:50px;color:var(--gold-hi);opacity:0">∎</div>
+  <div id="burstHost" class="abs"></div>
+  <div id="wflash" class="abs" style="inset:0;background:#fff;opacity:0"></div>
+  <div class="vign"></div>
+<script src="shared.js"></script>
+<script>
+var F = window.F;
+var $ = function (i) { return document.getElementById(i); };
+/* f(t) = 25t^2 - 126t + 169 ; X/Y mapping inside the panel */
+function f5(t) { return 25 * t * t - 126 * t + 169; }
+function X5(t) { return 110 + t * 146; }
+function Y5(v) { return 800 - v * 3.3; }
+(function () {
+  var d = '';
+  for (var i = 0; i <= 80; i++) {
+    var t = 5 * i / 80;
+    d += (i ? 'L' : 'M') + X5(t).toFixed(1) + ',' + Y5(f5(t)).toFixed(1);
+  }
+  $('pcur').setAttribute('d', d);
+})();
+/* golden thread from mini-256 to the Δ line */
+var THX1 = 1430, THY1 = 775, THX2 = 680, THY2 = 685;
+var THL = Math.hypot(THX2 - THX1, THY2 - THY1);
+$('tl').setAttribute('x1', THX1); $('tl').setAttribute('y1', THY1);
+$('tl').setAttribute('x2', THX2); $('tl').setAttribute('y2', THY2);
+$('tl').setAttribute('stroke-dasharray', THL);
+/* 万流归宗: measure flight sources (F3 digits) and targets (theorem groups) once at load */
+function ctr(el){var r = el.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2};}
+var P25 = ctr($('k25')), P126 = ctr($('k126')), P169 = ctr($('k169'));
+var QAB = ctr($('gAB')), QA2 = ctr($('gA2')), QB2 = ctr($('gB2'));
+$('qed').style.left = ($('gB2').getBoundingClientRect().right + 28) + 'px';
+function flight(el, ln, s, d, t, t0, dur) {
+  var u = F.seg(t, t0, t0 + dur), e = F.eic(u);
+  if (!el._w) { el._w = el.offsetWidth; el._h = el.offsetHeight; }
+  var x = F.lerp(s.x, d.x, e), y = F.lerp(s.y, d.y, e);
+  el.style.opacity = (u > 0 && u < 1) ? (u > .84 ? 1 - (u - .84) / .16 : 1) : 0;
+  el.style.left = (x - el._w / 2) + 'px';
+  el.style.top = (y - el._h / 2) + 'px';
+  el.style.transform = 'scale(' + F.lerp(1, .5, e) + ')';
+  var L = Math.hypot(d.x - s.x, d.y - s.y);
+  ln.setAttribute('x1', s.x); ln.setAttribute('y1', s.y);
+  ln.setAttribute('x2', d.x); ln.setAttribute('y2', d.y);
+  ln.setAttribute('stroke-dasharray', L);
+  ln.setAttribute('stroke-dashoffset', L * (1 - u));
+  ln.setAttribute('opacity', F.seg(t, t0, t0 + .2) * (1 - F.seg(t, t0 + dur + .25, t0 + dur + .85)));
+}
+function pop(el, t, t0) {
+  var u = F.seg(t, t0, t0 + .32);
+  el.style.opacity = u;
+  el.style.transform = 'scale(' + F.lerp(1.45, 1, F.eob(u)) + ')';
+}
+var burst = F.makeBurst($('burstHost'), 960, 505, 30, 13, 'rgba(255,255,255,.95)', 360);
+window.film = {
+  duration: 26,
+  frame: function (t) {
+    F.reveal($('F1'), t, .2, .08);
+    $('F0').style.opacity = F.seg(t, 2.2, 2.7);
+    /* square blocks on a glowing baseline: the line draws only once the blocks start rising */
+    $('bline').style.width = 740 * F.eoc(F.seg(t, 3.0, 3.8)) + 'px';
+    $('b1').style.transform = 'scaleY(' + F.eoc(F.seg(t, 3.0, 4.0)) + ')';
+    $('b2').style.transform = 'scaleY(' + F.eoc(F.seg(t, 3.3, 4.3)) + ')';
+    $('bcap').style.opacity = F.seg(t, 3.8, 4.4);
+    $('blk').style.opacity = 1 - F.seg(t, 4.8, 5.4);
+    /* expansion */
+    $('F2').style.opacity = F.seg(t, 5.2, 5.6);
+    F.reveal($('F2'), t, 5.3, .07);
+    $('F3').style.opacity = F.seg(t, 7.4, 7.8);
+    F.reveal($('F3'), t, 7.5, .09);
+    $('mp').style.opacity = F.seg(t, 8.8, 9.6);
+    /* parabola */
+    $('pp').style.opacity = F.seg(t, 9.8, 10.4);
+    var cu = F.eoc(F.seg(t, 10.4, 12.0));
+    $('pclip').style.clipPath = 'inset(0 ' + ((1 - cu) * 100) + '% 0 0)';
+    var vm = F.seg(t, 12.2, 12.7);
+    $('vdot').setAttribute('opacity', vm);
+    $('vdrop').setAttribute('opacity', vm);
+    $('vlab').setAttribute('opacity', vm);
+    var ts = F.lerp(0, 5, F.eic(F.seg(t, 13.2, 16.6)));
+    var sx = X5(ts), sy = Y5(f5(ts));
+    $('sdot').setAttribute('cx', sx); $('sdot').setAttribute('cy', sy);
+    $('sdot').setAttribute('opacity', F.seg(t, 13.2, 13.5));
+    $('sdrop').setAttribute('x1', sx); $('sdrop').setAttribute('y1', sy);
+    $('sdrop').setAttribute('x2', sx); $('sdrop').setAttribute('y2', 800);
+    $('sdrop').setAttribute('opacity', F.seg(t, 13.3, 13.6));
+    $('fv').style.opacity = F.seg(t, 13.3, 13.7);
+    $('fv').textContent = 'f(' + F.fmt(ts, 2) + ') = ' + F.fmt(f5(ts), 1);
+    /* discriminant */
+    $('dl').style.opacity = F.seg(t, 16.8, 17.2);
+    F.reveal($('dl'), t, 16.9, .07);
+    /* 256 callback: the mini chart draws its axis, grows its bars, then sweeps the gap line */
+    var mi = F.seg(t, 17.2, 17.7);
+    $('mini').style.opacity = mi * (1 - F.seg(t, 21.3, 21.9));
+    $('mini').style.transform = 'translateY(' + (1 - F.eoc(mi)) * 30 + 'px)';
+    $('maxis').style.width = 200 * F.eoc(F.seg(t, 17.6, 18.2)) + 'px';
+    var mb1 = F.eoc(F.seg(t, 18.1, 18.9)), mb2 = F.eoc(F.seg(t, 18.25, 19.05));
+    $('mbar1').style.height = 148 * mb1 + 'px'; $('mbar1').style.top = (180 - 148 * mb1) + 'px';
+    $('mbar2').style.height = 160 * mb2 + 'px'; $('mbar2').style.top = (180 - 160 * mb2) + 'px';
+    $('mgap').style.width = 140 * F.eoc(F.seg(t, 19.15, 19.75)) + 'px';
+    /* 256 flies from the gap line into the Δ line */
+    var fl = F.eic(F.seg(t, 19.7, 20.7));
+    var fx = F.lerp(THX1, THX2, fl), fy = F.lerp(THY1, THY2, fl);
+    $('fly256').style.opacity = (t > 19.6 && t < 21.12) ? 1 : 0;
+    $('fly256').style.left = (fx - 30) + 'px';
+    $('fly256').style.top = (fy - 30) + 'px';
+    $('fly256').style.transform = 'scale(' + F.lerp(1, 1.15, fl) + ')';
+    var th = F.seg(t, 19.7, 20.5);
+    $('tl').setAttribute('stroke-dashoffset', THL * (1 - th));
+    $('tl').setAttribute('opacity', F.seg(t, 19.7, 20.0) * (1 - F.seg(t, 21.5, 22.1)));
+    var pu = .5 + .5 * Math.sin((t - 20.7) * 6);
+    $('dl2').style.opacity = F.seg(t, 20.7, 21.1) * (t > 21.1 ? (.85 + .15 * pu) : 1);
+    /* conclusion: the stage empties and the key numbers fly home into the theorem */
+    var ex = F.eoc(F.seg(t, 22.3, 23.0)), up = -46 * (1 - ex);
+    $('F0').style.opacity = F.seg(t, 2.2, 2.7) * (1 - ex);
+    $('F0').style.transform = 'translateY(' + up + 'px)';
+    $('F1').style.opacity = 1 - ex;
+    $('F1').style.transform = 'translateY(' + up * 1.15 + 'px)';
+    $('F2').style.opacity = F.seg(t, 5.2, 5.6) * (1 - ex);
+    $('F2').style.transform = 'translateY(' + up + 'px)';
+    $('mp').style.opacity = F.seg(t, 8.8, 9.6) * (1 - ex);
+    $('mp').style.transform = 'translateY(' + up + 'px)';
+    var ex3 = F.eoc(F.seg(t, 22.6, 23.3));
+    $('F3').style.opacity = F.seg(t, 7.4, 7.8) * (1 - ex3);
+    $('F3').style.transform = 'translateY(' + (-40 * (1 - ex3)) + 'px)';
+    var exp = F.eoc(F.seg(t, 22.15, 22.9));
+    $('pp').style.opacity = F.seg(t, 9.8, 10.4) * (1 - exp);
+    $('pp').style.transform = 'scale(' + F.lerp(1, .93, exp) + ')';
+    var exd = F.seg(t, 22.1, 22.7);
+    $('dl').style.opacity = F.seg(t, 16.8, 17.2) * (1 - exd);
+    $('dl2').style.opacity = F.seg(t, 20.7, 21.1) * (t > 21.1 ? (.85 + .15 * pu) : 1) * (1 - exd);
+    var gd = F.seg(t, 22.0, 22.45), gi = F.seg(t, 22.3, 22.7);
+    $('cc').style.opacity = F.seg(t, 21.95, 22.1);
+    $('gD').style.opacity = gd;
+    $('gD').style.transform = 'translateY(' + (1 - F.eoc(gd)) * 26 + 'px)';
+    $('gImp').style.opacity = gi;
+    $('gImp').style.transform = 'translateY(' + (1 - F.eoc(gi)) * 26 + 'px)';
+    flight($('fly126'), $('tb'), P126, QAB, t, 22.5, 1.0);
+    flight($('fly25'), $('ta'), P25, QA2, t, 22.72, 1.0);
+    flight($('fly169'), $('tc'), P169, QB2, t, 22.94, 1.0);
+    pop($('gAB'), t, 23.5); pop($('gLe'), t, 23.62); pop($('gA2'), t, 23.72); pop($('gB2'), t, 23.94);
+    $('ccglow').style.opacity = F.seg(t, 23.9, 24.5) * (.7 + .3 * (.5 + .5 * Math.sin(t * 3)));
+    $('wflash').style.opacity = .22 * F.seg(t, 24.34, 24.4) * (1 - F.seg(t, 24.4, 24.95));
+    burst.update(t, 24.4, 1.0);
+    var qu = F.eoc(F.seg(t, 25.1, 25.6));
+    $('qed').style.opacity = F.seg(t, 25.1, 25.45);
+    $('qed').style.transform = 'scale(' + F.lerp(1.9, 1, qu) + ')';
+  }
+};
+</script>
+</body>
+</html>

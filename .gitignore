@@ -1,0 +1,23 @@
+# OpenFilm 内部状态（缓存/会话/日志，各项目均有）
+.film/
+
+# 视频与大模型文件（渲染产物可复现；样片/字体如需版本化建议 git-lfs）
+*.mp4
+*.bin
+
+# 派生分析数据（样片抽帧、光流图、whisper 模型）
+analysis/frames/
+analysis/mot/
+analysis/models/
+
+# 字体文件（思源宋体等公开字体，体积大且不变动；需要版本化建议 git-lfs）
+*.otf
+
+# Python / Node
+__pycache__/
+node_modules/
+
+# 本机配置与系统杂物
+.claude/settings.local.json
+Thumbs.db
+desktop.ini

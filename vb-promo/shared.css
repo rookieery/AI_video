@@ -1,0 +1,38 @@
+/* shared.css —— VB超排 promo 共享主题（取自产品 UI：#1e1f24 底 / #2ea06c 绿强调） */
+:root {
+  --bg: #101114;          /* 影片底（比产品 #1e1f24 更深，影院感） */
+  --panel: #26282e;       /* 产品面板色 */
+  --panel-2: #1e1f24;     /* 产品窗口底 */
+  --line: #34363d;        /* 产品边框 */
+  --line-soft: #2a2c33;
+  --ink: #e6e6e6;         /* 产品正文 */
+  --dim: #9aa0aa;
+  --faint: #5c626e;
+  --green: #2ea06c;       /* 产品 Tab 激活绿 */
+  --blue: #0078d4;        /* 产品 sash 蓝 */
+  --font: 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
+  --mono: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); }
+.stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+/* 通用：暗角 + 起始/收尾黑场（页面自行驱动 opacity） */
+.vignette {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 75% 68% at 50% 46%, transparent 55%, rgba(0,0,0,0.5) 100%);
+}
+.fadeblack { position: absolute; inset: 0; background: #000; pointer-events: none; }
+
+/* 通用：标签 chip */
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 18px; border: 1px solid var(--line); border-radius: 999px;
+  background: rgba(38, 40, 46, 0.72);
+  font-size: 22px; color: var(--dim); letter-spacing: 0.06em;
+}
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+
+/* 通用：等宽数字（计数器不跳动） */
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }

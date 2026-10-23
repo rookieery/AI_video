@@ -1,0 +1,260 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .win {
+    position: absolute; left: 180px; top: 110px; width: 1560px; height: 860px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.55); overflow: hidden;
+  }
+  .tabbar {
+    position: relative; display: flex; height: 52px; padding: 0 18px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .tab { padding: 0 22px; font-size: 19px; line-height: 52px; color: var(--dim); }
+  .tab.active { color: var(--ink); }
+  .tabline {
+    position: absolute; bottom: -1px; left: 18px; height: 3px; width: 118px;
+    background: var(--green); border-radius: 2px;
+  }
+  .pane { position: absolute; inset: 52px 0 0 0; }
+  /* —— 上传预览页 —— */
+  .up-left {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 430px; padding: 28px;
+    border-right: 1px solid var(--line);
+  }
+  .up-left h3 { font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 18px; }
+  .drop {
+    height: 190px; border: 2px dashed var(--line); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--faint); font-size: 18px; letter-spacing: 0.08em;
+  }
+  .drop.hot { border-color: var(--green); color: var(--dim); background: rgba(46,160,108,0.06); }
+  .filecard {
+    margin-top: 18px; padding: 16px 18px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--panel); display: flex; gap: 14px; align-items: center;
+    opacity: 0;
+  }
+  .filecard .fic { width: 40px; height: 40px; border-radius: 8px; background: rgba(46,160,108,0.14);
+    color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .filecard .fn { font-size: 17px; color: var(--ink); }
+  .filecard .fs { font-size: 14px; color: var(--faint); margin-top: 3px; }
+  .fprog { height: 3px; background: var(--line-soft); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .fprog i { display: block; height: 100%; width: 0; background: var(--green); }
+  .pstat { margin-top: 16px; font-size: 16px; color: var(--dim); opacity: 0; }
+  .pstat b { color: var(--green); font-weight: 600; }
+  .matrix { position: absolute; left: 430px; right: 0; top: 0; bottom: 0; padding: 26px 30px; }
+  .matrix table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  .matrix th, .matrix td { text-align: center; }
+  .matrix thead th { padding-bottom: 8px; vertical-align: bottom; }
+  .matrix thead svg { display: block; margin: 0 auto; }
+  .matrix thead .gb { font-size: 14px; color: var(--faint); margin-top: 5px; }
+  .matrix tbody th {
+    width: 60px; font-size: 16px; font-weight: 400; color: var(--dim);
+    border-bottom: 1px solid var(--line-soft); padding: 12px 0;
+  }
+  .matrix tbody td {
+    border-bottom: 1px solid var(--line-soft); padding: 12px 0;
+    font-size: 17px; color: var(--ink); font-family: var(--mono);
+  }
+  .matrix tr.sum td, .matrix tr.sum th { border-bottom: 0; color: var(--green); }
+  .mtotal { margin-top: 20px; font-size: 17px; color: var(--dim); }
+  .mtotal b { color: var(--ink); font-family: var(--mono); }
+  /* —— 超排页 —— */
+  .cp-left {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 340px; padding: 28px;
+    border-right: 1px solid var(--line);
+  }
+  .cp-left h3 { font-size: 20px; font-weight: 600; margin-bottom: 18px; }
+  .frow { display: flex; justify-content: space-between; padding: 11px 0;
+    border-bottom: 1px solid var(--line-soft); font-size: 17px; color: var(--dim); }
+  .frow .v { color: var(--ink); font-family: var(--mono); }
+  .runbtn {
+    margin-top: 26px; width: 100%; height: 54px; border: 0; border-radius: 10px;
+    background: var(--green); color: #0d1512; font-size: 20px; font-weight: 600;
+    letter-spacing: 0.2em; cursor: pointer;
+  }
+  .sstat { margin-top: 18px; font-size: 16px; color: var(--dim); display: flex; gap: 10px; align-items: center; }
+  .sstat .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .sprog { height: 4px; background: var(--line-soft); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .sprog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1f7a52, var(--green)); }
+  .ncanvas { position: absolute; left: 340px; right: 0; top: 0; bottom: 0; padding: 26px 30px; }
+  .nband {
+    position: relative; height: 100%; background: #15161a;
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  }
+  .nband svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .gate-lab { position: absolute; left: 14px; top: 12px; font-size: 14px; color: var(--faint); letter-spacing: 0.1em; }
+  .live { position: absolute; right: 14px; top: 12px; font-size: 14px; color: var(--green); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="win" id="win">
+    <div class="tabbar">
+      <span class="tab active" id="tab1">上传预览</span>
+      <span class="tab" id="tab2">超排</span>
+      <span class="tabline" id="tabline"></span>
+    </div>
+    <!-- 拍1：上传 + 解析 -->
+    <div class="pane" id="pane1">
+      <div class="up-left">
+        <h3>上传母版 (.dxf)</h3>
+        <div class="drop" id="drop">拖拽或点击上传母版 (.dxf)</div>
+        <div class="filecard" id="fcard">
+          <div class="fic">DXF</div>
+          <div style="flex:1">
+            <div class="fn">5336#老六订单_coded.dxf</div>
+            <div class="fs">已上传 · 解析中…</div>
+            <div class="fprog"><i id="fprog"></i></div>
+          </div>
+        </div>
+        <div class="pstat" id="pstat">已解析 <b>110</b> 片裁片 · <b>7</b> 个尺码 · <b>10</b> 类 g 码</div>
+      </div>
+      <div class="matrix">
+        <table><thead id="mhead"></thead><tbody id="mbody"></tbody></table>
+        <div class="mtotal" id="mtotal">全码合计 <b>110</b> 片</div>
+      </div>
+    </div>
+    <!-- 拍2/3：求解控制 + 画布 -->
+    <div class="pane" id="pane2" style="opacity:0; display:none">
+      <div class="cp-left">
+        <h3>求解控制</h3>
+        <div class="frow"><span>门幅</span><span class="v">1980 mm</span></div>
+        <div class="frow"><span>求解时长</span><span class="v">5 s</span></div>
+        <div class="frow"><span>随机种子</span><span class="v">0</span></div>
+        <div class="frow"><span>裁片数</span><span class="v">110</span></div>
+        <button class="runbtn" id="runbtn">普通运行</button>
+        <div class="sstat" id="sstat" style="opacity:0"><span class="sdot" id="sdot"></span><span id="stext">就绪</span></div>
+        <div class="sprog"><i id="sprog"></i></div>
+      </div>
+      <div class="ncanvas">
+        <div class="nband" id="nband">
+          <span class="gate-lab">门幅 1980 mm</span>
+          <span class="live" id="live" style="opacity:0">● LIVE</span>
+          <svg id="nsvg" viewBox="-80 -70 7744 2120"></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb" style="opacity:1"></div>
+</div>
+<script type="module">
+import { PIECES, PLACED, GATE, STATS } from './vb-data.js';
+import { seg, outCubic, inOutCubic, lerp } from './shared.js';
+
+const $ = id => document.getElementById(id);
+
+// —— 数量矩阵（10 列 g 码 × 7 行尺码，构建一次）——
+const byLabel = new Map(PIECES.map(p => [p.label, p]));
+const head = $('mhead');
+const htr = document.createElement('tr');
+htr.appendChild(document.createElement('th'));
+for (const lab of STATS.labels) {
+  const p = byLabel.get(lab);
+  const w = p.x1 - p.x0, h = p.y1 - p.y0;
+  const th = document.createElement('th');
+  th.innerHTML =
+    `<svg width="52" height="44" viewBox="${p.x0 - 4} ${p.y0 - 4} ${w + 8} ${h + 8}" preserveAspectRatio="xMidYMid meet">` +
+    `<polygon points="${p.pts}" fill="${p.color}" fill-opacity="0.55" stroke="${p.color}"/></svg>` +
+    `<div class="gb">${lab}</div>`;
+  htr.appendChild(th);
+}
+const sumTh = document.createElement('th');
+sumTh.innerHTML = '<div style="font-size:14px;color:var(--faint);padding-top:14px">小计</div>';
+sumTh.style.width = '58px';
+htr.appendChild(sumTh);
+head.appendChild(htr);
+
+const body = $('mbody');
+const cellEls = [];
+for (const size of STATS.sizes) {
+  const tr = document.createElement('tr');
+  const th = document.createElement('th'); th.textContent = size; tr.appendChild(th);
+  for (let c = 0; c <= STATS.labels.length; c++) {
+    const td = document.createElement('td');
+    if (c < STATS.labels.length) { td.textContent = '1'; cellEls.push(td); }
+    else td.textContent = '10';
+    tr.appendChild(td);
+  }
+  body.appendChild(tr);
+}
+const trSum = document.createElement('tr');
+trSum.className = 'sum';
+trSum.innerHTML = `<th>合计</th>${'<td>—</td>'.repeat(STATS.labels.length)}<td>110</td>`;
+body.appendChild(trSum);
+
+// —— 求解画布幽灵裁片（真实布局前 8 片）——
+const nsvg = $('nsvg');
+const flip = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+flip.setAttribute('transform', `translate(0 ${GATE}) scale(1 -1)`);
+nsvg.appendChild(flip);
+const ghosts = PLACED.slice(0, 8).map(p => {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  poly.setAttribute('points', p.pts);
+  poly.setAttribute('fill', p.color); poly.setAttribute('fill-opacity', '0.85');
+  g.appendChild(poly); flip.appendChild(g);
+  return g;
+});
+
+const win = $('win'), tab1 = $('tab1'), tab2 = $('tab2'), tabline = $('tabline');
+const pane1 = $('pane1'), pane2 = $('pane2');
+const drop = $('drop'), fcard = $('fcard'), fprog = $('fprog'), pstat = $('pstat');
+const runbtn = $('runbtn'), sdot = $('sdot'), stext = $('stext'), sstat = $('sstat');
+const sprog = $('sprog'), live = $('live'), nband = $('nband'), fb = $('fb');
+
+window.film = {
+  duration: 6.0,
+  frame(t) {
+    fb.style.opacity = 1 - seg(t, 0.1, 0.4);
+    const wIn = outCubic(seg(t, 0.15, 0.5));
+    win.style.opacity = wIn;
+    win.style.transform = `scale(${lerp(0.96, 1, wIn)})`;
+
+    // 拍1a：上传（0.9–1.9）
+    drop.classList.toggle('hot', seg(t, 0.9, 0.25) > 0 && seg(t, 1.45, 0.3) < 1);
+    const fly = outCubic(seg(t, 1.1, 0.4));
+    fcard.style.opacity = seg(t, 1.1, 0.15);
+    fcard.style.transform = `translate(${(1 - fly) * 560}px, ${(1 - fly) * -190}px) rotate(${(1 - fly) * -7}deg)`;
+    fprog.style.width = inOutCubic(seg(t, 1.25, 0.5)) * 100 + '%';
+    pstat.style.opacity = seg(t, 1.8, 0.35);
+
+    // 拍1b：矩阵浮现（1.9–2.7）
+    const mIn = i => outCubic(seg(t, 1.9 + i * 0.045, 0.4));
+    cellEls.forEach((td, i) => {
+      td.style.opacity = mIn(i % STATS.labels.length + Math.floor(i / STATS.labels.length));
+    });
+    $('mtotal').style.opacity = seg(t, 2.5, 0.4);
+
+    // 拍2：切「超排」页（2.9–3.2）
+    const sw = inOutCubic(seg(t, 2.9, 0.3));
+    tab1.classList.toggle('active', sw < 0.5);
+    tab2.classList.toggle('active', sw >= 0.5);
+    tabline.style.transform = `translateX(${sw * 142}px)`;
+    pane1.style.opacity = 1 - sw; pane1.style.display = sw >= 1 ? 'none' : '';
+    pane2.style.opacity = sw; pane2.style.display = sw > 0 ? '' : 'none';
+
+    // 拍3：开始求解（3.55 按钮 → 3.8 进度 → 4.2 幽灵裁片入场）
+    const press = seg(t, 3.55, 0.12) * (1 - seg(t, 3.72, 0.18));
+    runbtn.style.transform = `scale(${1 - press * 0.06})`;
+    runbtn.style.background = seg(t, 3.55, 0.01) > 0 && seg(t, 3.9, 999) < 1 ? '#399179' : '';
+    const solving = t >= 3.8;
+    sstat.style.opacity = seg(t, 3.8, 0.3);
+    stext.textContent = solving ? '求解中 · sparrow 引擎' : '就绪';
+    sprog.style.width = outCubic(seg(t, 3.8, 2.2)) * 46 + '%';
+    live.style.opacity = seg(t, 3.9, 0.3) * (0.55 + 0.45 * Math.abs(Math.sin(t * 3)));
+    ghosts.forEach((g, i) => {
+      const gin = outCubic(seg(t, 4.15 + i * 0.22, 0.5));
+      g.style.opacity = gin;
+      g.setAttribute('transform', `translate(0 ${(1 - gin) * 900})`);
+    });
+    nband.style.transform = `scale(${lerp(1, 1.055, inOutCubic(seg(t, 4.1, 1.9)))})`;
+  },
+};
+</script>
+</body>
+</html>

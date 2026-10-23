@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .title {
+    position: absolute; left: 0; right: 0; top: 175px; margin: 0; text-align: center;
+    font-size: 58px; font-weight: 300; letter-spacing: 0.3em; text-indent: 0.3em;
+    opacity: 0;
+  }
+  .cards {
+    position: absolute; left: 0; right: 0; top: 330px; height: 500px;
+    display: flex; justify-content: center; gap: 64px;
+  }
+  .card {
+    width: 400px; height: 470px; border-radius: 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-sizing: border-box; padding: 58px 48px 0; opacity: 0;
+  }
+  .card svg { width: 120px; height: 120px; display: block; margin: 0 auto; }
+  .card svg * {
+    fill: none; stroke: var(--amber); stroke-width: 5; stroke-linecap: round;
+    stroke-dasharray: 100; stroke-dashoffset: 100;
+  }
+  .card h3 {
+    margin: 44px 0 0; text-align: center; font-size: 42px; font-weight: 400;
+    letter-spacing: 0.12em; opacity: 0;
+  }
+  .card p {
+    margin: 20px 0 0; text-align: center; font-size: 24px; font-weight: 300;
+    color: var(--ink-dim); letter-spacing: 0.1em; opacity: 0;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <h2 class="title" id="title">为生活而设计</h2>
+  <div class="cards">
+    <div class="card">
+      <svg viewBox="0 0 120 120">
+        <circle cx="34" cy="36" r="12" pathLength="100"/>
+        <circle cx="88" cy="26" r="12" pathLength="100"/>
+        <circle cx="70" cy="86" r="12" pathLength="100"/>
+        <path d="M 44 41 L 78 30" pathLength="100"/>
+        <path d="M 77 76 L 84 38" pathLength="100"/>
+      </svg>
+      <h3>智能联动</h3>
+      <p>HomeKit · 米家 · Matter</p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 120 120">
+        <rect x="40" y="18" width="40" height="62" rx="20" pathLength="100"/>
+        <path d="M 28 58 v 6 a 32 32 0 0 0 64 0 v -6" pathLength="100"/>
+        <path d="M 60 100 v 14" pathLength="100"/>
+      </svg>
+      <h3>语音控制</h3>
+      <p>“嘿,把灯调成日落”</p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 120 120">
+        <path d="M 82 20 A 36 36 0 1 0 82 88 A 28 28 0 1 1 82 20" pathLength="100"/>
+        <path d="M 30 34 l 0 14 M 23 41 l 14 0" pathLength="100"/>
+        <path d="M 26 74 l 0 10 M 21 79 l 10 0" pathLength="100"/>
+      </svg>
+      <h3>日落助眠</h3>
+      <p>光随日落,渐暗入眠</p>
+    </div>
+  </div>
+  <div class="vignette"></div>
+  <div class="fadeblack" id="fb"></div>
+</div>
+<script type="module">
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const seg = (t, a, l) => clamp01((t - a) / l);
+const outCubic = x => 1 - Math.pow(1 - x, 3);
+const inOutCubic = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+const title = document.getElementById('title');
+const cards = [...document.querySelectorAll('.card')];
+const fb = document.getElementById('fb');
+
+window.film = {
+  duration: 2.5,
+  frame(t) {
+    const tp = outCubic(seg(t, 0, 0.45));
+    title.style.opacity = tp;
+    title.style.transform = `translateY(${(1 - tp) * 36}px)`;
+
+    cards.forEach((card, i) => {
+      const ci = outCubic(seg(t, 0.25 + i * 0.25, 0.55));
+      card.style.opacity = ci;
+      card.style.transform = `translateY(${(1 - ci) * 80}px)`;
+
+      [...card.querySelectorAll('svg *')].forEach((p, j) => {
+        p.style.strokeDashoffset = 100 * (1 - inOutCubic(seg(t, 0.38 + i * 0.25 + j * 0.06, 0.45)));
+      });
+      const th = outCubic(seg(t, 0.6 + i * 0.25, 0.35));
+      card.querySelector('h3').style.opacity = th;
+      card.querySelector('p').style.opacity = th * 0.9;
+    });
+
+    fb.style.opacity = 1 - clamp01(t / 0.35);
+  }
+};
+</script>
+</body>
+</html>
