@@ -13,7 +13,8 @@
   #aChip{position:absolute;left:0;right:0;top:452px;text-align:center;opacity:0;}
   #aChip .chip{font-size:38px;color:var(--pri-hi);}
   #pChip{position:absolute;left:0;right:0;top:200px;text-align:center;opacity:0;font-size:26px;color:var(--muted);}
-  #f5{position:absolute;left:0;right:0;top:542px;text-align:center;font-size:52px;opacity:0;}
+  /* F5 公式行（H28）：.fx-row 行基准线 y=570（避让字幕带 632–750） */
+  #f5{position:absolute;left:0;right:0;top:508px;font-size:52px;opacity:0;}
   #v100{position:absolute;left:830px;top:466px;font-size:48px;color:var(--pri-hi);opacity:0;
     text-shadow:0 0 26px rgba(232,182,76,.55);white-space:nowrap;}
   #sb{left:1480px;top:830px;border-color:rgba(232,182,76,.5);opacity:0;}
@@ -49,7 +50,7 @@
   <g id="pticks"></g>
 </svg>
 
-<div id="f5" class="fx">√(l·w) ≤ <span class="frac"><span class="top">l+w</span><span class="bot">2</span></span> <span data-tok>= 10</span> ⇒ l·w ≤ 100</div>
+<div id="f5" class="fx fx-row"><span class="surd">√(l·w)</span> ≤ <span class="frac"><span class="top">l+w</span><span class="bot">2</span></span> <span data-tok>= 10</span> ⇒ l·w ≤ 100</div>
 
 <div id="sb" class="hud">
   <div class="hud-t">记 分 牌</div>
@@ -99,40 +100,45 @@ var burst = F.makeBurst($('burstHost'), 930, 580, 30, 5, 'rgba(255,215,106,.95)'
 window.film = {
   duration: 13,
   frame: function (t) {
-    /* 0–0.5 转场：两矩形提亮归位；半圆影子压暗；扫描器光晕呼吸【H15】 */
+    /* 0–0.5 转场：两矩形提亮归位；半圆影子压暗（影子层不计主体）；扫描器光晕呼吸【H15】 */
     var bri = F.eoc(F.seg(t, 0, .5));
     ['gSlit', 'gSq', 'gLab1', 'gLab2'].forEach(function (id) { $(id).style.opacity = F.lerp(.25, 1, bri); });
     $('gSlit').style.boxShadow = '0 0 ' + (10 + 14 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(88,196,212,.3)';
     $('ghostArc').style.opacity = F.lerp(.18, .12, bri);
-    $('pChip').style.opacity = F.eoc(F.seg(t, .2, .6));
 
     /* 字幕④跨镜承接（H26 有意跨镜延续登记）：t0 全亮续驻，1.4–1.8 淡出 */
     document.querySelector('.cap').style.opacity = 1 - F.seg(t, 1.4, 1.8);
 
+    /* H27 交接链：7.0 顶点牌进场→扫描器组停变降权 0.6；7.5 F5 进场→顶点牌降权 0.55；
+       11.0 记分牌组进场→扫描器组退场、抛物线面板降权 0.5 */
+    var scDim = F.lerp(1, .6, F.seg(t, 7.0, 7.6)) * (1 - F.seg(t, 11.0, 11.6));
+    var pbDim = F.lerp(1, .5, F.seg(t, 11.0, 11.6));
+    $('pChip').style.opacity = F.eoc(F.seg(t, .2, .6)) * scDim;
+    var mr = $('mrect');
+    mr.style.opacity = F.eoc(F.seg(t, .5, 1.0)) * scDim;
+    $('aChip').style.opacity = F.eoc(F.seg(t, .6, 1.0)) * scDim;
+
     /* 0.5–7.0 w 自 1 连续扫向 10（匀加速 u=s²）：矩形形变+面积滚动+金笔描抛物线 */
     var s = F.seg(t, .5, 7.0), u = s * s, w = 1 + 9 * u, A = AOf(w);
     var rw = w * 20, rh = (20 - w) * 20;                       /* 20px/单位，中心 (960,330) */
-    var mr = $('mrect');
-    mr.style.opacity = F.eoc(F.seg(t, .5, 1.0));
     mr.style.width = rw + 'px'; mr.style.height = rh + 'px';
     mr.style.left = (960 - rw / 2) + 'px'; mr.style.top = (330 - rh / 2) + 'px';
     var aT = $('aTxt');
-    $('aChip').style.opacity = F.eoc(F.seg(t, .6, 1.0));
     aT.textContent = 'A = ' + F.fmt(A, 1) + ' ㎡';
     var drawU = F.eoc(F.seg(t, .5, 7.0));
-    $('axis').style.opacity = drawU;
+    $('axis').style.opacity = drawU * pbDim;
     $('curve').setAttribute('d', pathD(1, Math.max(1.001, 1 + 9 * drawU)));
-    $('curve').style.opacity = drawU * (.8 + .2 * Math.sin(2 * Math.PI * 1.5 * t));   /* 微呼吸【H15】 */
+    $('curve').style.opacity = drawU * (.8 + .2 * Math.sin(2 * Math.PI * 1.5 * t)) * pbDim;   /* 微呼吸【H15】 */
     $('dot').setAttribute('cx', xOf(w)); $('dot').setAttribute('cy', yOf(A));
-    $('dot').style.opacity = drawU;
+    $('dot').style.opacity = drawU * pbDim;
     $('dot').setAttribute('r', w >= 9.98 ? 9 : 7);
     /* 打点标签：过点弹出（eob），随后降权 */
     PTS.forEach(function (p) {
       var on = t >= p.tm ? 1 : 0;
       var pop = 1 + .3 * Math.sin(Math.PI * F.seg(t, p.tm, p.tm + .4));
-      p.te.style.opacity = on * (t < p.tm + 1.5 ? 1 : .65);
+      p.te.style.opacity = on * (t < p.tm + 1.5 ? 1 : .65) * pbDim;
       p.te.setAttribute('transform', 'translate(' + (xOf(p.w) - 44) + ' ' + (yOf(AOf(p.w)) - 18) + ') scale(' + pop + ') translate(' + (-(xOf(p.w) - 44)) + ' ' + (-(yOf(AOf(p.w)) - 18)) + ')');
-      p.ce.style.opacity = on * .9;
+      p.ce.style.opacity = on * .9 * pbDim;
     });
 
     /* 7.0 封顶爆发：金晕+粒子 30 粒（种子 5，不用白闪不盖章）；「100㎡」弹性过冲 */
@@ -142,11 +148,11 @@ window.film = {
     $('halo').setAttribute('r', 30 + 150 * hk);
     $('halo').style.opacity = (1 - hk) * .8;
     var vu = F.eob(F.seg(t, 7.0, 7.6));
-    $('v100').style.opacity = Math.min(1, F.seg(t, 7.0, 7.3) * 3);
+    $('v100').style.opacity = Math.min(1, F.seg(t, 7.0, 7.3) * 3) * F.lerp(1, .55, F.seg(t, 7.5, 8.0));   /* H27：F5 进场，顶点牌降权 */
     $('v100').style.transform = 'translateX(-50%) scale(' + F.lerp(1.35, 1, Math.min(1, vu)) + ')';
     $('v100').style.left = '930px';
 
-    /* 7.5–8.2 F5 入场（52px 整式）；8.2–9.0 token「=10」脉冲 */
+    /* 7.5–8.2 F5 入场（52px 整式，行基准线 y=570）；8.2–9.0 token「=10」脉冲 */
     var fu = F.eic(F.seg(t, 7.5, 8.2));
     var f5 = $('f5');
     f5.style.opacity = fu;
@@ -169,7 +175,7 @@ window.film = {
     gr.style.width = grw + 'px'; gr.style.height = grh + 'px';
     gr.style.left = (960 - grw / 2) + 'px'; gr.style.top = (330 - grh / 2) + 'px';
 
-    /* 11.0–13.0 记分牌定格降权常驻 + 右侧两块地并置（尺寸反差即说服） */
+    /* 11.0–13.0 记分牌组（记分牌+并置两块地）定格降权常驻（尺寸反差即说服） */
     var sbu = F.eob(F.seg(t, 11.0, 11.6));
     var sb = $('sb');
     sb.style.opacity = sbu * F.lerp(1, .55, F.seg(t, 12.6, 13.0));

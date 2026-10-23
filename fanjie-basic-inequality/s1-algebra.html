@@ -8,16 +8,17 @@
   #bgSq{position:absolute;left:180px;top:480px;width:100px;height:100px;border:2.5px solid var(--pri);border-radius:5px;opacity:0;}
   #glow{position:absolute;left:360px;top:300px;width:1200px;height:300px;border-radius:50%;
     background:radial-gradient(50% 50% at 50% 50%,rgba(232,182,76,.10),transparent 70%);opacity:0;}
-  .fxrow{position:absolute;left:0;right:0;text-align:center;opacity:0;}
-  #f1{top:398px;font-size:64px;}
-  #ex{top:398px;font-size:60px;}
-  #f2{top:392px;font-size:62px;padding:16px 44px;border:2px solid var(--pri);border-radius:16px;left:0;right:0;margin:0 auto;width:640px;box-sizing:border-box;}
-  #f3{top:398px;font-size:60px;}
-  #f4w{position:absolute;left:0;right:0;top:398px;text-align:center;transform-origin:50% 0;}
+  /* 公式行定位（H28）：.fx-row 行基准线 y=430——各行为单一容器，行内符号文档流排列 */
+  .fxrow{position:absolute;left:0;right:0;opacity:0;}
+  #f1{top:393px;font-size:64px;}
+  #ex{top:396px;font-size:60px;}
+  #f2{top:376px;font-size:62px;padding:16px 44px;border:2px solid var(--pri);border-radius:16px;left:0;right:0;margin:0 auto;width:640px;box-sizing:border-box;}
+  #f3{top:396px;font-size:60px;}
+  #f4w{position:absolute;left:0;right:0;top:358px;transform-origin:50% 0;}
   #f4{display:inline-block;font-size:60px;padding:18px 48px;border:2.5px solid var(--pri);border-radius:18px;opacity:0;}
-  #hatA,#hatB{position:absolute;font-size:56px;color:var(--pri-hi);opacity:0;top:322px;}
+  #hatA,#hatB{position:absolute;font-size:56px;color:var(--pri-hi);opacity:0;top:306px;}
   #abchip{position:absolute;left:870px;top:548px;opacity:0;font-size:32px;color:var(--sec-hi);border-color:rgba(88,196,212,.4);}
-  #d2L,#d2R{position:absolute;font-size:44px;color:var(--muted);opacity:0;top:400px;}
+  #d2L,#d2R{position:absolute;font-size:44px;color:var(--muted);opacity:0;top:404px;}
   #ins{position:absolute;left:1440px;top:290px;width:390px;height:330px;opacity:0;font-size:24px;}
   #cols{position:absolute;inset:0;opacity:0;}
   .col{position:absolute;width:150px;border-radius:8px 8px 0 0;}
@@ -32,13 +33,13 @@
 <div id="bgSlit"></div><div id="bgSq"></div>
 <div id="glow"></div>
 
-<div id="f1" class="fx fxrow">(a−b)² <span data-tok>≥ 0</span></div>
-<div id="ex" class="fx fxrow">a² <span id="mt">− 2ab</span> + b² ≥ 0</div>
-<div id="f2" class="fx fxrow">a² + b² ≥ 2ab</div>
+<div id="f1" class="fx fxrow fx-row">(a−b)² <span data-tok>≥ 0</span></div>
+<div id="ex" class="fx fxrow fx-row">a² <span id="mt">− 2ab</span> + b² ≥ 0</div>
+<div id="f2" class="fx fxrow fx-row">a² + b² ≥ 2ab</div>
 <div id="hatA" class="fx">√</div><div id="hatB" class="fx">√</div>
-<div id="f3" class="fx fxrow">a + b ≥ 2√(ab)</div>
+<div id="f3" class="fx fxrow fx-row">a + b ≥ 2<span class="surd">√(ab)</span></div>
 <div id="d2L" class="fx">/2</div><div id="d2R" class="fx">/2</div>
-<div id="f4w"><div id="f4" class="fx">√(ab) ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div></div>
+<div id="f4w" class="fx-row"><div id="f4" class="fx"><span class="surd">√(ab)</span> ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div></div>
 <div id="abchip" class="chip">a, b ≥ 0</div>
 
 <div id="ins" class="panel">
@@ -66,7 +67,7 @@
   <div id="halo" style="left:1198px;top:810px;width:124px;height:124px;"></div>
 </div>
 
-<div class="badge" id="bd1" style="left:250px;top:612px;border:2.5px dashed var(--ter);color:var(--ter);">几何平均 √ab</div>
+<div class="badge" id="bd1" style="left:250px;top:612px;border:2.5px dashed var(--ter);color:var(--ter);">几何平均 <span class="surd">√ab</span></div>
 <div class="badge" id="bd2" style="left:1370px;top:612px;border:2px solid var(--pri);color:var(--pri-hi);">算术平均 (a+b)/2</div>
 <div class="ring" id="rg1" style="left:310px;top:590px;width:180px;height:110px;"></div>
 <div class="ring" id="rg2" style="left:1430px;top:590px;width:180px;height:110px;"></div>
@@ -90,20 +91,21 @@ function aVal(t) {
 window.film = {
   duration: 19,
   frame: function (t) {
-    /* 转场：S0 矩形降权驻留 + 公式区光晕 */
+    /* 转场：S0 矩形降权驻留（沉淀区）+ 公式区光晕 */
     var bgu = F.seg(t, 0, .5);
     $('bgSlit').style.opacity = F.lerp(.35, .25, bgu);
     $('bgSq').style.opacity = F.lerp(.35, .25, bgu);
     var gl = F.eoc(F.seg(t, 0, .6));
     $('glow').style.opacity = gl * (.6 + .4 * Math.sin(2 * Math.PI * .5 * t));  /* 呼吸【H15】 */
 
-    /* F1 整式入场 0.5–3.0（上浮14px+透明度+微缩复合，eic）；≥0 token 2.4–3.0 */
+    /* F1 整式入场 0.5–3.0（容器整体上浮14px+透明度+微缩复合，eic）；≥0 token 2.4–3.0 */
     var f1u = F.eic(F.seg(t, .5, 3.0));
     f1.style.opacity = Math.min(1, f1u * 2.5) * (1 - F.seg(t, 3.0, 3.3));
     f1.style.transform = 'translateY(' + ((1 - f1u) * 14) + 'px) scale(' + F.lerp(.96, 1, f1u) + ')';
     F.token(f1, t, [[2.4, .6]]);
 
-    /* 展开式 3.0–3.6（token 重排+金光替换）；−2ab 红闪一瞬转正（全片唯一 --alert 拍） */
+    /* 展开式 3.0–3.6（容器内 token 重排+金光替换）；−2ab 红闪一瞬转正（全片唯一 --alert 拍）；
+       7.5 F2 成牌，同刻展开式降暗 0.3（H27 交接） */
     var exu = F.eic(F.seg(t, 3.0, 3.6));
     ex.style.opacity = exu * F.lerp(1, .3, F.seg(t, 7.5, 8.0));
     ex.style.transform = 'translateY(' + ((1 - exu) * -14) + 'px)';
@@ -113,7 +115,7 @@ window.film = {
       mt.style.textShadow = '0 0 ' + (10 + 14 * rk) + 'px rgba(255,107,107,.8)';
     } else { mt.style.color = ''; mt.style.textShadow = ''; }
 
-    /* 四分格插景卡 3.0–3.5 上浮（透明度+自右 40px），5.5 起降权 0.25 常驻 */
+    /* 四分格插景卡 3.0–3.5 上浮（透明度+自右 40px），5.5 起降权 0.25 常驻（入沉淀） */
     var iu = F.eic(F.seg(t, 3.0, 3.5));
     ins.style.opacity = iu * F.lerp(1, .25, F.seg(t, 5.5, 6.0));
     ins.style.transform = 'translateX(' + ((1 - iu) * 40) + 'px)';
@@ -153,7 +155,7 @@ window.film = {
     var f3u = F.eic(F.seg(t, 11.0, 11.5));
     f3.style.opacity = f3u * (1 - F.seg(t, 12.2, 12.5));
     f3.style.transform = 'translateY(' + ((1 - f3u) * -18) + 'px)';
-    /* /2 chip 两侧滑入 11.5–12.2 */
+    /* /2 chip 两侧滑入 11.5–12.2（容器内 token 重排） */
     [['d2L', 560, 640], ['d2R', 1300, 1220]].forEach(function (it) {
       var du = F.eic(F.seg(t, 11.5, 12.2));
       var de = $(it[0]);
@@ -170,9 +172,9 @@ window.film = {
     var f4gl = .5 + .5 * Math.sin(2 * Math.PI * 2.5 * t);
     f4.style.boxShadow = '0 0 ' + (12 + 30 * f4gl) + 'px rgba(232,182,76,' + (.15 + .3 * f4gl) + ')';
 
-    /* 15.0–17.0：F4 缩 0.34× 沉降为顶部定理牌（y≈110）降权常驻全片 */
+    /* 15.0–17.0：F4 缩 0.34× 沉降为顶部定理牌（y≈110，降级让位），同刻双徽章升起（H27 交接） */
     var pu = F.eic(F.seg(t, 15.0, 17.0));
-    f4w.style.top = F.lerp(398, 86, pu) + 'px';
+    f4w.style.top = F.lerp(358, 86, pu) + 'px';
     f4w.style.transform = 'scale(' + F.lerp(1, .34, pu) + ')';
 
     /* 双徽章 15.0–15.8 升起（各一圈扩散环） */

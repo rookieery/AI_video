@@ -47,3 +47,12 @@ sub,sup{font-size:.55em;}
 .hud-d{font-size:29px;margin-top:8px;}
 .stele{position:absolute;border:1px solid rgba(232,182,76,.35);border-radius:24px;background:linear-gradient(180deg,rgba(232,182,76,.09),rgba(232,182,76,.02));box-shadow:0 0 60px rgba(232,182,76,.10) inset;}
 .flash{position:absolute;inset:0;background:var(--flash);opacity:0;pointer-events:none;z-index:80;}
+
+/* ---- H28 公式排版组件（prompt-spec v1.5 / 本片 prompt v2 §2.8）----
+   一行一容器：公式行一律 .fx-row（flex 垂直居中 = 行基准线），行内符号文档流排列，
+   token/morph 只做容器内 transform，行内符号零独立绝对坐标；
+   复合记号 .frac/.surd/.sup/.sub 在组件内解决对齐（分数线中心=行基准线，
+   上下标只占自身盒）。 */
+.fx-row{display:flex;align-items:center;justify-content:center;white-space:nowrap;line-height:1.15;}
+.surd{display:inline-flex;white-space:nowrap;}             /* √ 记号组：根号与被开方数不拆行 */
+.fx-row sub,.fx-row sup{line-height:1;align-self:center;}   /* 上下标：只占自身盒，不抬兄弟 */
