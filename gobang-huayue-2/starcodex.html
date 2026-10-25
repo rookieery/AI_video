@@ -28,7 +28,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED, STYLE, BOOK_STYLE } from './config.js';
+import { SELECTED, STYLE, BOOK_STYLE, TRANSITION } from './config.js';
 
 /* ================= 风格调色板 =================
    ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
@@ -187,6 +187,8 @@ const PALETTES={
 const COL=PALETTES[STYLE_ID]||PALETTES.gold;
 // 书封重制方案（待确认）：只影响 S1–S2 的书，其余分镜零改动
 const BOOK_ID=BOOK_STYLE||'seal';
+const TR_ID=TRANSITION||'pillar';            // 转场机制：pillar | fountain | helix | ripple
+const TR_PILLAR=TR_ID==='pillar';            // 现行光柱基线（书缝辉光/光污染强度按此分档）
 const BOOK_STYLES={
   seal:{glass:.27,pageOp:.55,backOp:.32,flame:'plasma',stones:'solid',lattice:'dots',innerPlate:false,scan:0,sealOp:.95,stoneR:.066,flameSize:.40},
   holo:{glass:.26,pageOp:.34,backOp:.18,flame:'vector',stones:'wire',lattice:'dots',innerPlate:false,scan:.14,sealOp:1.0,stoneR:.060,flameSize:.40},
@@ -840,6 +842,10 @@ const coverPivot=new THREE.Group();          // 绕书脊（局部 -x 端）翻�
   var pageHalo=new THREE.Mesh(new THREE.PlaneGeometry(0.62,1.34),
     new THREE.MeshBasicMaterial({map:glowTex,color:COL.pageHaloCol,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
   pageHalo.position.set(-0.30,0,0.02);book.add(pageHalo);
+  if(!TR_PILLAR){ // 转场 v1.3：书缝辉光改青色能量线（低亮度，去白光污染）
+    pageGlow.material.color.set(COL.beamB);
+    pageHalo.material.color.set(COL.beamB);
+  }
 }
 
 /* ================= S3 光柱 + 亮核 ================= */
@@ -852,6 +858,48 @@ colGroup.add(colA,colB);
 const core=new THREE.Mesh(new THREE.SphereGeometry(0.10,20,14),new THREE.MeshBasicMaterial({color:COL.coreCol,transparent:true,opacity:0}));
 const coreGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.coreGlow,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
 coreGlow.scale.setScalar(0.9);colGroup.add(core,coreGlow);
+
+/* ================= S3 转场 v1.3（fountain 星屑喷泉 | helix 双螺旋星门 | ripple 涟漪点将） ================= */
+const transGroup=new THREE.Group();scene.add(transGroup);
+// 小亮核（fountain/helix 出卡原点，与卡片起飞点 (0,2.55,0) 重合；体积只有现行 core 的 1/3）
+const kSphere=new THREE.Mesh(new THREE.SphereGeometry(0.055,18,12),
+  new THREE.MeshBasicMaterial({color:COL.coreCol,transparent:true,opacity:0,depthWrite:false}));
+const kGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.coreGlow,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+kSphere.position.set(0,2.55,0);kGlow.position.set(0,2.55,0);kGlow.scale.setScalar(0.5);
+transGroup.add(kSphere,kGlow);
+// helix：两条反向旋转的霓虹细螺旋（青=直指族 / 绯=斜指族，织门→解旋消散）
+const HELIX_N=220,HELIX_IDX=HELIX_N*36;   // TubeGeometry 索引数 = 段数×radial6×6
+function mkHelix(phase,color){
+  const H=2.30,R=0.28,TURNS=2.6,pts=[];
+  for(let i=0;i<=HELIX_N;i++){const u=i/HELIX_N,a=phase+u*TURNS*2*Math.PI;
+    pts.push(new THREE.Vector3(R*Math.cos(a),0.10+u*H,R*Math.sin(a)))}
+  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),HELIX_N,0.013,6,false);
+  const m=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,
+    blending:THREE.AdditiveBlending,depthWrite:false});
+  const l=new THREE.Mesh(g,m);
+  l.geometry.setDrawRange(0,0);return l;   // 可见性由 helixGroup 统一控制
+}
+const helixGroup=new THREE.Group();scene.add(helixGroup);
+const helixA=mkHelix(0,COL.goldHi),helixB=mkHelix(Math.PI,COL.vortexA||COL.crimsonHi);
+helixGroup.add(helixA,helixB);
+// ripple：书心爆开的屏面方形涟漪（双嵌套细线，预演 9.5s 大盘方波）+ 书心余晖 + 两道弧上点将扫光
+function mkSquareLine(color,op){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(12),3));
+  const l=new THREE.LineLoop(g,new THREE.LineBasicMaterial({color,transparent:true,opacity:0,
+    blending:THREE.AdditiveBlending,depthWrite:false}));
+  l.frustumCulled=false;return l;          // 可见性由 ripGroup 统一控制（r<0.06 时不写入顶点）
+}
+const ripGroup=new THREE.Group();ripGroup.position.set(0,0.25,0);scene.add(ripGroup);
+const ripA=[mkSquareLine(COL.sweep),mkSquareLine(COL.sweep),mkSquareLine(COL.sweep)]; // 三线束加粗读感
+const ripB=[mkSquareLine(COL.goldHi),mkSquareLine(COL.goldHi)];
+ripGroup.add(...ripA,...ripB);
+function setSquareXY(attr,r){const v=[[-r,-r],[r,-r],[r,r],[-r,r]];
+  for(let i=0;i<4;i++){attr[i*3]=v[i][0];attr[i*3+1]=v[i][1];attr[i*3+2]=0}}
+const genGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+genGlow.position.set(0,0.25,0);genGlow.scale.setScalar(1.1);scene.add(genGlow);
+function mkSweepLike(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.setScalar(scale);s.visible=false;scene.add(s);return s}
+const glintDeal=[mkSweepLike(0.20),mkSweepLike(0.20)];
 
 /* ================= 26 卡 + 双弧阵 ================= */
 // 弧位角度（度）：直指 210→60（左上弧，金）；斜指 240→390（右下弧，绯红）
@@ -1109,6 +1157,20 @@ const dustSys=particleSys(90,i=>{const r=mulberry32(9000+i*7);
   const a=r()*6.283,u=r()*2-1,sq=Math.sqrt(1-u*u),sp=1.4+r()*1.6;
   return{p:[0,0,0],v:[sp*sq*Math.cos(a),sp*u*0.8,sp*sq*Math.sin(a)],
     t0:8.02+(i%18)*0.008,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?COL.dustA:COL.dustB,curv:0}});
+// fountain：书体羽化星屑（3.24–3.54 自书页喷涌，上飘成松散涡旋，不成柱）
+const burstSys=TR_ID==='fountain'?particleSys(150,i=>{const r=mulberry32(5200+i*17);
+  const a=r()*6.283,rad=0.15+r()*0.45;
+  return{p:[Math.cos(a)*rad,(r()-0.5)*1.05,0.05+(r()-0.5)*0.25],
+    v:[Math.cos(a)*(0.45+r()*0.65),1.25+r()*1.25,Math.sin(a)*(0.30+r()*0.40)],
+    t0:3.24+r()*0.30,life:0.75+r()*0.55,size:0.5+r()*0.85,
+    c:r()<0.62?COL.trail:(r()<0.5?COL.debA:COL.dustA),curv:0.62}}):null;
+// fountain/helix：每张出卡拉出的一道短光丝（自亮核拽向弧位方向，随即消散）
+const launchSys=(TR_ID==='fountain'||TR_ID==='helix')?particleSys(26*3,i=>{
+  const m=(i/3)|0,k=i%3,def=cardDefs[m],r=mulberry32(7000+i*11);
+  const a=slotAngle(def.set,def.j)*DEG,sp=1.15+r()*0.7;
+  return{p:[0,2.55,0],v:[Math.cos(a)*sp,Math.sin(a)*sp,0.06*(k-1)],
+    t0:(3.7+m*0.07)+0.03*k,life:0.30+r()*0.18,size:0.45+r()*0.5,
+    c:def.set==='direct'?COL.debA:COL.debB,curv:0.35}}):null;
 
 /* ================= frame(t)：一切可见状态由 t 派生 ================= */
 const _q1=new THREE.Quaternion(),_q2=new THREE.Quaternion(),_v1=new THREE.Vector3(),_v2=new THREE.Vector3(),_m1=new THREE.Matrix4();
@@ -1129,10 +1191,20 @@ function frame(t){
   const bookGone=t>3.45;
   book.visible=!bookGone;
   if(book.visible){
-    const sink=ease.inOutCubic(remap(t,3.2,3.4))*0.55;
+    let sink=ease.inOutCubic(remap(t,3.2,3.4))*0.55;
+    if(TR_ID==='fountain'){          // 羽化：提前深沉 + 微缩，星屑自书页喷出
+      sink=ease.inOutCubic(remap(t,3.15,3.42))*0.75;
+      book.scale.setScalar(1-0.10*ease.inCubic(remap(t,3.15,3.45)));
+    }else if(TR_ID==='ripple'){      // 收拢：回扉、压扁成薄片（封印组先行隐去，避免糊成色块）
+      const cp=ease.inCubic(remap(t,3.15,3.42));
+      sink=ease.inOutCubic(remap(t,3.15,3.42))*0.15;
+      book.scale.set(1+0.12*cp,Math.max(0.035,1-0.965*cp),1+0.12*cp);
+      coverDeco.visible=remap(t,3.10,3.18)<1;
+    }
     book.position.set(0,0.05*Math.sin(2*Math.PI*t/3)-sink,0);
     book.rotation.y=4*DEG*Math.sin(2*Math.PI*t/6);
     coverPivot.rotation.y=178*DEG*ease.inOutCubic(remap(t,2.6,3.4));
+    if(TR_ID==='ripple')coverPivot.rotation.y*=1-ease.inOutCubic(remap(t,3.15,3.5));
     // 封印：外环慢转，四团能量焰各自反向自转/呼吸；1.6 后整体亮度爬升
     const heat=env(t,[[0,.72],[1.6,.72],[2.2,1.25],[2.7,1.05],[3.4,.9]]);
     sealRing.rotation.z=0.16*t;
@@ -1161,28 +1233,92 @@ function frame(t){
     // 书脊金线蔓延
     spineA.material.opacity=0.9*ease.outCubic(remap(t,2.2,2.35));
     spineB.material.opacity=0.9*ease.outCubic(remap(t,2.3,2.5));
-    // 书页缝白金辉光（3.0 主峰）
+    // 书页缝辉光（3.0 主峰）：非 pillar 方案压窄压暗为青色能量线，杜绝爆白
     const pg=Math.pow(Math.sin(Math.PI*remap(t,2.8,3.35)),2);
-    pageGlow.material.opacity=pg*0.72;
-    pageGlow.scale.set(1+pg*0.15,1+pg*0.10,1);
-    pageHalo.material.opacity=pg*0.16;
-    pageHalo.scale.setScalar(1+pg*0.35);
+    pageGlow.material.opacity=pg*(TR_PILLAR?0.72:0.26);
+    pageGlow.scale.set(1+pg*(TR_PILLAR?0.15:0.06),1+pg*(TR_PILLAR?0.10:0.05),1);
+    pageHalo.material.opacity=pg*(TR_PILLAR?0.16:0.045);
+    pageHalo.scale.setScalar(1+pg*(TR_PILLAR?0.35:0.10));
   }
 
-  /* --- S3 光柱/亮核 → 6.4 淡出 --- */
+  /* --- S3 书→卡转场（TRANSITION 分派）--- */
   {
-    const h=2.6*ease.outCubic(remap(t,3.25,3.7));
-    const fade=1-remap(t,5.9,6.35);
-    colGroup.visible=h>0.01&&fade>0.01;
-    if(colGroup.visible){
-      colA.scale.set(1,Math.max(h,0.001),1);colA.position.y=h/2;colA.material.opacity=0.5*fade;
-      colB.scale.set(1,Math.max(h,0.001),1);colB.position.y=h/2;colB.material.opacity=0.14*fade;
-      const pulse=1+0.18*Math.sin(2*Math.PI*t/0.5);
-      core.scale.setScalar(pulse);
-      core.position.y=h*0.99;coreGlow.position.y=h*0.99;
-      core.material.opacity=fade;coreGlow.material.opacity=0.85*fade;
-      colLight.intensity=3.5*fade;
-    }else colLight.intensity=0;
+    if(TR_PILLAR){ /* 现行：白金光柱 + 亮核（对照基线） */
+      const h=2.6*ease.outCubic(remap(t,3.25,3.7));
+      const fade=1-remap(t,5.9,6.35);
+      colGroup.visible=h>0.01&&fade>0.01;
+      if(colGroup.visible){
+        colA.scale.set(1,Math.max(h,0.001),1);colA.position.y=h/2;colA.material.opacity=0.5*fade;
+        colB.scale.set(1,Math.max(h,0.001),1);colB.position.y=h/2;colB.material.opacity=0.14*fade;
+        const pulse=1+0.18*Math.sin(2*Math.PI*t/0.5);
+        core.scale.setScalar(pulse);
+        core.position.y=h*0.99;coreGlow.position.y=h*0.99;
+        core.material.opacity=fade;coreGlow.material.opacity=0.85*fade;
+        colLight.intensity=3.5*fade;
+      }else colLight.intensity=0;
+    }else colGroup.visible=false;
+
+    if(TR_ID==='fountain'){        // 星屑喷泉：小亮核悬于书心上空，星屑自书页喷涌（无柱）
+      const kf=env(t,[[3.30,0],[3.62,1],[5.0,1],[5.55,0]]);
+      transGroup.visible=kf>0.01;
+      if(transGroup.visible){
+        const rise=ease.outBack(remap(t,3.30,3.62)),pulse=1+0.10*Math.sin(2*Math.PI*t/0.45);
+        kSphere.scale.setScalar(Math.max(0.05,rise)*pulse);
+        kGlow.scale.setScalar(0.5*(0.4+0.6*rise)*pulse);
+        kSphere.material.opacity=0.9*kf;kGlow.material.opacity=0.6*kf;
+        colLight.intensity=1.15*kf;
+      }else colLight.intensity=0;
+    }else if(TR_ID==='helix'){     // 双螺旋星门：青/绯双螺旋织门→解旋，小亮核出卡
+      const hr=remap(t,3.20,3.85),hu=remap(t,3.95,4.60);
+      helixGroup.visible=t>3.18&&hu<1;
+      if(helixGroup.visible){
+        helixGroup.rotation.y=2.4*(t-3.2);
+        helixB.rotation.y=-5.0*(t-3.2);
+        const start=Math.round(HELIX_IDX*ease.inCubic(hu));
+        const cnt=Math.max(0,Math.round(HELIX_IDX*ease.outCubic(hr))-start);
+        helixA.geometry.setDrawRange(start,cnt);helixB.geometry.setDrawRange(start,cnt);
+        const lop=0.95*(0.35+0.65*ease.outCubic(hr))*(1-ease.inOutCubic(hu));
+        helixA.material.opacity=lop;helixB.material.opacity=lop*0.92;
+      }
+      const kf=env(t,[[3.42,0],[3.75,1],[5.0,1],[5.60,0]]);
+      transGroup.visible=kf>0.01;
+      if(transGroup.visible){
+        const rise=ease.outBack(remap(t,3.42,3.75)),pulse=1+0.10*Math.sin(2*Math.PI*t/0.45);
+        kSphere.scale.setScalar(Math.max(0.05,rise)*pulse);
+        kGlow.scale.setScalar(0.55*(0.4+0.6*rise)*pulse);
+        kSphere.material.opacity=0.9*kf;kGlow.material.opacity=0.7*kf;
+        colLight.intensity=1.0*kf;
+      }else colLight.intensity=0;
+    }else if(TR_ID==='ripple'){    // 涟漪点将：书心余晖 + 屏面方形涟漪扩散 + 弧上点将扫光
+      const gf=env(t,[[3.50,0],[3.72,1],[4.35,0]]);
+      genGlow.visible=gf>0.01;
+      if(genGlow.visible){
+        genGlow.material.opacity=0.5*gf;
+        genGlow.scale.setScalar(1.1+0.5*remap(t,3.50,4.3));
+      }
+      const prog=remap(t,3.50,4.45),ro=(1-remap(t,3.95,4.60))*(t>3.50?1:0);
+      ripGroup.visible=ro>0.01;
+      if(ripGroup.visible){
+        const r=0.2+4.6*ease.outCubic(prog);
+        ripA.forEach((l,i)=>{setSquareXY(l.geometry.attributes.position.array,r+(i-1)*0.010);
+          l.geometry.attributes.position.needsUpdate=true;l.material.opacity=0.34*ro});
+        ripB.forEach((l,i)=>{setSquareXY(l.geometry.attributes.position.array,Math.max(0.06,r-0.22)+(i-0.5)*0.014);
+          l.geometry.attributes.position.needsUpdate=true;l.material.opacity=0.28*ro});
+      }
+      const lightF=env(t,[[3.50,0],[3.68,1],[4.30,0]]);
+      colLight.intensity=0.7*lightF;
+      // 点将扫光：与出卡序同步沿弧移动（直指 3.70–4.54 / 斜指 4.61–5.45）
+      const dWin=[[3.70,4.54,210,60],[4.61,5.45,240,390]];
+      for(let gi=0;gi<2;gi++){
+        const [t0,t1,a0,a1]=dWin[gi],g=glintDeal[gi],d=remap(t,t0,t1);
+        g.visible=d>0&&d<1;
+        if(g.visible){
+          const a=lerp(a0,a1,d)*DEG;
+          g.position.set((ARC_R+0.10)*Math.cos(a),(ARC_R+0.10)*Math.sin(a),0.06);
+          g.material.opacity=0.85*Math.pow(Math.sin(Math.PI*d),0.5);
+        }
+      }
+    }
   }
 
   /* --- S6 波前与大盘 --- */
@@ -1247,9 +1383,12 @@ function frame(t){
   trailSys.uniforms.uTime.value=t;
   debrisSys.uniforms.uTime.value=t;
   dustSys.uniforms.uTime.value=t;
+  if(burstSys)burstSys.uniforms.uTime.value=t;
+  if(launchSys)launchSys.uniforms.uTime.value=t;
 
   /* --- Bloom 呼吸 + 暗角 + 赛博后处理 --- */
-  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[2.2,1.171],[2.8,1.057],[3.0,1.171],[3.5,1.143],[4.2,1],[6.4,1],[6.7,1.2],[7.6,1.029],[9.5,1.029],[10.1,1.171],[10.8,1],[11.5,1.071],[12,1.114]]);
+  const bPeak=TR_PILLAR?[2.2,1.171,2.8,1.057,3.0,1.171,3.5,1.143]:[2.2,1.12,2.8,1.03,3.0,1.06,3.5,1.04];
+  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[6.4,1],[6.7,1.2],[7.6,1.029],[9.5,1.029],[10.1,1.171],[10.8,1],[11.5,1.071],[12,1.114]]);
   vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,11.5,12))).toFixed(3);
   postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,6.40,6.50)+burst(t,11.46,11.56));
 
@@ -1286,6 +1425,14 @@ function updateCards(t){
       pos.set(r*Math.cos(a),r*Math.sin(a),0);
       scale=1-0.9*q;opacity=1-q;
       stretchVerts(c,pos,quat,ease.inQuad(remap(elimP,0.10,0.25)));
+    }else if(p<1&&TR_ID==='ripple'){           // —— 涟漪点将：在弧位就地凝出（升起+微过冲）
+      const u=clamp01(p/0.45);
+      pos.y+=0.55*(1-ease.outCubic(u));
+      quat.copy(slotQuat(c.angA));
+      scale=lerp(0.55,1,ease.outBack(u));
+      opacity=Math.min(1,u/0.10);
+      c.mat.color.setScalar(1+0.45*(1-ease.outCubic(u)));   // 凝出瞬间轻亮后回落
+      restoreVerts(c);
     }else if(p<1){                             // —— 螺旋+贝塞尔飞行（0.55s，错峰 70ms）
       // 螺旋发生在 XY 屏面：亮核(0,2.55,0) → 弧位 (R cosA, R sinA, 0)，easeOutBack 过冲回弹
       const u=clamp01(p/0.55);

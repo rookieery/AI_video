@@ -8,3 +8,6 @@ export const STYLE = 'a';
 
 // 书封风格（v1.2 书封重制）：'seal' 能量封印 | 'holo' 全息投影 | 'circuit' 玻璃刻印
 export const BOOK_STYLE = 'seal';
+
+// 书→26卡 转场机制（v1.3 重构）：'helix' 双螺旋星门（现行） | 'fountain' 星屑喷泉 | 'ripple' 涟漪点将 | 'pillar' 白金光柱（v1.2 基线）
+export const TRANSITION = 'helix';
