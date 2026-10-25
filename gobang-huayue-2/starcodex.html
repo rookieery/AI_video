@@ -26,18 +26,165 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED } from './config.js';
+import { SELECTED, STYLE } from './config.js';
 
-/* ================= 常量（prompt.md §2/§3） ================= */
-const COL = {
-  deepA: 0x04060E, deepB: 0x0A0F1E,
-  starWarm: '#F5EFE0', starGold: '#E8C96A',
-  gold: '#C9A227', goldHi: '#E8C96A', sweep: '#FFE9B8',
-  crimson: '#B03A2E', crimsonHi: '#FF6B52',
-  obsidian: '#0B0D12', rimCool: '#6B7A8F',
-  pearl: '#F5EFE0', lacquer: '#14100D',
+/* ================= 风格调色板 =================
+   ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
+   金色家族 = 直指弧主色，绯红家族 = 斜指弧主色；换风格只换取值，语义不变。 */
+const STYLE_ID=STYLE||'gold';
+const PALETTES={
+  gold:{
+    deepA:'#04060E',deepMid:'#060A16',deepB:'#0A0F1E',exposure:1.12,
+    starWarm:'#F5EFE0',starGold:'#E8C96A',
+    gold:'#C9A227',goldHi:'#E8C96A',sweep:'#FFE9B8',grid:'#C9A227',lineDim:'#C9A227',
+    crimson:'#B03A2E',crimsonHi:'#FF6B52',
+    obsidian:'#0B0D12',rimCool:'#6B7A8F',pearl:'#F5EFE0',lacquer:'#14100D',
+    glow1:'rgba(255,233,192,.85)',glow2:'rgba(232,201,106,.28)',
+    markFill:'rgba(201,162,39,.30)',markStroke:'rgba(232,201,106,.95)',starMark:'diamond',
+    markDot:'#E8C96A',markGlow:'rgba(201,162,39,.45)',
+    coverTop:'#171310',coverMid:'#12100C',coverBot:'#0E0C09',coverSide:0x171310,
+    coverMesh:'rgba(201,162,39,.12)',coverBorder1:'rgba(201,162,39,.34)',coverBorder2:'rgba(232,201,106,.18)',
+    coverCircuit:false,coverGrid:'rgba(201,162,39,.06)',coverEmissive:0xC9A227,coverEmInt:.03,
+    pageBase:'#6B6250',pageLine:'rgba(38,33,26,.52)',pageLight:'rgba(255,241,205,.20)',
+    pageSeam:'#FFF6E2',pageHaloCol:'#FFF3D8',fireRing:'#E8A04A',
+    vortexWide:'rgba(176,58,46,.30)',vortexGlow:'rgba(255,107,82,.7)',
+    vortexA:'#FF6B52',vortexB:'#D64541',vortexC:'#B03A2E',
+    vortexCore:'rgba(255,220,200,.95)',vortexCoreFade:'rgba(255,107,82,0)',
+    acc0:'rgba(255,107,82,1)',acc1:'rgba(255,138,94,.95)',acc2:'rgba(232,160,74,.8)',
+    acc3:'rgba(232,201,106,.5)',acc4:'rgba(201,162,39,.18)',acc5:'rgba(201,162,39,0)',accSpoke:'#FFE9B8',
+    neb1:['rgba(232,201,106,A)','rgba(201,162,39,A)','rgba(245,239,224,A)','rgba(255,107,82,A)'],
+    neb2:['rgba(107,122,143,A)','rgba(58,80,120,A)','rgba(176,58,46,A)','rgba(90,70,110,A)'],
+    nebOp1:.19,nebOp2:.17,
+    beamA:'#F5EFE0',beamB:'#E8C96A',coreCol:'#FFF6DC',coreGlow:'#FFE9B8',
+    photon:'#FFE9B8',lens:'#E8C96A',holeLight:'#FF6B52',
+    boardIn:'vec3(0.0100,0.0080,0.0062)',boardOut:'vec3(0.0220,0.0175,0.0135)',frameCol:'#C9A227',
+    blackColor:'#05070A',whiteColor:'#FDF8EC',stoneRim:'#6B7A8F',
+    blackEm:[0.018,0.024,0.034],whiteEm:0x3A3428,whiteEmInt:.18,blackEmInt:.15,
+    white2d1:'#FFFFFF',white2d2:'#F5EFE0',white2d3:'#D9D2C0',white2d4:'#B9B2A2',
+    black2d1:'#2A3038',black2d2:'#141820',black2d3:'#0B0D12',
+    black2dRim:'rgba(107,122,143,.85)',black2dHi:'rgba(150,170,195,.5)',
+    cardGlass:'rgba(11,13,18,.94)',cardLine1:'rgba(107,122,143,.30)',cardLine2:'rgba(107,122,143,.12)',
+    cardTicks:false,
+    trail:[1,0.85,0.5],debA:[1,0.85,0.5],debB:[1,0.5,0.35],dustA:[1,0.92,0.72],dustB:[0.85,0.7,0.45],
+    bloomStrength:.7,bloomThreshold:.85,bloomRadius:.6,
+    ambient:0x1E2634,ambInt:.78,keyCol:0xFFF2DA,keyInt:1.12,rimCol:0x8FA3BD,rimInt:.68,
+    vigBase:.25,vigEnd:.35,scan:0,chroma:0,glitch:0,neonFrame:false,
+  },
+  a:{ // 霓虹棋谱：截图配色直译（青主 + 洋红辅 + 深海军蓝底）
+    deepA:'#050A14',deepMid:'#081324',deepB:'#0C1B31',exposure:1.0,
+    starWarm:'#A9E8FF',starGold:'#7CF3E0',
+    gold:'#04C7E8',goldHi:'#9BEEFF',sweep:'#CFF8FF',grid:'#0E90A8',lineDim:'#0E90A8',
+    crimson:'#F43F5E',crimsonHi:'#FF8FA3',
+    obsidian:'#050B16',rimCool:'#1FC8E0',pearl:'#E8FBF7',lacquer:'#071019',
+    glow1:'rgba(207,248,255,.85)',glow2:'rgba(4,199,232,.28)',
+    markFill:'rgba(4,199,232,.30)',markStroke:'rgba(155,238,255,.95)',starMark:'dot',
+    markDot:'#9BEEFF',markGlow:'rgba(4,199,232,.45)',
+    coverTop:'#0A1524',coverMid:'#081120',coverBot:'#050C16',coverSide:0x050C16,
+    coverMesh:'rgba(4,199,232,.38)',coverBorder1:'rgba(4,199,232,.42)',coverBorder2:'rgba(155,238,255,.22)',
+    coverCircuit:true,coverGrid:'rgba(4,199,232,.10)',coverEmissive:0x04C7E8,coverEmInt:.035,
+    pageBase:'#22344F',pageLine:'rgba(6,20,34,.55)',pageLight:'rgba(180,240,255,.20)',
+    pageSeam:'#CFF8FF',pageHaloCol:'#B6F2FF',fireRing:'#04C7E8',
+    vortexWide:'rgba(244,63,94,.30)',vortexGlow:'rgba(255,122,156,.7)',
+    vortexA:'#FF7A96',vortexB:'#F43F5E',vortexC:'#B01E44',
+    vortexCore:'rgba(255,240,245,.95)',vortexCoreFade:'rgba(244,63,94,0)',
+    acc0:'rgba(255,59,101,1)',acc1:'rgba(255,110,140,.95)',acc2:'rgba(170,80,210,.78)',
+    acc3:'rgba(4,199,232,.55)',acc4:'rgba(4,199,232,.20)',acc5:'rgba(4,199,232,0)',accSpoke:'#B6FFF4',
+    neb1:['rgba(4,199,232,A)','rgba(45,212,191,A)','rgba(244,63,94,A)','rgba(86,120,255,A)'],
+    neb2:['rgba(31,120,180,A)','rgba(80,60,160,A)','rgba(4,199,232,A)','rgba(45,212,191,A)'],
+    nebOp1:.09,nebOp2:.07,
+    beamA:'#CFF8FF',beamB:'#04C7E8',coreCol:'#EAFFFF',coreGlow:'#9BEEFF',
+    photon:'#D8FEFF',lens:'#04C7E8',holeLight:'#F43F5E',
+    boardIn:'vec3(0.0045,0.0105,0.0200)',boardOut:'vec3(0.0100,0.0240,0.0450)',frameCol:'#04C7E8',
+    blackColor:'#04070D',whiteColor:'#E8FBF7',stoneRim:'#1FC8E0',
+    blackEm:[0.004,0.016,0.024],whiteEm:0x1E4A52,whiteEmInt:.22,blackEmInt:.18,
+    white2d1:'#FFFFFF',white2d2:'#E8FBF7',white2d3:'#BFE9E4',white2d4:'#9FD3D0',
+    black2d1:'#16303F',black2d2:'#0A1622',black2d3:'#04070D',
+    black2dRim:'rgba(31,200,224,.85)',black2dHi:'rgba(155,238,255,.5)',
+    cardGlass:'rgba(8,18,32,1)',cardLine1:'rgba(31,200,224,.28)',cardLine2:'rgba(31,200,224,.10)',
+    cardTicks:false,
+    trail:[0.45,0.95,1],debA:[0.55,0.95,1],debB:[1,0.35,0.5],dustA:[0.65,1,0.98],dustB:[1,0.45,0.6],
+    bloomStrength:.82,bloomThreshold:.52,bloomRadius:.62,
+    ambient:0x0A1A26,ambInt:.85,keyCol:0xBFF3FF,keyInt:1.0,rimCol:0xFF4D74,rimInt:.55,
+    vigBase:.28,vigEnd:.42,scan:0,chroma:.8,glitch:1,neonFrame:true,
+  },
+  b:{ // 夜城全息：紫黑底 + 洋红主光 + 电光青辅光，扫描线/色差
+    deepA:'#06040E',deepMid:'#0C0718',deepB:'#160C28',exposure:1.0,
+    starWarm:'#D8E8FF',starGold:'#FF7FA8',
+    gold:'#22D3EE',goldHi:'#A5F3FC',sweep:'#E6FFFF',grid:'#1AA0B8',lineDim:'#127F94',
+    crimson:'#FF2D6F',crimsonHi:'#FF7A9C',
+    obsidian:'#0A0612',rimCool:'#FF3D7F',pearl:'#F2F6FF',lacquer:'#0A0710',
+    glow1:'rgba(255,217,240,.85)',glow2:'rgba(255,45,111,.30)',
+    markFill:'rgba(255,45,111,.26)',markStroke:'rgba(255,217,240,.9)',starMark:'dot',
+    markDot:'#FFD9F0',markGlow:'rgba(255,45,111,.45)',
+    coverTop:'#120A1E',coverMid:'#0C0618',coverBot:'#08040F',coverSide:0x080410,
+    coverMesh:'rgba(255,45,111,.38)',coverBorder1:'rgba(255,45,111,.40)',coverBorder2:'rgba(255,217,240,.20)',
+    coverCircuit:true,coverGrid:'rgba(255,45,111,.10)',coverEmissive:0xFF2D6F,coverEmInt:.02,
+    pageBase:'#2A2140',pageLine:'rgba(12,6,20,.55)',pageLight:'rgba(255,210,240,.20)',
+    pageSeam:'#FFE6F2',pageHaloCol:'#FFC0D8',fireRing:'#22D3EE',
+    vortexWide:'rgba(34,211,238,.28)',vortexGlow:'rgba(165,243,252,.7)',
+    vortexA:'#FF4D8D',vortexB:'#D92662',vortexC:'#8A1240',
+    vortexCore:'rgba(255,235,245,.95)',vortexCoreFade:'rgba(255,45,111,0)',
+    acc0:'rgba(255,45,111,1)',acc1:'rgba(255,90,140,.95)',acc2:'rgba(139,92,246,.8)',
+    acc3:'rgba(34,211,238,.5)',acc4:'rgba(34,211,238,.18)',acc5:'rgba(34,211,238,0)',accSpoke:'#FFE6F2',
+    neb1:['rgba(255,45,111,A)','rgba(139,92,246,A)','rgba(34,211,238,A)','rgba(255,127,168,A)'],
+    neb2:['rgba(80,30,120,A)','rgba(34,211,238,A)','rgba(255,45,111,A)','rgba(60,40,140,A)'],
+    nebOp1:.20,nebOp2:.18,
+    beamA:'#FFE6F2',beamB:'#FF2D6F',coreCol:'#FFFFFF',coreGlow:'#FFB3CC',
+    photon:'#FFE6F2',lens:'#FF2D6F',holeLight:'#FF2D6F',
+    boardIn:'vec3(0.0070,0.0040,0.0140)',boardOut:'vec3(0.0180,0.0100,0.0340)',frameCol:'#FF2D6F',
+    blackColor:'#07030E',whiteColor:'#EFF6FF',stoneRim:'#FF3D7F',
+    blackEm:[0.016,0.003,0.010],whiteEm:0x2A1A3A,whiteEmInt:.20,blackEmInt:.20,
+    white2d1:'#FFFFFF',white2d2:'#EFF6FF',white2d3:'#C7D8F0',white2d4:'#9FB4D8',
+    black2d1:'#2A1030',black2d2:'#12061C',black2d3:'#07030E',
+    black2dRim:'rgba(255,61,127,.85)',black2dHi:'rgba(255,217,240,.5)',
+    cardGlass:'rgba(14,8,26,1)',cardLine1:'rgba(34,211,238,.26)',cardLine2:'rgba(255,45,111,.14)',
+    cardTicks:true,
+    trail:[1,0.5,0.7],debA:[0.55,0.95,1],debB:[1,0.3,0.55],dustA:[1,0.6,0.8],dustB:[0.45,0.95,1],
+    bloomStrength:.70,bloomThreshold:.58,bloomRadius:.55,
+    ambient:0x120A22,ambInt:.8,keyCol:0xFFD9F0,keyInt:.95,rimCol:0x22D3EE,rimInt:.7,
+    vigBase:.30,vigEnd:.44,scan:.35,chroma:1.6,glitch:0,neonFrame:true,
+  },
+  c:{ // 全息终端：高亮薄荷青 + 洋红故障 + HUD 扫描线
+    deepA:'#020508',deepMid:'#030B12',deepB:'#041018',exposure:.95,
+    starWarm:'#5FFFE0',starGold:'#FF3B6B',
+    gold:'#19F0D8',goldHi:'#B6FFF4',sweep:'#EAFFFB',grid:'#12B4A6',lineDim:'#0C8C80',
+    crimson:'#FF3B6B',crimsonHi:'#FF9BAF',
+    obsidian:'#02070A',rimCool:'#19F0D8',pearl:'#DFFFF6',lacquer:'#02100E',
+    glow1:'rgba(234,255,251,.9)',glow2:'rgba(25,240,216,.32)',
+    markFill:'rgba(25,240,216,.30)',markStroke:'rgba(182,255,244,.95)',starMark:'dot',
+    markDot:'#B6FFF4',markGlow:'rgba(25,240,216,.5)',
+    coverTop:'#041214',coverMid:'#031012',coverBot:'#020A0A',coverSide:0x020A0A,
+    coverMesh:'rgba(25,240,216,.42)',coverBorder1:'rgba(25,240,216,.5)',coverBorder2:'rgba(182,255,244,.25)',
+    coverCircuit:true,coverGrid:'rgba(25,240,216,.10)',coverEmissive:0x19F0D8,coverEmInt:.025,
+    pageBase:'#1A3A38',pageLine:'rgba(2,18,16,.55)',pageLight:'rgba(160,255,240,.20)',
+    pageSeam:'#EAFFFB',pageHaloCol:'#B6FFF4',fireRing:'#19F0D8',
+    vortexWide:'rgba(255,59,107,.32)',vortexGlow:'rgba(255,155,175,.7)',
+    vortexA:'#FF6B8A',vortexB:'#FF3B6B',vortexC:'#A8123A',
+    vortexCore:'rgba(255,240,245,.95)',vortexCoreFade:'rgba(255,59,107,0)',
+    acc0:'rgba(255,59,107,1)',acc1:'rgba(255,120,140,.95)',acc2:'rgba(160,80,190,.75)',
+    acc3:'rgba(25,240,216,.55)',acc4:'rgba(25,240,216,.2)',acc5:'rgba(25,240,216,0)',accSpoke:'#EAFFFB',
+    neb1:['rgba(25,240,216,A)','rgba(20,184,166,A)','rgba(255,59,107,A)','rgba(30,90,140,A)'],
+    neb2:['rgba(20,120,120,A)','rgba(25,240,216,A)','rgba(255,59,107,A)','rgba(10,60,80,A)'],
+    nebOp1:.07,nebOp2:.05,
+    beamA:'#B6FFF4',beamB:'#19F0D8',coreCol:'#FFFFFF',coreGlow:'#B6FFF4',
+    photon:'#CFFFF8',lens:'#FF3B6B',holeLight:'#FF3B6B',
+    boardIn:'vec3(0.0030,0.0120,0.0110)',boardOut:'vec3(0.0080,0.0280,0.0260)',frameCol:'#19F0D8',
+    blackColor:'#02070A',whiteColor:'#DFFFF6',stoneRim:'#19F0D8',
+    blackEm:[0.002,0.020,0.016],whiteEm:0x0E3A32,whiteEmInt:.26,blackEmInt:.24,
+    white2d1:'#FFFFFF',white2d2:'#DFFFF6',white2d3:'#B6E8E0',white2d4:'#8FCFC8',
+    black2d1:'#0C2E2C',black2d2:'#041A18',black2d3:'#02070A',
+    black2dRim:'rgba(25,240,216,.9)',black2dHi:'rgba(182,255,244,.55)',
+    cardGlass:'rgba(4,20,22,1)',cardLine1:'rgba(25,240,216,.30)',cardLine2:'rgba(255,59,107,.12)',
+    cardTicks:true,
+    trail:[0.6,1,0.95],debA:[0.6,1,0.95],debB:[1,0.35,0.5],dustA:[0.7,1,0.98],dustB:[1,0.4,0.55],
+    bloomStrength:.58,bloomThreshold:.62,bloomRadius:.50,
+    ambient:0x04161A,ambInt:.9,keyCol:0xB6FFF4,keyInt:1.0,rimCol:0xFF3B6B,rimInt:.6,
+    vigBase:.32,vigEnd:.48,scan:.55,chroma:2.6,glitch:1,neonFrame:true,
+  },
 };
+const COL=PALETTES[STYLE_ID]||PALETTES.gold;
 const S = 0.15;                 // 棋盘格距（世界单位）——卡面迷你盘与大盘共用，全程不变（§6 铁律）
 const CARD = 0.72;              // 卡片边长
 const ARC_R = 3.34;             // 双弧半径（3.2 时 0.72 卡在 12.5° 间距下互相压边）
@@ -61,6 +208,10 @@ const ease={
 // 分段线性包络：[[t,v],...]
 function env(t,stops){if(t<=stops[0][0])return stops[0][1];for(let i=0;i<stops.length-1;i++){const[t0,v0]=stops[i],[t1,v1]=stops[i+1];if(t<=t1)return v0+(v1-v0)*(t-t0)/(t1-t0)}return stops[stops.length-1][1]}
 const DEG=Math.PI/180;
+// '#RRGGBB' → 'rgba(r,g,b,a)'（贴图绘制用）
+const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
+// 故障脉冲包络（确定性）：t 落在 [a,b] 内给出 0→1→0
+const burst=(t,a,b)=>t<a||t>b?0:Math.sin(Math.PI*(t-a)/(b-a));
 // 封面呼吸相位：周期 1.6s，1.6–2.2 加速到 1.0s（闭式积分，无状态）
 function breathPhase(t){
   if(t<1.6) return 2*Math.PI*t/1.6;
@@ -73,31 +224,55 @@ function vortexAngle(t){ return t<2.2 ? 0.2*t+t*t/4.4 : (0.2*2.2+2.2*2.2/4.4)+1.
 /* ================= 渲染器 / 场景 / 后期 ================= */
 const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
 renderer.setPixelRatio(1); renderer.setSize(1920,1080);
-renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=COL.exposure;
 document.body.appendChild(renderer.domElement);
 
 const scene=new THREE.Scene();
-// 深空底径向渐变 #04060E → #0A0F1E
+// 深空底径向渐变（配色随风格）
 {
   const c=document.createElement('canvas');c.width=c.height=1024;const x=c.getContext('2d');
   const g=x.createRadialGradient(512,512,80,512,512,720);
-  g.addColorStop(0,'#04060E');g.addColorStop(.6,'#060A16');g.addColorStop(1,'#0A0F1E');
+  g.addColorStop(0,COL.deepA);g.addColorStop(.6,COL.deepMid);g.addColorStop(1,COL.deepB);
   x.fillStyle=g;x.fillRect(0,0,1024,1024);
   const bg=new THREE.CanvasTexture(c);bg.colorSpace=THREE.SRGBColorSpace;scene.background=bg;
 }
 const camera=new THREE.PerspectiveCamera(42,1920/1080,0.05,200);
 
-scene.add(new THREE.AmbientLight(0x1E2634,0.78));
-const keyL=new THREE.DirectionalLight(0xFFF2DA,1.12); keyL.position.set(2.5,4,3.5); scene.add(keyL);
-const rimL=new THREE.DirectionalLight(0x8FA3BD,0.68); rimL.position.set(-3,1.5,-2.5); scene.add(rimL);
-const colLight=new THREE.PointLight(0xF5EFE0,0,6,2); colLight.position.set(0,2.2,0.3); scene.add(colLight);
-const holeLight=new THREE.PointLight(0xFF6B52,0,5,2); holeLight.position.set(0,0,0.4); scene.add(holeLight);
+scene.add(new THREE.AmbientLight(COL.ambient,COL.ambInt));
+const keyL=new THREE.DirectionalLight(COL.keyCol,COL.keyInt); keyL.position.set(2.5,4,3.5); scene.add(keyL);
+const rimL=new THREE.DirectionalLight(COL.rimCol,COL.rimInt); rimL.position.set(-3,1.5,-2.5); scene.add(rimL);
+const colLight=new THREE.PointLight(COL.beamA,0,6,2); colLight.position.set(0,2.2,0.3); scene.add(colLight);
+const holeLight=new THREE.PointLight(COL.holeLight,0,5,2); holeLight.position.set(0,0,0.4); scene.add(holeLight);
 
 const composer=new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(1920,1080),0.7,0.6,0.85); // §7：0.85/0.7/0.6
+const bloom=new UnrealBloomPass(new THREE.Vector2(1920,1080),COL.bloomStrength,COL.bloomRadius,COL.bloomThreshold);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
+// 赛博后处理：扫描线 / 色差 / 故障错位（强度为 0 时与原版逐像素一致）
+const postPass=new ShaderPass({
+  uniforms:{tDiffuse:{value:null},uRes:{value:new THREE.Vector2(1920,1080)},
+    uScan:{value:COL.scan},uChroma:{value:COL.chroma},uGlitch:{value:0}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform sampler2D tDiffuse;uniform vec2 uRes;uniform float uScan,uChroma,uGlitch;
+    varying vec2 vUv;
+    void main(){
+      vec2 uv=vUv;
+      // 行块水平错位（uGlitch 为 0 时完全不生效）
+      float row=floor(uv.y*54.0);
+      float h=fract(sin(row*91.7+uGlitch*13.0)*43758.5453);
+      uv.x+=(step(0.91,h)-0.5)*2.0*0.0024*uGlitch;
+      vec2 d=uv-0.5;
+      vec3 col;
+      col.r=texture2D(tDiffuse,uv+d*uChroma*0.001).r;
+      col.g=texture2D(tDiffuse,uv).g;
+      col.b=texture2D(tDiffuse,uv-d*uChroma*0.001).b;
+      float sl=0.5+0.5*sin(uv.y*uRes.y*2.0943951);
+      col*=1.0-uScan*0.22*sl;
+      gl_FragColor=vec4(col,1.0);
+    }`
+});
+composer.addPass(postPass);
 
 /* ================= 程序化纹理 ================= */
 function cnv(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
@@ -106,15 +281,23 @@ function tex(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorS
 // 柔光点（辉光精灵通用）
 const glowTex=(()=>{const c=cnv(128,128),x=c.getContext('2d');
   const g=x.createRadialGradient(64,64,2,64,64,62);
-  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.22,'rgba(255,233,192,.85)');
-  g.addColorStop(.55,'rgba(232,201,106,.28)');g.addColorStop(1,'rgba(232,201,106,0)');
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.22,COL.glow1);
+  g.addColorStop(.55,COL.glow2);g.addColorStop(1,COL.glow2.replace(/[\d.]+\)$/,'0)'));
   x.fillStyle=g;x.fillRect(0,0,128,128);return tex(c)})();
 
-// 菱形金标
+// 星位标：菱形（暗金版）/ 霓虹光点（赛博版，对应参考图）
 const diamondTex=(()=>{const c=cnv(64,64),x=c.getContext('2d');
   x.translate(32,32);x.beginPath();x.moveTo(0,-22);x.lineTo(15,0);x.lineTo(0,22);x.lineTo(-15,0);x.closePath();
-  x.fillStyle='rgba(201,162,39,.30)';x.fill();
-  x.strokeStyle='rgba(232,201,106,.95)';x.lineWidth=3.5;x.stroke();return tex(c)})();
+  x.fillStyle=COL.markFill;x.fill();
+  x.strokeStyle=COL.markStroke;x.lineWidth=3.5;x.stroke();return tex(c)})();
+const dotTex=(()=>{const c=cnv(64,64),x=c.getContext('2d');
+  const g=x.createRadialGradient(32,32,0,32,32,22);
+  g.addColorStop(0,COL.markDot);g.addColorStop(.30,COL.markDot);
+  g.addColorStop(.55,COL.markGlow);g.addColorStop(1,COL.markGlow.replace(/[\d.]+\)$/,'0)'));
+  x.fillStyle=g;x.fillRect(0,0,64,64);
+  x.fillStyle='#FFFFFF';x.beginPath();x.arc(32,32,3.2,0,7);x.fill();
+  return tex(c)})();
+const markTex=COL.starMark==='dot'?dotTex:diamondTex;
 
 // 棋子软影（盘面落影）
 const shadowTex=(()=>{const c=cnv(128,128),x=c.getContext('2d');
@@ -125,12 +308,12 @@ const shadowTex=(()=>{const c=cnv(128,128),x=c.getContext('2d');
 // 吸积盘：内缘亮绯红 → 外缘暗金
 const accretionTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
   const g=x.createRadialGradient(128,128,80,128,128,128);
-  g.addColorStop(0,'rgba(255,107,82,1)');g.addColorStop(.18,'rgba(255,138,94,.95)');
-  g.addColorStop(.38,'rgba(232,160,74,.8)');g.addColorStop(.62,'rgba(232,201,106,.5)');
-  g.addColorStop(.85,'rgba(201,162,39,.18)');g.addColorStop(1,'rgba(201,162,39,0)');
+  g.addColorStop(0,COL.acc0);g.addColorStop(.18,COL.acc1);
+  g.addColorStop(.38,COL.acc2);g.addColorStop(.62,COL.acc3);
+  g.addColorStop(.85,COL.acc4);g.addColorStop(1,COL.acc5);
   x.fillStyle=g;x.fillRect(0,0,256,256);
   // 径向亮辐条（随盘旋转）
-  x.globalAlpha=.10;x.strokeStyle='#FFE9B8';
+  x.globalAlpha=.10;x.strokeStyle=COL.accSpoke;
   for(let i=0;i<28;i++){const a=i/28*2*Math.PI;x.beginPath();
     x.moveTo(128+86*Math.cos(a),128+86*Math.sin(a));x.lineTo(128+124*Math.cos(a),128+124*Math.sin(a));
     x.lineWidth=2+((i*7)%5);x.stroke()}
@@ -145,16 +328,16 @@ const vortexTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');
       x.beginPath();
       for(let i=0;i<=120;i++){const th=i/120*13.5,r=16+9.6*th;
         const px=r*Math.cos(a0+th),py=r*Math.sin(a0+th);i?x.lineTo(px,py):x.moveTo(px,py)}
-      if(pass===0){x.strokeStyle='rgba(176,58,46,.30)';x.lineWidth=16;x.shadowColor='rgba(255,107,82,.7)';x.shadowBlur=22}
+      if(pass===0){x.strokeStyle=COL.vortexWide;x.lineWidth=16;x.shadowColor=COL.vortexGlow;x.shadowBlur=22}
       else{const g=x.createLinearGradient(-140,-140,140,140);
-        g.addColorStop(0,'#FF6B52');g.addColorStop(.55,'#D64541');g.addColorStop(1,'#B03A2E');
+        g.addColorStop(0,COL.vortexA);g.addColorStop(.55,COL.vortexB);g.addColorStop(1,COL.vortexC);
         x.strokeStyle=g;x.lineWidth=5;x.shadowBlur=0}
       x.stroke();
     }
   }
   // 中心亮核
   const g=x.createRadialGradient(0,0,0,0,0,26);
-  g.addColorStop(0,'rgba(255,220,200,.95)');g.addColorStop(1,'rgba(255,107,82,0)');
+  g.addColorStop(0,COL.vortexCore);g.addColorStop(1,COL.vortexCoreFade);
   x.fillStyle=g;x.beginPath();x.arc(0,0,26,0,7);x.fill();
   return tex(c)})();
 
@@ -172,63 +355,117 @@ function nebulaTex(seed,pal){const c=cnv(512,512),x=c.getContext('2d'),r=mulberr
   m.addColorStop(0,'rgba(0,0,0,1)');m.addColorStop(1,'rgba(0,0,0,0)');
   x.globalCompositeOperation='destination-in';x.fillStyle=m;x.fillRect(0,0,512,512);
   return tex(c)}
-const neb1=nebulaTex(20260101,['rgba(232,201,106,A)','rgba(201,162,39,A)','rgba(245,239,224,A)','rgba(255,107,82,A)']);
-const neb2=nebulaTex(990311,['rgba(107,122,143,A)','rgba(58,80,120,A)','rgba(176,58,46,A)','rgba(90,70,110,A)']);
+const neb1=nebulaTex(20260101,COL.neb1);
+const neb2=nebulaTex(990311,COL.neb2);
 
 // 书页断面：纸叠横纹（翻开后仍读得出"书"）
 const pageTex=(()=>{const c=cnv(256,512),x=c.getContext('2d');
-  x.fillStyle='#6B6250';x.fillRect(0,0,256,512);
-  x.strokeStyle='rgba(38,33,26,.52)';x.lineWidth=1.2;
+  x.fillStyle=COL.pageBase;x.fillRect(0,0,256,512);
+  x.strokeStyle=COL.pageLine;x.lineWidth=1.2;
   for(let y=6;y<512;y+=4){x.beginPath();x.moveTo(0,y);x.lineTo(256,y);x.stroke()}
   const g=x.createLinearGradient(0,0,256,0);
-  g.addColorStop(0,'rgba(255,241,205,.20)');g.addColorStop(.45,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.22)');
+  g.addColorStop(0,COL.pageLight);g.addColorStop(.45,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.22)');
   x.fillStyle=g;x.fillRect(0,0,256,512);return tex(c)})();
 
 // 书皮：漆器底 + 菱形点阵压印 + 暗金边框
 const coverTex=(()=>{const c=cnv(512,704),x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,0,704);
-  g.addColorStop(0,'#171310');g.addColorStop(.5,'#12100C');g.addColorStop(1,'#0E0C09');
+  g.addColorStop(0,COL.coverTop);g.addColorStop(.5,COL.coverMid);g.addColorStop(1,COL.coverBot);
   x.fillStyle=g;x.fillRect(0,0,512,704);
-  // 菱形点阵（避开中央漩涡区）
-  x.strokeStyle='rgba(201,162,39,.12)';x.lineWidth=1.6;
-  const step=42;
-  for(let iy=2;iy<704/step-1;iy++)for(let ix=2;ix<512/step-1;ix++){
-    const px=ix*step,py=iy*step,d=Math.hypot(px-256,py-352);
-    if(d<150||d>330)continue;
-    const s=7+2*Math.sin(ix*1.7+iy*2.3);
-    x.beginPath();x.moveTo(px,py-s);x.lineTo(px+s,py);x.lineTo(px,py+s);x.lineTo(px-s,py);x.closePath();x.stroke();
+  if(COL.coverCircuit){
+    // PCB 地纹网格（整幅细线，任何镜头距离都读得出"电路板"）
+    x.strokeStyle=COL.coverGrid;x.lineWidth=1;
+    for(let gx=22;gx<492;gx+=48){x.beginPath();x.moveTo(gx,22);x.lineTo(gx,682);x.stroke()}
+    for(let gy=22;gy<690;gy+=48){x.beginPath();x.moveTo(22,gy);x.lineTo(490,gy);x.stroke()}
+    // 电路走线（正交折线 + 焊点），避开中央漩涡区，带霓虹辉光
+    const r=mulberry32(77);
+    x.strokeStyle=COL.coverMesh;x.fillStyle=COL.coverMesh;
+    x.save();x.lineWidth=3.2;x.shadowColor=COL.coverBorder1;x.shadowBlur=10;
+    for(let n=0;n<52;n++){
+      let px=34+r()*444,py=34+r()*636;
+      const pts=[[px,py]];let ok=Math.hypot(px-256,py-352)>150;
+      for(let s=0;s<4;s++){
+        const horiz=s%2===0,len=24+r()*66,dir=r()<.5?-1:1;
+        px+=horiz?dir*len:0;py+=horiz?0:dir*len;
+        pts.push([px,py]);
+        if(Math.hypot(px-256,py-352)<150)ok=false;
+      }
+      if(!ok||px<26||px>486||py<26||py>678)continue;
+      x.beginPath();x.moveTo(pts[0][0],pts[0][1]);
+      for(let q=1;q<pts.length;q++)x.lineTo(pts[q][0],pts[q][1]);
+      x.stroke();
+      const e=pts[pts.length-1];x.fillRect(e[0]-3.5,e[1]-3.5,7,7);
+    }
+    x.restore();
+    // 芯片块（小 IC 轮廓，散布在漩涡外）
+    const rc=mulberry32(131);
+    x.strokeStyle=COL.coverBorder1;x.lineWidth=1.6;x.fillStyle=COL.coverMesh;
+    for(let n=0;n<7;n++){
+      const px=44+rc()*424,py=44+rc()*612;
+      if(Math.hypot(px-256,py-352)<190)continue;
+      const w=16+rc()*22,h=10+rc()*12;
+      x.strokeRect(px-w/2,py-h/2,w,h);
+      for(let p=-1;p<=1;p++)x.fillRect(px+p*5-1,py-h/2-4,2,3);
+    }
+    // 漩涡外环：虚线仪表盘
+    x.strokeStyle=COL.coverBorder2;x.lineWidth=1.6;
+    x.setLineDash([7,9]);
+    x.beginPath();x.arc(256,352,168,0,7);x.stroke();
+    x.setLineDash([]);
+  }else{
+    // 菱形点阵（避开中央漩涡区）
+    x.strokeStyle=COL.coverMesh;x.lineWidth=1.6;
+    const step=42;
+    for(let iy=2;iy<704/step-1;iy++)for(let ix=2;ix<512/step-1;ix++){
+      const px=ix*step,py=iy*step,d=Math.hypot(px-256,py-352);
+      if(d<150||d>330)continue;
+      const s=7+2*Math.sin(ix*1.7+iy*2.3);
+      x.beginPath();x.moveTo(px,py-s);x.lineTo(px+s,py);x.lineTo(px,py+s);x.lineTo(px-s,py);x.closePath();x.stroke();
+    }
   }
-  // 暗金双线边框
-  x.strokeStyle='rgba(201,162,39,.34)';x.lineWidth=3;x.strokeRect(22,22,468,660);
-  x.strokeStyle='rgba(232,201,106,.18)';x.lineWidth=1.5;x.strokeRect(34,34,444,636);
+  // 双线边框（外框带霓虹辉光）
+  x.save();x.shadowColor=COL.coverBorder1;x.shadowBlur=12;
+  x.strokeStyle=COL.coverBorder1;x.lineWidth=3;x.strokeRect(22,22,468,660);
+  x.restore();
+  x.strokeStyle=COL.coverBorder2;x.lineWidth=1.5;x.strokeRect(34,34,444,636);
   return tex(c)})();
 
 // 卡面底图（无名称版，§5）：黑曜玻璃 + 描边 + 软影；kind: gold/crimson；hero=true 时不画网格棋子（用 3D）
 function cardBaseTex(kind,hero,stones){
   const c=cnv(512,512),x=c.getContext('2d');
-  const bd=kind==='gold'?'#C9A227':'#B03A2E', bh=kind==='gold'?'#E8C96A':'#FF6B52';
+  const bd=kind==='gold'?COL.gold:COL.crimson, bh=kind==='gold'?COL.goldHi:COL.crimsonHi;
   const P=(gx,gy)=>[256+gx*106.667,256-gy*106.667];
   // 玻璃底 + 冷边菲涅尔
   const rr=(x0,y0,w,h,r)=>{x.beginPath();x.roundRect(x0,y0,w,h,r)};
-  rr(14,14,484,484,34);x.fillStyle='rgba(11,13,18,.94)';x.fill();
-  rr(20,20,472,472,28);x.strokeStyle='rgba(107,122,143,.30)';x.lineWidth=3;x.stroke();
-  rr(26,26,460,460,24);x.strokeStyle='rgba(107,122,143,.12)';x.lineWidth=6;x.stroke();
+  rr(14,14,484,484,34);x.fillStyle=COL.cardGlass;x.fill();
+  rr(20,20,472,472,28);x.strokeStyle=COL.cardLine1;x.lineWidth=3;x.stroke();
+  rr(26,26,460,460,24);x.strokeStyle=COL.cardLine2;x.lineWidth=6;x.stroke();
   // 描边（主）+ 外辉
   rr(14,14,484,484,34);x.strokeStyle=bd;x.lineWidth=9;x.stroke();
-  rr(14,14,484,484,34);x.strokeStyle=bh.replace(')',',.35)').replace('rgb','rgba');x.strokeStyle=kind==='gold'?'rgba(232,201,106,.33)':'rgba(255,107,82,.33)';
+  rr(14,14,484,484,34);x.strokeStyle=rgba(bh,.33);
   x.lineWidth=20;x.stroke();
+  if(COL.cardTicks){
+    // HUD 四角括号（赛博版）
+    x.strokeStyle=rgba(bd,.85);x.lineWidth=7;const a=44,b=44,L=56;
+    x.beginPath();
+    x.moveTo(a,b+L);x.lineTo(a,b);x.lineTo(a+L,b);
+    x.moveTo(512-a-L,b);x.lineTo(512-a,b);x.lineTo(512-a,b+L);
+    x.moveTo(a,512-b-L);x.lineTo(a,512-b);x.lineTo(a+L,512-b);
+    x.moveTo(512-a-L,512-b);x.lineTo(512-a,512-b);x.lineTo(512-a,512-b-L);
+    x.stroke();
+  }
   if(!hero){
     // 迷你 5×5 网格：α0.55，外框略亮
-    x.strokeStyle='rgba(201,162,39,.55)';x.lineWidth=3;
+    x.strokeStyle=rgba(COL.grid,.55);x.lineWidth=3;
     for(let i=-2;i<=2;i++){
       const a=P(i,-2),b=P(i,2);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();
       const d=P(-2,i),e=P(2,i);x.beginPath();x.moveTo(d[0],d[1]);x.lineTo(e[0],e[1]);x.stroke();
     }
-    x.strokeStyle='rgba(232,201,106,.85)';x.lineWidth=4.5;
+    x.strokeStyle=rgba(COL.goldHi,.85);x.lineWidth=4.5;
     const f1=P(-2,-2),f2=P(2,-2),f3=P(2,2),f4=P(-2,2);
     x.beginPath();x.moveTo(f1[0],f1[1]);x.lineTo(f2[0],f2[1]);x.lineTo(f3[0],f3[1]);x.lineTo(f4[0],f4[1]);x.closePath();x.stroke();
     // 天元小菱形（层序在棋子之下）
-    x.save();x.translate(256,256);x.strokeStyle='rgba(232,201,106,.8)';x.lineWidth=3;
+    x.save();x.translate(256,256);x.strokeStyle=rgba(COL.goldHi,.8);x.lineWidth=3;
     x.beginPath();x.moveTo(0,-8);x.lineTo(5.5,0);x.lineTo(0,8);x.lineTo(-5.5,0);x.closePath();x.stroke();x.restore();
   }
   // 三子软影（α0.3）
@@ -244,15 +481,15 @@ function cardBaseTex(kind,hero,stones){
 function drawStone2D(x,px,py,r,white){
   if(white){
     const g=x.createRadialGradient(px-r*.3,py-r*.35,r*.1,px,py,r);
-    g.addColorStop(0,'#FFFFFF');g.addColorStop(.35,'#F5EFE0');g.addColorStop(.8,'#D9D2C0');g.addColorStop(1,'#B9B2A2');
+    g.addColorStop(0,COL.white2d1);g.addColorStop(.35,COL.white2d2);g.addColorStop(.8,COL.white2d3);g.addColorStop(1,COL.white2d4);
     x.fillStyle=g;x.beginPath();x.arc(px,py,r,0,7);x.fill();
     x.fillStyle='rgba(255,255,255,.9)';x.beginPath();x.arc(px-r*.32,py-r*.38,r*.16,0,7);x.fill();
   }else{
     const g=x.createRadialGradient(px-r*.3,py-r*.35,r*.1,px,py,r);
-    g.addColorStop(0,'#2A3038');g.addColorStop(.55,'#141820');g.addColorStop(1,'#0B0D12');
+    g.addColorStop(0,COL.black2d1);g.addColorStop(.55,COL.black2d2);g.addColorStop(1,COL.black2d3);
     x.fillStyle=g;x.beginPath();x.arc(px,py,r,0,7);x.fill();
-    x.strokeStyle='rgba(107,122,143,.85)';x.lineWidth=3;x.beginPath();x.arc(px,py,r-1.5,0,7);x.stroke();
-    x.fillStyle='rgba(150,170,195,.5)';x.beginPath();x.arc(px-r*.32,py-r*.38,r*.13,0,7);x.fill();
+    x.strokeStyle=COL.black2dRim;x.lineWidth=3;x.beginPath();x.arc(px,py,r-1.5,0,7);x.stroke();
+    x.fillStyle=COL.black2dHi;x.beginPath();x.arc(px-r*.32,py-r*.38,r*.13,0,7);x.fill();
   }}
 
 /* ================= 星空 ================= */
@@ -291,9 +528,9 @@ const starGroup=new THREE.Group();scene.add(starGroup);
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
   starGroup.add(new THREE.Points(g,starMat));
 }
-const nebP1=new THREE.Mesh(new THREE.PlaneGeometry(64,40),new THREE.MeshBasicMaterial({map:neb1,transparent:true,opacity:.19,depthWrite:false,blending:THREE.AdditiveBlending}));
+const nebP1=new THREE.Mesh(new THREE.PlaneGeometry(64,40),new THREE.MeshBasicMaterial({map:neb1,transparent:true,opacity:COL.nebOp1,depthWrite:false,blending:THREE.AdditiveBlending}));
 nebP1.position.set(-6,3,-32);scene.add(nebP1);
-const nebP2=new THREE.Mesh(new THREE.PlaneGeometry(52,34),new THREE.MeshBasicMaterial({map:neb2,transparent:true,opacity:.17,depthWrite:false,blending:THREE.AdditiveBlending}));
+const nebP2=new THREE.Mesh(new THREE.PlaneGeometry(52,34),new THREE.MeshBasicMaterial({map:neb2,transparent:true,opacity:COL.nebOp2,depthWrite:false,blending:THREE.AdditiveBlending}));
 nebP2.position.set(12,-4,-34);scene.add(nebP2);
 
 /* ================= 相机关键帧（分段 Catmull-Rom + 分段缓动） ================= */
@@ -335,8 +572,8 @@ const coverPivot=new THREE.Group();          // 绕书脊（局部 -x 端）翻�
 {
   const W=0.95,H=1.30,SP=-W/2;               // 书脊在局部 x=-0.475
   coverPivot.position.set(SP,0,0);
-  const front=new THREE.MeshStandardMaterial({map:coverTex,roughness:.42,metalness:.25,emissive:0xC9A227,emissiveIntensity:0.03});
-  const darkM=new THREE.MeshStandardMaterial({color:0x171310,roughness:.5,metalness:.2});
+  const front=new THREE.MeshStandardMaterial({map:coverTex,roughness:.42,metalness:.25,emissive:COL.coverEmissive,emissiveIntensity:COL.coverEmInt});
+  const darkM=new THREE.MeshStandardMaterial({color:COL.coverSide,roughness:.5,metalness:.2});
   const cover=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.035),[darkM,darkM,darkM,darkM,front,darkM]);
   cover.position.x=W/2;coverPivot.add(cover);
   book.add(coverPivot);
@@ -346,9 +583,9 @@ const coverPivot=new THREE.Group();          // 绕书脊（局部 -x 端）翻�
   pages.position.set(0.01,0,-0.06);book.add(pages);
   const back=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.03),darkM);back.position.set(0,0,-0.098);book.add(back);
   // 书脊金线（激活时亮起蔓延）
-  var spineA=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:0xE8C96A,transparent:true,opacity:0}));
+  var spineA=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:COL.goldHi,transparent:true,opacity:0}));
   spineA.position.set(SP,0,0);book.add(spineA);
-  var spineB=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:0xE8C96A,transparent:true,opacity:0}));
+  var spineB=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:COL.goldHi,transparent:true,opacity:0}));
   spineB.position.set(SP-0.028,0,0);book.add(spineB);
   // 封面元素组（随封面翻）
   var coverDeco=new THREE.Group();coverDeco.position.set(W/2,0,0.02);coverPivot.add(coverDeco);
@@ -363,32 +600,32 @@ const coverPivot=new THREE.Group();          // 绕书脊（局部 -x 端）翻�
       new THREE.MeshStandardMaterial({color:COL.obsidian,roughness:.2,metalness:.4}));
     st.position.set(p[0],p[1],0.012);coverDeco.add(st);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(0.064,0.011,10,40),
-      new THREE.MeshStandardMaterial({color:0xE8A04A,emissive:0xE8A04A,emissiveIntensity:.6,roughness:.4}));
+      new THREE.MeshStandardMaterial({color:COL.fireRing,emissive:COL.fireRing,emissiveIntensity:.6,roughness:.4}));
     ring.position.set(p[0],p[1],0.012);coverDeco.add(ring);
     ringStones.push({ring,i,ph:i*0.4,base:rseed()});
   });
   // 激活脉冲辉光覆盖层
   var pulseGlow=new THREE.Mesh(new THREE.PlaneGeometry(W*1.04,H*1.04),
-    new THREE.MeshBasicMaterial({map:glowTex,color:0xFFE9B8,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
   pulseGlow.position.set(W/2,0,0.05);coverPivot.add(pulseGlow);
   // 翻开过半：书页缝白金辉光
   var pageGlow=new THREE.Mesh(new THREE.PlaneGeometry(0.10,1.26),
-    new THREE.MeshBasicMaterial({map:glowTex,color:0xFFF6E2,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.pageSeam,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
   pageGlow.position.set(-0.40,0,0.035);book.add(pageGlow);
   var pageHalo=new THREE.Mesh(new THREE.PlaneGeometry(0.62,1.34),
-    new THREE.MeshBasicMaterial({map:glowTex,color:0xFFF3D8,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.pageHaloCol,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
   pageHalo.position.set(-0.30,0,0.02);book.add(pageHalo);
 }
 
 /* ================= S3 光柱 + 亮核 ================= */
 const colGroup=new THREE.Group();scene.add(colGroup);
 const colA=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.09,1,14,1,true),
-  new THREE.MeshBasicMaterial({color:0xF5EFE0,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+  new THREE.MeshBasicMaterial({color:COL.beamA,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
 const colB=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.17,1,14,1,true),
-  new THREE.MeshBasicMaterial({color:0xE8C96A,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+  new THREE.MeshBasicMaterial({color:COL.beamB,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
 colGroup.add(colA,colB);
-const core=new THREE.Mesh(new THREE.SphereGeometry(0.10,20,14),new THREE.MeshBasicMaterial({color:0xFFF6DC,transparent:true,opacity:0}));
-const coreGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xFFE9B8,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+const core=new THREE.Mesh(new THREE.SphereGeometry(0.10,20,14),new THREE.MeshBasicMaterial({color:COL.coreCol,transparent:true,opacity:0}));
+const coreGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.coreGlow,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
 coreGlow.scale.setScalar(0.9);colGroup.add(core,coreGlow);
 
 /* ================= 26 卡 + 双弧阵 ================= */
@@ -437,9 +674,12 @@ for(let j=-2;j<=2;j++)for(let i=-2;i<2;i++)segs5x5.push({x1:i*S,y1:j*S,x2:(i+1)*
 
 // 3D 棋子（黑曜 / 珍珠）
 const stoneGeo=new THREE.SphereGeometry(0.78*S/2,28,18);
-const blackMat=new THREE.MeshStandardMaterial({color:0x05070A,roughness:.38,metalness:.12,emissive:0x0A0E14,emissiveIntensity:.15});
-const whiteMat=new THREE.MeshStandardMaterial({color:0xFDF8EC,roughness:.46,metalness:0,emissive:0x3A3428,emissiveIntensity:.18});
-const stoneRimMat=new THREE.MeshBasicMaterial({color:0x6B7A8F,transparent:true,opacity:.42,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false});
+const blackMat=new THREE.MeshStandardMaterial({color:COL.blackColor,roughness:.34,metalness:.18,
+  emissive:new THREE.Color(COL.blackEm[0],COL.blackEm[1],COL.blackEm[2]),emissiveIntensity:COL.blackEmInt});
+const whiteMat=new THREE.MeshStandardMaterial({color:COL.whiteColor,roughness:.42,metalness:0,
+  emissive:COL.whiteEm,emissiveIntensity:COL.whiteEmInt});
+const stoneRimMat=new THREE.MeshBasicMaterial({color:COL.stoneRim,transparent:true,opacity:COL.neonFrame?.55:.42,
+  side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false});
 function mkStone(black){
   const m=new THREE.Mesh(stoneGeo,black?blackMat:whiteMat);
   if(black){const rim=new THREE.Mesh(stoneGeo,stoneRimMat);rim.scale.setScalar(1.14);m.add(rim)}
@@ -481,10 +721,10 @@ const rndCard=mulberry32(1234);
 const heroCard=cards.find(c=>c.hero);
 const miniBoard=new THREE.Group();scene.add(miniBoard);
 const miniGrid=new THREE.Mesh(buildStrips(segs5x5,'xy'),
-  new THREE.MeshBasicMaterial({color:COL.gold,transparent:true,opacity:.62,depthWrite:false}));
+  new THREE.MeshBasicMaterial({color:COL.lineDim,transparent:true,opacity:.62,depthWrite:false}));
 miniGrid.renderOrder=3;miniBoard.add(miniGrid);
 const miniTY=new THREE.Mesh(new THREE.PlaneGeometry(0.05,0.05),
-  new THREE.MeshBasicMaterial({map:diamondTex,transparent:true,opacity:0,depthWrite:false}));
+  new THREE.MeshBasicMaterial({map:markTex,transparent:true,opacity:0,depthWrite:false}));
 miniTY.position.z=0.004;miniTY.renderOrder=3;miniBoard.add(miniTY);
 const heroStonesPos=[[0,0,1],[HERO.set==='direct'?0:1,1,0],[heroOpening.dx,heroOpening.dy,1]]; // (gx,gy,black)
 const miniShadows=heroStonesPos.map(s=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.118,0.118),
@@ -500,12 +740,12 @@ const boardShadows=heroStonesPos.map(s=>{const m=new THREE.Mesh(new THREE.PlaneG
 const hole=new THREE.Group();hole.position.set(0,0,-0.02);scene.add(hole);
 const horizon=new THREE.Mesh(new THREE.CircleGeometry(0.36,48),new THREE.MeshBasicMaterial({color:0x000000}));
 const photonRing=new THREE.Mesh(new THREE.RingGeometry(0.365,0.405,64),
-  new THREE.MeshBasicMaterial({color:0xFFE9B8,transparent:true,opacity:.55,blending:THREE.AdditiveBlending,depthWrite:false}));
+  new THREE.MeshBasicMaterial({color:COL.photon,transparent:true,opacity:.55,blending:THREE.AdditiveBlending,depthWrite:false}));
 const accretion=new THREE.Mesh(new THREE.RingGeometry(0.45,1.18,80,1),
   new THREE.MeshBasicMaterial({map:accretionTex,transparent:true,opacity:.88,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
 accretion.rotation.x=-0.46;
 const lensRing=new THREE.Mesh(new THREE.RingGeometry(1.22,1.62,64),
-  new THREE.MeshBasicMaterial({map:glowTex,color:0xE8C96A,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+  new THREE.MeshBasicMaterial({map:glowTex,color:COL.lens,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
 hole.add(horizon,photonRing,accretion,lensRing);
 hole.scale.setScalar(0);
 
@@ -527,14 +767,14 @@ const boardBase=new THREE.Mesh(new THREE.PlaneGeometry(2.3,2.3),new THREE.Shader
     void main(){vec2 c=vUv-0.5;float cheb=max(abs(c.x),abs(c.y))*2.3;
       float a=(1.0-smoothstep(uR-0.02,uR+0.06,cheb))*uOp;
       if(a<0.012)discard;
-      vec3 col=mix(vec3(0.0100,0.0080,0.0062),vec3(0.0220,0.0175,0.0135),pow(max(0.0,1.0-2.0*cheb),2.0));
+      vec3 col=mix(${COL.boardIn},${COL.boardOut},pow(max(0.0,1.0-2.0*cheb),2.0));
       gl_FragColor=vec4(col,a*0.97);}`,
   transparent:true,depthWrite:false}));
 boardBase.rotation.x=-Math.PI/2;boardBase.position.y=-0.004;boardBase.renderOrder=0;scene.add(boardBase);
 // 环 k（3..7）线段按 N/E/S/W 四侧成组（凝出时依次差 0.0125s）
 const ringMeshes=[];
 {
-  const gold=new THREE.Color(COL.gold),bright=new THREE.Color(COL.sweep);
+  const gold=new THREE.Color(COL.lineDim),bright=new THREE.Color(COL.sweep);
   for(let k=3;k<=7;k++){
     for(const side of ['N','E','S','W']){
       const segs=[];
@@ -564,26 +804,37 @@ const ringMeshes=[];
 // 波前方形亮环（+外晕）
 const wavePts=new Float32Array(12);
 const waveGeo=new THREE.BufferGeometry();waveGeo.setAttribute('position',new THREE.BufferAttribute(wavePts,3));
-const waveRing=new THREE.LineLoop(waveGeo,new THREE.LineBasicMaterial({color:0xFFE9B8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+const waveRing=new THREE.LineLoop(waveGeo,new THREE.LineBasicMaterial({color:COL.sweep,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
 waveRing.renderOrder=5;scene.add(waveRing);
 const waveGlow=new THREE.LineLoop(waveGeo.clone(),waveRing.material.clone());waveGlow.material.opacity=0;waveGlow.renderOrder=5;scene.add(waveGlow);
 // 四角星位金标（±4,±4）+ 边框金线 + 天元终式微光
 const starMarks=[];
 for(const sx of[-4,4])for(const sy of[-4,4]){
   const m=new THREE.Mesh(new THREE.PlaneGeometry(0.075,0.075),
-    new THREE.MeshBasicMaterial({map:diamondTex,transparent:true,opacity:0,depthWrite:false}));
+    new THREE.MeshBasicMaterial({map:markTex,transparent:true,opacity:0,depthWrite:false}));
   m.rotation.x=-Math.PI/2;m.position.set(sx*S,0.0018,-sy*S);m.renderOrder=4;scene.add(m);starMarks.push(m);
 }
 const boardFrame=(()=>{const g=new THREE.BufferGeometry().setFromPoints([
   new THREE.Vector3(-1.15,0.002,-1.15),new THREE.Vector3(1.15,0.002,-1.15),
   new THREE.Vector3(1.15,0.002,1.15),new THREE.Vector3(-1.15,0.002,1.15)]);
-  const l=new THREE.LineLoop(g,new THREE.LineBasicMaterial({color:0xC9A227,transparent:true,opacity:0,depthWrite:false}));
+  const l=new THREE.LineLoop(g,new THREE.LineBasicMaterial({color:COL.frameCol,transparent:true,opacity:0,depthWrite:false}));
   l.renderOrder=3;scene.add(l);return l})();
-const tyGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xFFE9B8,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+// 霓虹圆角边框（对齐参考图的发光板框；仅赛博风格启用，11.3 后凝出）
+const boardNeon=(()=>{
+  const c=cnv(1024,1024),x=c.getContext('2d'),inset=46,r=72;
+  x.strokeStyle=COL.frameCol;x.lineWidth=8;x.shadowColor=COL.frameCol;x.shadowBlur=40;
+  x.beginPath();x.roundRect(inset,inset,1024-inset*2,1024-inset*2,r);x.stroke();
+  x.shadowBlur=14;x.globalAlpha=.5;x.lineWidth=2.5;
+  x.beginPath();x.roundRect(inset+16,inset+16,1024-(inset+16)*2,1024-(inset+16)*2,r*.8);x.stroke();
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(2.34,2.34),
+    new THREE.MeshBasicMaterial({map:tex(c),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  m.rotation.x=-Math.PI/2;m.position.y=0.0025;m.renderOrder=5;m.visible=false;scene.add(m);return m;
+})();
+const tyGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
 tyGlow.position.set(0,0.03,0);scene.add(tyGlow);
 
 /* ================= 扫光精灵（S3 弧扫 / S5 卡框扫） ================= */
-function mkSweep(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xFFE9B8,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.setScalar(scale);s.visible=false;scene.add(s);return s}
+function mkSweep(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.setScalar(scale);s.visible=false;scene.add(s);return s}
 const arcSweeps=[mkSweep(0.24),mkSweep(0.24),mkSweep(0.22),mkSweep(0.22)];
 const rimSweepA=mkSweep(0.16),rimSweepB=mkSweep(0.11);
 
@@ -621,18 +872,18 @@ function particleSys(N,gen){
 const trailSys=particleSys(26,i=>{const r=mulberry32(500+i)();
   return{p:[-0.45+(mulberry32(600+i)()*0.55),(r-0.5)*1.05,0.06],
     v:[(mulberry32(700+i)()-0.5)*0.45,0.12+mulberry32(800+i)()*0.30,0.22+mulberry32(900+i)()*0.40],
-    t0:2.65+i*0.022,life:0.30+r*0.20,size:0.22+r*0.30,c:[1,0.85,0.5],curv:0.15}});
+    t0:2.65+i*0.022,life:0.30+r*0.20,size:0.22+r*0.30,c:COL.trail,curv:0.15}});
 // 吸积碎屑：每张被吞卡 6 粒（吞噬时刻附近诞生，外抛后被吸回）
 const debrisSys=particleSys(25*6,i=>{const m=(i/6)|0,k=i%6,rr=mulberry32(4000+i*13);
   const a=rr()*6.283,sp=0.5+rr()*0.9,t0=ELIM[m].tE+0.40+k*0.015;
   return{p:[Math.cos(a)*0.12,Math.sin(a)*0.12,0.05],
     v:[Math.cos(a)*sp,Math.sin(a)*sp,(rr()-0.5)*0.3],
-    t0,life:0.3+rr()*0.2,size:0.4+rr()*0.6,c:rr()<0.5?[1,0.85,0.5]:[1,0.5,0.35],curv:0.85}});
+    t0,life:0.3+rr()*0.2,size:0.4+rr()*0.6,c:rr()<0.5?COL.debA:COL.debB,curv:0.85}});
 // 黑洞收拢时的星尘径向吹散（8.0–8.2）
 const dustSys=particleSys(90,i=>{const r=mulberry32(9000+i*7);
   const a=r()*6.283,u=r()*2-1,sq=Math.sqrt(1-u*u),sp=1.4+r()*1.6;
   return{p:[0,0,0],v:[sp*sq*Math.cos(a),sp*u*0.8,sp*sq*Math.sin(a)],
-    t0:8.02+(i%18)*0.008,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?[1,0.92,0.72]:[0.85,0.7,0.45],curv:0}});
+    t0:8.02+(i%18)*0.008,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?COL.dustA:COL.dustB,curv:0}});
 
 /* ================= frame(t)：一切可见状态由 t 派生 ================= */
 const _q1=new THREE.Quaternion(),_q2=new THREE.Quaternion(),_v1=new THREE.Vector3(),_v2=new THREE.Vector3(),_m1=new THREE.Matrix4();
@@ -664,7 +915,7 @@ function frame(t){
       const p=0.5+0.5*Math.sin(bph-2*Math.PI*rs.ph/1.6);
       rs.ring.scale.setScalar(1+0.16*p);
       rs.ring.material.emissiveIntensity=0.5+1.7*p;
-      rs.ring.material.color.setHex(0xE8A04A);
+      rs.ring.material.color.set(COL.fireRing);
     }
     // 封面脉冲两次（2.2–2.6）
     pulseGlow.material.opacity=(t>=2.2&&t<2.4?Math.sin(Math.PI*(t-2.2)/0.2):0)+(t>=2.4&&t<2.6?Math.sin(Math.PI*(t-2.4)/0.2)*0.8:0);
@@ -712,19 +963,24 @@ function frame(t){
     const tCross=kCross(rm.k);                    // 波前到达环 k 的时刻
     const d={N:0,E:0.0125,S:0.025,W:0.0375}[rm.side];
     const a=remap(t,tCross+0.05+d,tCross+0.10+d); // 波后 0.05s 内凝出（0.05s 淡入）
-    rm.mat.opacity=a*0.8;
+    rm.mat.opacity=a*(COL.neonFrame?0.62:0.8);
     rm.mat.color.copy(rm.bright).lerp(rm.gold,a); // 亮起 → 沉为暗金
   }
   // 四角星位（±4,±4）：波前扫过时凝出
   {const tc=kCross(4)+0.05,a=remap(t,tc,tc+0.10);
    starMarks.forEach(m=>{m.material.opacity=a*(0.85+0.15*Math.sin(2*Math.PI*t/2.2))})}
-  boardFrame.material.opacity=0.8*ease.outCubic(remap(t,11.5,11.85));
+  boardFrame.material.opacity=COL.neonFrame?0:0.8*ease.outCubic(remap(t,11.5,11.85));
+  // 霓虹圆角边框（仅赛博风格）：11.3 后凝出
+  if(COL.neonFrame){
+    boardNeon.visible=t>11.28;
+    boardNeon.material.opacity=0.9*ease.outCubic(remap(t,11.3,11.75));
+  }else boardNeon.visible=false;
   // 波前扫过棋子：弹亮 0.1s（三子最大环半径 ≈1.5）
   const stoneFlash=Math.max(0,1-Math.abs(t-(WAVE_T0+0.10))/0.1)*Math.sign(wr>1.4*S);
-  blackMat.emissive=blackMat.emissive||new THREE.Color();
-  whiteMat.emissiveIntensity=0.18+0.9*Math.max(0,stoneFlash);
-  blackMat.emissive.setRGB(0.018,0.024,0.034);
-  if(stoneFlash>0){blackMat.emissive.setRGB(0.018+0.35*stoneFlash,0.024+0.30*stoneFlash,0.034+0.26*stoneFlash)}
+  whiteMat.emissiveIntensity=COL.whiteEmInt+0.9*Math.max(0,stoneFlash);
+  blackMat.emissive.setRGB(COL.blackEm[0],COL.blackEm[1],COL.blackEm[2]);
+  blackMat.emissiveIntensity=COL.blackEmInt*(1+1.6*Math.max(0,stoneFlash));
+  if(stoneFlash>0){blackMat.emissive.setRGB(COL.blackEm[0]+0.35*stoneFlash,COL.blackEm[1]+0.30*stoneFlash,COL.blackEm[2]+0.26*stoneFlash)}
   // 天元终式微光呼吸一次（11.5–12.0）
   tyGlow.material.opacity=0.75*Math.sin(Math.PI*remap(t,11.5,11.95));
   tyGlow.scale.setScalar(0.22+0.16*remap(t,11.5,11.95));
@@ -753,9 +1009,10 @@ function frame(t){
   debrisSys.uniforms.uTime.value=t;
   dustSys.uniforms.uTime.value=t;
 
-  /* --- Bloom 呼吸 + 暗角 --- */
-  bloom.strength=env(t,[[0,0.7],[1.6,0.7],[2.2,0.82],[2.8,0.74],[3.0,0.82],[3.5,0.8],[4.2,0.7],[6.4,0.7],[6.7,0.84],[7.6,0.72],[9.5,0.72],[10.1,0.82],[10.8,0.7],[11.5,0.75],[12,0.78]]);
-  vigEl.style.opacity=(0.25+0.35*ease.inOutCubic(remap(t,11.5,12))).toFixed(3);
+  /* --- Bloom 呼吸 + 暗角 + 赛博后处理 --- */
+  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[2.2,1.171],[2.8,1.057],[3.0,1.171],[3.5,1.143],[4.2,1],[6.4,1],[6.7,1.2],[7.6,1.029],[9.5,1.029],[10.1,1.171],[10.8,1],[11.5,1.071],[12,1.114]]);
+  vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,11.5,12))).toFixed(3);
+  postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,6.40,6.50)+burst(t,11.46,11.56));
 
   composer.render();
 }

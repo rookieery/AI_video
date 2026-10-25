@@ -2,3 +2,6 @@
 // set: 'direct' 直指 / 'indirect' 斜指；index: 0–12（表内第 n 局 → index = n-1）
 // S4 保留卡、S5 定格卡、S6 三子坐标将自动查 openings.js 切换。
 export const SELECTED = { set: 'direct', index: 3 }; // 直指第4局：花月
+
+// 视觉风格：'gold' 暗金原版 | 'a' 霓虹棋谱 | 'b' 夜城全息 | 'c' 全息终端
+export const STYLE = 'a';
