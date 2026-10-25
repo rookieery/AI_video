@@ -14,3 +14,6 @@ export const TRANSITION = 'helix';
 
 // S4 淘汰机制（v1.5 重构，待确认）：'hole' 粉盘黑洞（现行基线） | 'taiji' 太极归一 | 'singularity' 全息坍缩 | 'ring' 星环收束
 export const ELIM_MODE = 'taiji';
+
+// S6.5 尾声棋盒（v1.7 定稿 'holo'）：'capsule' 悬浮能量舱 | 'jar' 霓虹棋罐 | 'holo' 全息取子台 | 'none' 无棋盒
+export const BOWL_MODE = 'holo';

@@ -28,7 +28,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE } from './config.js';
+import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE } from './config.js';
 
 /* ================= 风格调色板 =================
    ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
@@ -190,6 +190,7 @@ const BOOK_ID=BOOK_STYLE||'seal';
 const TR_ID=TRANSITION||'pillar';            // 转场机制：pillar | fountain | helix | ripple
 const TR_PILLAR=TR_ID==='pillar';            // 现行光柱基线（书缝辉光/光污染强度按此分档）
 const ELIM_ID=ELIM_MODE||'hole';             // S4 淘汰机制：hole | taiji | singularity | ring
+const BOWL_ID=BOWL_MODE||'none';             // S6.5 棋盒：capsule | jar | holo | none
 const BOOK_STYLES={
   seal:{glass:.27,pageOp:.55,backOp:.32,flame:'plasma',stones:'solid',lattice:'dots',innerPlate:false,scan:0,sealOp:.95,stoneR:.066,flameSize:.40},
   holo:{glass:.26,pageOp:.34,backOp:.18,flame:'vector',stones:'wire',lattice:'dots',innerPlate:false,scan:.14,sealOp:1.0,stoneR:.060,flameSize:.40},
@@ -199,7 +200,7 @@ const BKC=BOOK_STYLES[BOOK_ID]||BOOK_STYLES.seal;
 const S = 0.15;                 // 棋盘格距（世界单位）——卡面迷你盘与大盘共用，全程不变（§6 铁律）
 const CARD = 0.72;              // 卡片边长
 const ARC_R = 3.20;             // v1.4：26 等分环位（13.85° 间距）下 0.72 卡不再压边
-const DUR = 13.0;
+const DUR = 14.0;                    // v1.7：+1s 棋盒入场与待机拍（13.0 前分镜零改动）
 // v1.4 时间轴：6.0–7.1 游框选将；S4/S5 整体后移 0.7s；S6 同比例顺延至 13.0
 const T_SEL0=6.0,T_SEL1=7.1;          // 游框选将
 const T_HOLE0=7.1,T_HOLE1=7.4;        // 黑洞张开
@@ -797,7 +798,9 @@ const CK=[
   {t:11.118,p:[0.0,1.38,2.15], l:[0,0,0]},
   {t:11.893,p:[0.0,2.55,1.35], l:[0,0,0]},
   {t:12.446,p:[0.0,3.33,0.29], l:[0,0,0]},       // 俯角 85°，全盘入画占屏高82%
-  {t:13.0,p:[0.0,3.30,0.25], l:[0,0,0]},
+  {t:12.95,p:[0.0,3.30,0.25], l:[0,0,0]},        // 盘定版持镜（原 13.0 终键）
+  {t:13.50,p:[0.0,3.60,0.32], l:[0,0,0]},        // v1.7：轻拉让位棋盒
+  {t:14.0,p:[0.0,3.60,0.32], l:[0,0,0]},
 ];
 // 经典 CR 基（端点精确：u=0→k1，u=1→k2）
 const crSeg=(p0,p1,p2,p3,u)=>{const u2=u*u,u3=u2*u;
@@ -1242,6 +1245,108 @@ const boardNeon=(()=>{
 const tyGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
 tyGlow.position.set(0,0.03,0);scene.add(tyGlow);
 
+/* ================= S6.5 棋盒（v1.7：BOWL_ID = capsule 悬浮能量舱 / jar 霓虹棋罐 / holo 全息取子台） ================= */
+// 棋盘定版后两侧凝出棋盒（左黑右白，青系霓虹延续全片色彩语言），供后续取子落子；动画全闭式
+const T_B0=12.95,BOWL_X=1.72;
+const bowlGroup=new THREE.Group();bowlGroup.visible=false;scene.add(bowlGroup);
+// 垫盘贴图：主环 + 内衬 + 外刻度
+const bowlPadTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');x.translate(256,256);
+  x.strokeStyle='#FFFFFF';x.lineWidth=10;x.shadowColor='#FFFFFF';x.shadowBlur=16;
+  x.beginPath();x.arc(0,0,212,0,7);x.stroke();
+  x.globalAlpha=.45;x.lineWidth=3;x.shadowBlur=6;
+  x.beginPath();x.arc(0,0,180,0,7);x.stroke();
+  x.globalAlpha=.85;x.lineWidth=4;x.shadowBlur=0;
+  for(let i=0;i<24;i++){const a=i/24*2*Math.PI,l=i%2?238:248;
+    x.beginPath();x.moveTo(Math.cos(a)*228,Math.sin(a)*228);x.lineTo(Math.cos(a)*l,Math.sin(a)*l);x.stroke()}
+  return tex(c)})();
+// holo 光锥渐变（底亮上淡）
+const bowlConeTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
+  const g=x.createLinearGradient(0,256,0,0);
+  g.addColorStop(0,'rgba(120,230,255,.34)');g.addColorStop(.55,'rgba(90,200,240,.12)');g.addColorStop(1,'rgba(80,190,235,0)');
+  x.fillStyle=g;x.fillRect(0,0,256,256);return tex(c)})();
+// 盒内棋子确定性摆位（1+6 环 + 顶 2；y 以石半径折算层高）
+const bowlLayout=seed=>{const r=mulberry32(seed),out=[];
+  const put=(x,z,l)=>out.push({x,z,y:(l+0.92)*0.062+0.02,ph:r()*6.283});
+  put(0,0,0);for(let i=0;i<6;i++){const a=i/6*6.283+.42;put(Math.cos(a)*.114,Math.sin(a)*.114,0)}
+  put(.045,.02,1);put(-.085,-.05,1);return out};
+const bowlRim=black=>black?'#04C7E8':'#7FE3F7';            // 黑盒深青 / 白盒亮青白
+const mkPad=(rimC,size=0.55)=>{const g=new THREE.Group();
+  const disc=new THREE.Mesh(new THREE.CircleGeometry(size*0.545,48),
+    new THREE.MeshBasicMaterial({color:0x081420,transparent:true,opacity:.85,depthWrite:false}));
+  disc.rotation.x=-Math.PI/2;disc.position.y=0.004;g.add(disc);
+  const ring=new THREE.Mesh(new THREE.PlaneGeometry(size,size),
+    new THREE.MeshBasicMaterial({map:bowlPadTex,color:rimC,transparent:true,opacity:.75,depthWrite:false,blending:THREE.AdditiveBlending}));
+  ring.rotation.x=-Math.PI/2;ring.position.y=0.006;g.add(ring);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  glow.scale.setScalar(size*0.9);glow.position.y=0.03;g.add(glow);
+  return{g,disc,ring,glow}};
+const bowlStone=(black,px,py,pz)=>{const m=mkStone(black);m.position.set(px,py,pz);m.userData.ty=py;bowlGroup.add(m);return m};
+let bowlA=null,bowlB=null,bowlC=null;
+if(BOWL_ID==='capsule'){          // —— A 悬浮能量舱：垫盘上悬浮开口玻璃舱，舱口霓虹环，棋子落入
+  bowlA={items:[]};
+  for(const side of[-1,1]){
+    const black=side<0,rimC=bowlRim(black),cx=side*BOWL_X;
+    const pad=mkPad(rimC,BOWL_ID==='holo'?0.7:0.55);pad.g.position.set(cx,0,0);bowlGroup.add(pad.g);
+    const base=0.05;
+    const wall=new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.205,0.24,40,1,true),
+      new THREE.MeshStandardMaterial({color:0x0A1A2A,roughness:.12,metalness:.3,transparent:true,opacity:.26,side:THREE.DoubleSide,depthWrite:false}));
+    wall.position.set(cx,base+0.12,0);bowlGroup.add(wall);
+    const bottom=new THREE.Mesh(new THREE.CircleGeometry(0.205,40),
+      new THREE.MeshBasicMaterial({color:0x061019,transparent:true,opacity:.9,depthWrite:false}));
+    bottom.rotation.x=-Math.PI/2;bottom.position.set(cx,base+0.004,0);bowlGroup.add(bottom);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(0.205,0.011,10,60),
+      new THREE.MeshBasicMaterial({color:rimC,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+    rim.rotation.x=Math.PI/2;rim.position.set(cx,base+0.24,0);bowlGroup.add(rim);
+    const rg=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    rg.scale.setScalar(0.5);rg.position.set(cx,base+0.24,0);bowlGroup.add(rg);
+    const stones=bowlLayout(black?7712:7713).map(s=>bowlStone(black,cx+s.x,base+s.y,s.z));
+    bowlA.items.push({pad,wall,bottom,rim,rg,stones,base,ph:side*1.7});
+  }
+}
+if(BOWL_ID==='jar'){              // —— B 霓虹棋罐：半透明罐体自垫盘升起，罐口霓虹环，悬浮盖缓旋（取子口常开）
+  bowlB={items:[]};
+  const jarPts=[[0.115,0],[0.15,0.015],[0.235,0.075],[0.265,0.16],[0.25,0.245],[0.205,0.30],[0.185,0.325],[0.205,0.345],[0.218,0.352]].map(p=>new THREE.Vector2(p[0],p[1]));
+  const lidPts=[[0,0.006],[0.13,0.006],[0.18,0.028],[0.198,0.052],[0.155,0.066],[0.07,0.074],[0,0.076]].map(p=>new THREE.Vector2(p[0],p[1]));
+  for(const side of[-1,1]){
+    const black=side<0,rimC=bowlRim(black),cx=side*BOWL_X;
+    const pad=mkPad(rimC,BOWL_ID==='holo'?0.7:0.55);pad.g.position.set(cx,0,0);bowlGroup.add(pad.g);
+    const jar=new THREE.Mesh(new THREE.LatheGeometry(jarPts,44),
+      new THREE.MeshStandardMaterial({color:0x0A1622,roughness:.2,metalness:.32,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}));
+    jar.position.set(cx,0.01,0);bowlGroup.add(jar);
+    const mouth=new THREE.Mesh(new THREE.TorusGeometry(0.212,0.010,10,60),
+      new THREE.MeshBasicMaterial({color:rimC,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+    mouth.rotation.x=Math.PI/2;mouth.position.set(cx,0.366,0);bowlGroup.add(mouth);
+    const lid=new THREE.Mesh(new THREE.LatheGeometry(lidPts,44),
+      new THREE.MeshStandardMaterial({color:0x0C1826,roughness:.22,metalness:.35,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));
+    lid.position.set(cx,0.40,0);bowlGroup.add(lid);
+    const lr=new THREE.Mesh(new THREE.TorusGeometry(0.196,0.008,10,60),
+      new THREE.MeshBasicMaterial({color:rimC,transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+    lr.rotation.x=Math.PI/2;lr.position.y=0.006;lid.add(lr);
+    const seam=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    seam.scale.setScalar(0.55);seam.position.set(cx,0.38,0);bowlGroup.add(seam);
+    const stones=bowlLayout(black?7712:7713).map(s=>bowlStone(black,cx+s.x,0.03+s.y,s.z));
+    bowlB.items.push({pad,jar,mouth,lid,seam,stones,lidY:0.40,ph:side*1.7});
+  }
+}
+if(BOWL_ID==='holo'){             // —— C 全息取子台：垫盘投光锥，棋子悬浮螺旋柱缓旋，底部标记「下一手」
+  bowlC={items:[]};
+  for(const side of[-1,1]){
+    const black=side<0,rimC=bowlRim(black),cx=side*BOWL_X;
+    const pad=mkPad(rimC,BOWL_ID==='holo'?0.7:0.55);pad.g.position.set(cx,0,0);bowlGroup.add(pad.g);
+    const cone=new THREE.Mesh(new THREE.CylinderGeometry(0.30,0.15,0.44,36,1,true),
+      new THREE.MeshBasicMaterial({map:bowlConeTex,color:rimC,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+    cone.position.set(cx,0.23,0);bowlGroup.add(cone);
+    const col=new THREE.Group();col.position.set(cx,0,0);bowlGroup.add(col);
+    const tys=[];
+    for(let i=0;i<6;i++){const a=i*2.35+.5,rr=0.115+(i%2?0.035:0),ty=0.075+i*0.03;
+      const m=mkStone(black);m.position.set(Math.cos(a)*rr,ty,Math.sin(a)*rr);col.add(m);tys.push(ty)}
+    const mark=new THREE.Mesh(new THREE.PlaneGeometry(0.17,0.17),
+      new THREE.MeshBasicMaterial({map:bowlPadTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    mark.rotation.x=-Math.PI/2;mark.position.y=0.035;col.add(mark);
+    bowlC.items.push({pad,cone,col,tys,mark,ph:side*1.7});
+  }
+}
+
 /* ================= 扫光精灵（S3 弧扫 / S5 卡框扫） ================= */
 function mkSweep(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.setScalar(scale);s.visible=false;scene.add(s);return s}
 const arcSweeps=[mkSweep(0.24),mkSweep(0.24),mkSweep(0.22),mkSweep(0.22)];
@@ -1535,6 +1640,51 @@ function frame(t){
   tyGlow.material.opacity=0.75*Math.sin(Math.PI*remap(t6,11.5,11.95));
   tyGlow.scale.setScalar(0.22+0.16*remap(t6,11.5,11.95));
 
+  /* --- S6.5 棋盒入场与待机（v1.7：12.95 垫盘 → 主体 → 棋子/盖，13.6 后待机呼吸） --- */
+  bowlGroup.visible=BOWL_ID!=='none'&&t>T_B0-0.02;
+  if(bowlGroup.visible){
+    const uP=ease.outCubic(remap(t,T_B0,T_B0+0.20));          // 垫盘
+    const uB=ease.outBack(remap(t,T_B0+0.14,T_B0+0.42));      // 主体（舱壁/罐体/光锥）
+    const uS=ease.outCubic(remap(t,T_B0+0.40,T_B0+0.66));     // 完成度（标记等）
+    const ib=Math.sin(2*Math.PI*(t-T_B0)/1.9);                // 待机呼吸相位
+    const drop=(m,te,dy)=>{const dp=ease.outCubic(remap(t,te,te+0.16));
+      m.visible=dp>0.001;m.position.y=m.userData.ty+(1-dp)*dy};
+    for(const it of (bowlA?bowlA.items:bowlB?bowlB.items:bowlC?bowlC.items:[])){
+      it.pad.g.scale.setScalar(Math.max(0.001,uP));
+      it.pad.ring.material.opacity=.75*uP;it.pad.glow.material.opacity=.35*uP*(0.85+0.15*ib);
+    }
+    if(bowlA)for(const it of bowlA.items){     // 悬浮能量舱：舱壁升起 → 舱口霓虹环 → 棋子落入
+      const wu=Math.max(0.001,uB);
+      it.wall.scale.set(wu,wu,wu);it.wall.position.y=it.base+0.12*wu+0.008*ib;
+      it.bottom.material.opacity=.9*uP;
+      it.rim.scale.setScalar(Math.max(0.001,uB));it.rim.position.y=it.base+0.24+0.008*ib;
+      it.rim.material.opacity=.8*uB;
+      it.rg.material.opacity=.24*uB*(0.82+0.18*ib);
+      it.stones.forEach((m,i)=>drop(m,T_B0+0.30+i*0.030,0.18));
+    }
+    if(bowlB)for(const it of bowlB.items){     // 霓虹棋罐：罐体升起 → 罐口霓虹环 → 悬浮盖落定缓旋
+      const ju=Math.max(0.001,uB);
+      it.jar.scale.set(ju,ju,ju);
+      it.mouth.scale.setScalar(Math.max(0.001,uB));it.mouth.material.opacity=.8*uB;
+      const lu=ease.outCubic(remap(t,T_B0+0.40,T_B0+0.62));
+      it.lid.visible=lu>0.001;it.lid.material.opacity=.85*lu;
+      it.lid.position.y=it.lidY+0.012*Math.sin(2*Math.PI*t/2.2+it.ph);
+      it.seam.material.opacity=.38*uB*(0.78+0.22*ib);
+      it.stones.forEach((m,i)=>drop(m,T_B0+0.30+i*0.030,0.10));
+    }
+    if(bowlC)for(const it of bowlC.items){     // 全息取子台：光锥亮起 → 棋子自下而上凝出悬浮旋柱 → 下一手标记
+      const cu=Math.max(0.001,uB);
+      it.cone.scale.set(cu,cu,cu);
+      it.cone.material.opacity=(0.75+0.25*Math.sin(2*Math.PI*t/1.7+it.ph))*uB;
+      it.col.rotation.y=t*0.22;
+      it.col.children.forEach((m,i)=>{if(i>=it.tys.length)return;
+        const te=T_B0+0.26+i*0.05,pp=ease.outBack(remap(t,te,te+0.18));
+        m.visible=pp>0.001;m.scale.setScalar(Math.max(0.001,pp));
+        m.position.y=it.tys[i]+0.006*Math.sin(2*Math.PI*t/1.6+i*1.3);});
+      it.mark.material.opacity=(0.55+0.45*Math.sin(2*Math.PI*t/1.1))*uS;
+    }
+  }
+
   /* --- S4 中心机制（v1.5 分支） --- */
   {
     const open=ease.outQuart(remap(t,T_HOLE0,T_HOLE1))*(1-ease.inCubic(remap(t,T_HOLE_C0,T_HOLE_C1)));
@@ -1605,7 +1755,7 @@ function frame(t){
 
   /* --- Bloom 呼吸 + 暗角 + 赛博后处理 --- */
   const bPeak=TR_PILLAR?[2.2,1.171,2.8,1.057,3.0,1.171,3.5,1.143]:[2.2,1.12,2.8,1.03,3.0,1.06,3.5,1.04];
-  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[7.1,1],[7.4,1.2],[8.3,1.029],[10.232,1.029],[10.896,1.171],[11.671,1],[12.446,1.071],[13,1.114]]);
+  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[7.1,1],[7.4,1.2],[8.3,1.029],[10.232,1.029],[10.896,1.171],[11.671,1],[12.446,1.071],[13,1.114],[13.5,1.06],[14,1.03]]);
   vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,12.446,13))).toFixed(3);
   postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,7.10,7.20)+burst(t,12.40,12.51));
 
