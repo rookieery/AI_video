@@ -267,7 +267,8 @@ const camera=new THREE.PerspectiveCamera(42,1920/1080,0.05,200);
 
 scene.add(new THREE.AmbientLight(COL.ambient,COL.ambInt));
 const keyL=new THREE.DirectionalLight(COL.keyCol,COL.keyInt); keyL.position.set(2.5,4,3.5); scene.add(keyL);
-const rimL=new THREE.DirectionalLight(COL.rimCol,COL.rimInt); rimL.position.set(-3,1.5,-2.5); scene.add(rimL);
+// v1.8：绯红轮廓光→青系（与对弈片统一，近景白子不染红；拼缝高光完全一致）
+const rimL=new THREE.DirectionalLight(0x1FC8E0,COL.rimInt); rimL.position.set(-3,1.5,-2.5); scene.add(rimL);
 const colLight=new THREE.PointLight(COL.beamA,0,6,2); colLight.position.set(0,2.2,0.3); scene.add(colLight);
 const holeLight=new THREE.PointLight(COL.holeLight,0,5,2); holeLight.position.set(0,0,0.4); scene.add(holeLight);
 
