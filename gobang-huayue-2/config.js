@@ -11,3 +11,6 @@ export const BOOK_STYLE = 'seal';
 
 // 书→26卡 转场机制（v1.3 重构）：'helix' 双螺旋星门（现行） | 'fountain' 星屑喷泉 | 'ripple' 涟漪点将 | 'pillar' 白金光柱（v1.2 基线）
 export const TRANSITION = 'helix';
+
+// S4 淘汰机制（v1.5 重构，待确认）：'hole' 粉盘黑洞（现行基线） | 'taiji' 太极归一 | 'singularity' 全息坍缩 | 'ring' 星环收束
+export const ELIM_MODE = 'taiji';

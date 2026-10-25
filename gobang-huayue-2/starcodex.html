@@ -28,7 +28,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED, STYLE, BOOK_STYLE, TRANSITION } from './config.js';
+import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE } from './config.js';
 
 /* ================= 风格调色板 =================
    ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
@@ -189,6 +189,7 @@ const COL=PALETTES[STYLE_ID]||PALETTES.gold;
 const BOOK_ID=BOOK_STYLE||'seal';
 const TR_ID=TRANSITION||'pillar';            // 转场机制：pillar | fountain | helix | ripple
 const TR_PILLAR=TR_ID==='pillar';            // 现行光柱基线（书缝辉光/光污染强度按此分档）
+const ELIM_ID=ELIM_MODE||'hole';             // S4 淘汰机制：hole | taiji | singularity | ring
 const BOOK_STYLES={
   seal:{glass:.27,pageOp:.55,backOp:.32,flame:'plasma',stones:'solid',lattice:'dots',innerPlate:false,scan:0,sealOp:.95,stoneR:.066,flameSize:.40},
   holo:{glass:.26,pageOp:.34,backOp:.18,flame:'vector',stones:'wire',lattice:'dots',innerPlate:false,scan:.14,sealOp:1.0,stoneR:.060,flameSize:.40},
@@ -342,6 +343,72 @@ const accretionTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
   for(let i=0;i<28;i++){const a=i/28*2*Math.PI;x.beginPath();
     x.moveTo(128+86*Math.cos(a),128+86*Math.sin(a));x.lineTo(128+124*Math.cos(a),128+124*Math.sin(a));
     x.lineWidth=2+((i*7)%5);x.stroke()}
+  return tex(c)})();
+
+// v1.5 全息坍缩：吸积盘改青蓝全息谱（亮青心→电青→深蓝→透明），辐条冷青——中等亮度防 bloom 冲白
+const singAccTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
+  const g=x.createRadialGradient(128,128,80,128,128,128);
+  g.addColorStop(0,'rgba(90,200,240,.55)');g.addColorStop(.16,'rgba(30,150,200,.42)');
+  g.addColorStop(.38,'rgba(8,100,150,.30)');g.addColorStop(.62,'rgba(5,55,95,.18)');
+  g.addColorStop(.85,'rgba(3,28,60,.07)');g.addColorStop(1,'rgba(6,24,60,0)');
+  x.fillStyle=g;x.fillRect(0,0,256,256);
+  x.globalAlpha=.10;x.strokeStyle='#9FDCEE';
+  for(let i=0;i<28;i++){const a=i/28*2*Math.PI;x.beginPath();
+    x.moveTo(128+86*Math.cos(a),128+86*Math.sin(a));x.lineTo(128+124*Math.cos(a),128+124*Math.sin(a));
+    x.lineWidth=2+((i*7)%5);x.stroke()}
+  return tex(c)})();
+
+// v1.5 太极归一：单臂逗号形（头在上），含彼色鱼眼；另一臂由同贴图 mesh 旋转 180° 叠放
+// cy=直指青 / cr=斜指绯；底=暗青气场（taijiBaseTex）
+const TAIJI_R=196;
+function taijiArmTex(fam){
+  const c=cnv(512,512),x=c.getContext('2d'),R=TAIJI_R;
+  x.translate(256,256);
+  const main=fam==='cy'?'#04C7E8':'#F43F5E', hi=fam==='cy'?'#9BEEFF':'#FF8FA3',
+        eye=fam==='cy'?'#F43F5E':'#04C7E8';
+  // 逗号形：大弧(顶→底 经东) + 下小圆右半(底→心) + 上小圆左半(心→顶)——头在顶部
+  const path=()=>{x.beginPath();
+    x.arc(0,0,R,-Math.PI/2,Math.PI/2,false);
+    x.arc(0,R/2,R/2,Math.PI/2,-Math.PI/2,true);
+    x.arc(0,-R/2,R/2,Math.PI/2,-Math.PI/2,false);
+    x.closePath()};
+  // 填充：头部亮→尾部透的能量渐变（径向自头部圆心）——压亮度防 bloom 冲白
+  path();
+  const g=x.createRadialGradient(0,-R/2,10,0,-R/2,R*1.35);
+  g.addColorStop(0,rgba(hi,.42));g.addColorStop(.42,rgba(main,.24));g.addColorStop(1,rgba(main,.05));
+  x.fillStyle=g;x.fill();
+  // S 缘亮线（辉光）
+  path();x.strokeStyle=rgba(hi,.75);x.lineWidth=3.5;x.shadowColor=main;x.shadowBlur=16;x.stroke();
+  x.shadowBlur=0;
+  // 鱼眼（彼色）
+  x.fillStyle=rgba(eye,.72);x.shadowColor=eye;x.shadowBlur=10;
+  x.beginPath();x.arc(0,-R/2,R/5.6,0,7);x.fill();x.shadowBlur=0;
+  return tex(c);
+}
+const taijiArmCy=taijiArmTex('cy'),taijiArmCr=taijiArmTex('cr');
+const taijiBaseTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');
+  x.translate(256,256);
+  const g=x.createRadialGradient(0,0,20,0,0,TAIJI_R*1.12);
+  g.addColorStop(0,'rgba(10,34,58,.46)');g.addColorStop(.72,'rgba(8,24,44,.22)');g.addColorStop(1,'rgba(8,24,44,0)');
+  x.fillStyle=g;x.beginPath();x.arc(0,0,TAIJI_R*1.12,0,7);x.fill();
+  // 外缘细环（气场边界）
+  x.strokeStyle='rgba(155,238,255,.20)';x.lineWidth=2;
+  x.beginPath();x.arc(0,0,TAIJI_R+4,0,7);x.stroke();
+  return tex(c)})();
+
+// v1.5 星环收束：主环（亮细环）+ 副环（虚线细环，反向旋转）
+const ringTexMain=(()=>{const c=cnv(512,512),x=c.getContext('2d');
+  x.translate(256,256);
+  x.strokeStyle='rgba(4,199,232,.55)';x.lineWidth=10;x.shadowColor='#04C7E8';x.shadowBlur=30;
+  x.beginPath();x.arc(0,0,228,0,7);x.stroke();
+  x.shadowColor='#9BEEFF';x.shadowBlur=14;x.strokeStyle='rgba(207,248,255,.95)';x.lineWidth=3.5;
+  x.beginPath();x.arc(0,0,228,0,7);x.stroke();
+  return tex(c)})();
+const ringTexDash=(()=>{const c=cnv(512,512),x=c.getContext('2d');
+  x.translate(256,256);
+  x.strokeStyle='rgba(155,238,255,.85)';x.lineWidth=2.5;x.shadowColor='#04C7E8';x.shadowBlur=10;
+  for(let i=0;i<24;i++){const a0=i/24*2*Math.PI;
+    x.beginPath();x.arc(0,0,206,a0,a0+Math.PI/9);x.stroke()}
   return tex(c)})();
 
 // 封面绯红漩涡
@@ -1040,18 +1107,52 @@ const boardShadows=heroStonesPos.map(s=>{const m=new THREE.Mesh(new THREE.PlaneG
   new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:0,depthWrite:false}));
   m.rotation.x=-Math.PI/2;m.position.set(s[0]*S,0.0025,-s[1]*S);m.visible=false;m.renderOrder=2;scene.add(m);return m});
 
-/* ================= S4 黑洞 ================= */
+/* ================= S4 中心机制（v1.5：hole 粉盘黑洞基线 / taiji 太极归一 / singularity 全息坍缩 / ring 星环收束） ================= */
 const hole=new THREE.Group();hole.position.set(0,0,-0.02);scene.add(hole);
 const horizon=new THREE.Mesh(new THREE.CircleGeometry(0.36,48),new THREE.MeshBasicMaterial({color:0x000000}));
 const photonRing=new THREE.Mesh(new THREE.RingGeometry(0.365,0.405,64),
   new THREE.MeshBasicMaterial({color:COL.photon,transparent:true,opacity:.55,blending:THREE.AdditiveBlending,depthWrite:false}));
 const accretion=new THREE.Mesh(new THREE.RingGeometry(0.45,1.18,80,1),
-  new THREE.MeshBasicMaterial({map:accretionTex,transparent:true,opacity:.88,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+  new THREE.MeshBasicMaterial({map:ELIM_ID==='singularity'?singAccTex:accretionTex,transparent:true,opacity:.88,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
 accretion.rotation.x=-0.46;
 const lensRing=new THREE.Mesh(new THREE.RingGeometry(1.22,1.62,64),
   new THREE.MeshBasicMaterial({map:glowTex,color:COL.lens,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
 hole.add(horizon,photonRing,accretion,lensRing);
 hole.scale.setScalar(0);
+// 中心光按机制换色：粉盘黑洞保留绯红照明，其余走青色家族
+holeLight.color.set(ELIM_ID==='hole'?COL.holeLight:(ELIM_ID==='taiji'?0x9BEEFF:0x04C7E8));
+if(ELIM_ID==='singularity')accretion.material.opacity=.62;   // 全息谱已提亮，压叠盘透明度防 bloom 冲白
+// —— taiji 太极归一：暗气场底盘 + 青/绯双臂（同贴图 180° 叠放，各自脉冲）+ 归一核闪
+const tjBase=new THREE.Mesh(new THREE.PlaneGeometry(2.7,2.7),
+  new THREE.MeshBasicMaterial({map:taijiBaseTex,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending}));
+const tjArmCy=new THREE.Mesh(new THREE.PlaneGeometry(2.7,2.7),
+  new THREE.MeshBasicMaterial({map:taijiArmCy,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));
+const tjArmCr=new THREE.Mesh(new THREE.PlaneGeometry(2.7,2.7),
+  new THREE.MeshBasicMaterial({map:taijiArmCr,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));
+tjArmCr.rotation.z=Math.PI;
+const tjCore=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:'#EAFFFB',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+tjCore.position.z=0.02;
+if(ELIM_ID==='taiji'){accretion.visible=false;horizon.scale.setScalar(0.52);photonRing.material.opacity=.4;
+  hole.add(tjBase,tjArmCr,tjArmCy,tjCore)}
+// —— ring 星环收束：主环 + 反旋虚线副环 + 25 颗族色光珠（逐卡入环轨）+ 收束核闪
+const ringDisc=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),
+  new THREE.MeshBasicMaterial({map:ringTexMain,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending}));
+const ringDash=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),
+  new THREE.MeshBasicMaterial({map:ringTexDash,transparent:true,opacity:.65,depthWrite:false,blending:THREE.AdditiveBlending}));
+const rgCore=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:'#EAFFFB',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+rgCore.position.z=0.02;
+const RING_R=1.14;                                     // 星环半径（世界单位）
+const ringBeads=ELIM.map(e=>{                          // 每张被淘汰卡一颗：入环后沿环轨加速公转
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,
+    color:e.set==='direct'?'#9BEEFF':'#FF8FA3',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  s.scale.setScalar(0.145);s.visible=false;hole.add(s);
+  return{spr:s,tE:e.tE+0.32,ang:slotAngle(e.set,e.j)*DEG,om:1.5+2.3*(e.tE-T_ELIM0)/(T_HOLE_C0-T_ELIM0),fam:e.set}});
+if(ELIM_ID==='ring'){accretion.visible=false;horizon.visible=false;photonRing.visible=false;lensRing.visible=false;
+  hole.add(ringDisc,ringDash,rgCore)}
+// v1.5：族吸收脉冲（闭式）——该族每张卡被吸入后，对应臂/环短暂增亮
+const ELIM_T={direct:ELIM.filter(e=>e.set==='direct').map(e=>e.tE+0.38),
+              indirect:ELIM.filter(e=>e.set==='indirect').map(e=>e.tE+0.38)};
+function taijiPulse(fam,t){let s=0;for(const t0 of ELIM_T[fam]){const d=t-t0;if(d>0)s+=Math.exp(-6*d)}return Math.min(1,s)}
 
 /* ================= S6 大盘生长 ================= */
 // 波前半径 r(t)：9.5–11.5 五圈，圈时长 .28/.32/.38/.46/.56 → 半径 3S..7S
@@ -1207,12 +1308,13 @@ const trailSys=particleSys(26,i=>{const r=mulberry32(500+i)();
   return{p:[-0.45+(mulberry32(600+i)()*0.55),(r-0.5)*1.05,0.06],
     v:[(mulberry32(700+i)()-0.5)*0.45,0.12+mulberry32(800+i)()*0.30,0.22+mulberry32(900+i)()*0.40],
     t0:2.65+i*0.022,life:0.30+r*0.20,size:0.22+r*0.30,c:COL.trail,curv:0.15}});
-// 吸积碎屑：每张被吞卡 6 粒（吞噬时刻附近诞生，外抛后被吸回）
-const debrisSys=particleSys(25*6,i=>{const m=(i/6)|0,k=i%6,rr=mulberry32(4000+i*13);
+// 吸积碎屑：每张被吞卡 6 粒（吞噬时刻附近诞生，外抛后被吸回）；v1.5 星环机制无中心吞噬点，跳过；太极机制用族色
+const debrisSys=ELIM_ID==='ring'?null:particleSys(25*6,i=>{const m=(i/6)|0,k=i%6,rr=mulberry32(4000+i*13);
   const a=rr()*6.283,sp=0.5+rr()*0.9,t0=ELIM[m].tE+0.40+k*0.015;
+  const famC=ELIM_ID==='taiji'?(ELIM[m].set==='direct'?COL.debA:COL.debB):null;
   return{p:[Math.cos(a)*0.12,Math.sin(a)*0.12,0.05],
     v:[Math.cos(a)*sp,Math.sin(a)*sp,(rr()-0.5)*0.3],
-    t0,life:0.3+rr()*0.2,size:0.4+rr()*0.6,c:rr()<0.5?COL.debA:COL.debB,curv:0.85}});
+    t0,life:0.3+rr()*0.2,size:0.4+rr()*0.6,c:famC||(rr()<0.5?COL.debA:COL.debB),curv:0.85}});
 // 黑洞收拢时的星尘径向吹散（v1.4：8.7–8.9）
 const dustSys=particleSys(90,i=>{const r=mulberry32(9000+i*7);
   const a=r()*6.283,u=r()*2-1,sq=Math.sqrt(1-u*u),sp=1.4+r()*1.6;
@@ -1429,16 +1531,58 @@ function frame(t){
   tyGlow.material.opacity=0.75*Math.sin(Math.PI*remap(t6,11.5,11.95));
   tyGlow.scale.setScalar(0.22+0.16*remap(t6,11.5,11.95));
 
-  /* --- S4 黑洞 --- */
+  /* --- S4 中心机制（v1.5 分支） --- */
   {
     const open=ease.outQuart(remap(t,T_HOLE0,T_HOLE1))*(1-ease.inCubic(remap(t,T_HOLE_C0,T_HOLE_C1)));
     hole.visible=open>0.001;
     hole.scale.setScalar(Math.max(open,0.001));
     if(hole.visible){
-      accretion.rotation.z=-2.4*t;
-      photonRing.material.opacity=0.55*open;
-      lensRing.material.opacity=0.12*open*(1+0.3*Math.sin(2*Math.PI*t/0.9));
-      holeLight.intensity=2.4*open;
+      if(ELIM_ID==='taiji'){
+        /* 太极归一：双臂顺时针旋（随淘汰加速）→ 8.5 起收拢并色归一 → 核闪 */
+        const u=remap(t,T_ELIM0,T_HOLE_C0),conv=remap(t,8.5,8.85),late=remap(t,8.62,8.85);
+        const spinA=0.8*(t-T_HOLE0)+1.2308*Math.max(0,t-T_ELIM0)**2+2.0*Math.max(0,t-8.5)**2;
+        const cS=1-0.74*ease.inCubic(conv);
+        tjBase.rotation.z=-0.35*spinA;tjArmCy.rotation.z=-spinA;tjArmCr.rotation.z=Math.PI-spinA;
+        tjBase.material.opacity=0.9*open*(1-0.45*conv);
+        const pd=taijiPulse('direct',t),pi=taijiPulse('indirect',t);
+        const bD=1+0.40*pd+0.55*conv,bI=1+0.40*pi+0.55*conv;
+        tjArmCy.material.opacity=Math.min(1,0.85*open*(0.80+0.4*pd))*(1-late);
+        tjArmCr.material.opacity=Math.min(1,0.85*open*(0.80+0.4*pi))*(1-late);
+        tjArmCy.material.color.setRGB(bD,bD,Math.min(1.5,bD+0.08));
+        tjArmCr.material.color.setRGB(bI,bI,Math.min(1.5,bI+0.08));
+        horizon.scale.setScalar(0.52*(1-0.85*late));
+        photonRing.material.opacity=0.4*open;
+        lensRing.material.opacity=0.10*open*(1+0.3*Math.sin(2*Math.PI*t/0.9));
+        tjCore.material.opacity=0.9*Math.sin(Math.PI*remap(t,8.55,8.95));
+        tjCore.scale.setScalar(0.35+0.55*remap(t,8.55,8.82));
+        holeLight.intensity=1.4*open*(1+0.5*conv);
+      }else if(ELIM_ID==='ring'){
+        /* 星环收束：主环/副环对旋（随吸收增亮）→ 8.7 环体向心收束 → 核闪；光珠沿环轨公转 */
+        const spinA=0.5*(t-T_HOLE0)+0.9*Math.max(0,t-T_ELIM0)**2;
+        const cS=1-0.94*ease.inCubic(remap(t,8.7,8.85));
+        ringDisc.rotation.z=spinA;ringDash.rotation.z=-1.7*spinA;
+        const pt=taijiPulse('direct',t)+taijiPulse('indirect',t);
+        ringDisc.material.opacity=Math.min(1,0.9*open*(0.8+0.45*pt));
+        ringDash.material.opacity=0.65*open;
+        ringDisc.scale.setScalar(cS);ringDash.scale.setScalar(cS);
+        for(const b of ringBeads){
+          const tau=t-b.tE;
+          if(tau<0||t>8.86){b.spr.visible=false;continue}
+          b.spr.visible=true;
+          const a=b.ang+b.om*tau,r=RING_R*cS;
+          b.spr.position.set(r*Math.cos(a),r*Math.sin(a),0.012);
+          b.spr.material.opacity=0.95*Math.min(1,tau/0.06)*(1-remap(t,8.78,8.86));
+        }
+        rgCore.material.opacity=0.95*Math.sin(Math.PI*remap(t,8.70,8.94));
+        rgCore.scale.setScalar(0.3+0.6*remap(t,8.70,8.86));
+        holeLight.intensity=1.7*open;
+      }else{
+        /* hole / singularity：现行黑洞（全息坍缩仅换吸积盘谱色与照明色） */
+        accretion.rotation.z=-2.4*t;
+        photonRing.material.opacity=0.55*open;
+        lensRing.material.opacity=0.12*open*(1+0.3*Math.sin(2*Math.PI*t/0.9));
+        holeLight.intensity=2.4*open;
+      }
     }else holeLight.intensity=0;
   }
 
@@ -1450,7 +1594,7 @@ function frame(t){
 
   /* --- 粒子 --- */
   trailSys.uniforms.uTime.value=t;
-  debrisSys.uniforms.uTime.value=t;
+  if(debrisSys)debrisSys.uniforms.uTime.value=t;
   dustSys.uniforms.uTime.value=t;
   if(burstSys)burstSys.uniforms.uTime.value=t;
   if(launchSys)launchSys.uniforms.uTime.value=t;
@@ -1484,17 +1628,26 @@ function updateCards(t){
     const elimP=t-tE;
     let pos=c.base.clone(),quat=_q1.identity(),scale=1,opacity=1;
 
-    if(elimP>0&&!c.hero){                      // —— 淘汰：翻面→变暗→拉丝→螺旋吸入
+    if(elimP>0&&!c.hero){                      // —— 淘汰：翻面→变暗→拉丝→吸入（v1.5 按机制分路径）
       if(elimP>0.5){c.grp.visible=false;continue}
       const flip=Math.PI*ease.outCubic(remap(elimP,0,0.15));
       quat.setFromAxisAngle(_v1.set(0,1,0),flip);
       const dark=1-0.72*Math.min(1,elimP/0.25);
       c.mat.color.setScalar(dark);
-      const q=ease.inQuad(remap(elimP,0.15,0.5));
-      const r=ARC_R*(1-q),a=c.angA*DEG+2.2*q;
-      pos.set(r*Math.cos(a),r*Math.sin(a),0);
-      scale=1-0.9*q;opacity=1-q;
-      stretchVerts(c,pos,quat,ease.inQuad(remap(elimP,0.10,0.25)));
+      if(ELIM_ID==='ring'){                    // 星环收束：直飞环上最近点，熔为光珠
+        const q=ease.inQuad(remap(elimP,0,0.35));
+        const r=ARC_R+(RING_R-ARC_R)*q,a=c.angA*DEG;
+        pos.set(r*Math.cos(a),r*Math.sin(a),0);
+        scale=1-0.78*q;opacity=1-q;
+        stretchVerts(c,pos,quat,ease.inQuad(remap(elimP,0.08,0.22)));
+      }else{                                   // hole/taiji/singularity：螺旋吸入
+        const q=ease.inQuad(remap(elimP,0.15,0.5));
+        const dir=ELIM_ID==='taiji'?-2.5:2.2;  // 太极：顺肘流入左旋臂
+        const r=ARC_R*(1-q),a=c.angA*DEG+dir*q;
+        pos.set(r*Math.cos(a),r*Math.sin(a),0);
+        scale=1-0.9*q;opacity=1-q;
+        stretchVerts(c,pos,quat,ease.inQuad(remap(elimP,0.10,0.25)));
+      }
     }else if(p<1&&TR_ID==='ripple'){           // —— 涟漪点将：在弧位就地凝出（升起+微过冲）
       const u=clamp01(p/0.45);
       pos.y+=0.55*(1-ease.outCubic(u));
