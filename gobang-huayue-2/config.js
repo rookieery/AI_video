@@ -5,3 +5,6 @@ export const SELECTED = { set: 'direct', index: 3 }; // 直指第4局：花月
 
 // 视觉风格：'gold' 暗金原版 | 'a' 霓虹棋谱 | 'b' 夜城全息 | 'c' 全息终端
 export const STYLE = 'a';
+
+// 书封风格（v1.2 书封重制）：'seal' 能量封印 | 'holo' 全息投影 | 'circuit' 玻璃刻印
+export const BOOK_STYLE = 'seal';

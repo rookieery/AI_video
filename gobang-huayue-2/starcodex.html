@@ -28,7 +28,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED, STYLE } from './config.js';
+import { SELECTED, STYLE, BOOK_STYLE } from './config.js';
 
 /* ================= 风格调色板 =================
    ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
@@ -185,6 +185,14 @@ const PALETTES={
   },
 };
 const COL=PALETTES[STYLE_ID]||PALETTES.gold;
+// 书封重制方案（待确认）：只影响 S1–S2 的书，其余分镜零改动
+const BOOK_ID=BOOK_STYLE||'seal';
+const BOOK_STYLES={
+  seal:{glass:.27,pageOp:.55,backOp:.32,flame:'plasma',stones:'solid',lattice:'dots',innerPlate:false,scan:0,sealOp:.95,stoneR:.066,flameSize:.40},
+  holo:{glass:.26,pageOp:.34,backOp:.18,flame:'vector',stones:'wire',lattice:'dots',innerPlate:false,scan:.14,sealOp:1.0,stoneR:.060,flameSize:.40},
+  circuit:{glass:.44,pageOp:.62,backOp:.42,flame:'spark',stones:'solid',lattice:'pads',innerPlate:true,scan:0,sealOp:.85,stoneR:.068,flameSize:.38},
+};
+const BKC=BOOK_STYLES[BOOK_ID]||BOOK_STYLES.seal;
 const S = 0.15;                 // 棋盘格距（世界单位）——卡面迷你盘与大盘共用，全程不变（§6 铁律）
 const CARD = 0.72;              // 卡片边长
 const ARC_R = 3.34;             // 双弧半径（3.2 时 0.72 卡在 12.5° 间距下互相压边）
@@ -367,11 +375,13 @@ const pageTex=(()=>{const c=cnv(256,512),x=c.getContext('2d');
   g.addColorStop(0,COL.pageLight);g.addColorStop(.45,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.22)');
   x.fillStyle=g;x.fillRect(0,0,256,512);return tex(c)})();
 
-// 书皮：漆器底 + 菱形点阵压印 + 暗金边框
-const coverTex=(()=>{const c=cnv(512,704),x=c.getContext('2d');
-  const g=x.createLinearGradient(0,0,0,704);
-  g.addColorStop(0,COL.coverTop);g.addColorStop(.5,COL.coverMid);g.addColorStop(1,COL.coverBot);
-  x.fillStyle=g;x.fillRect(0,0,512,704);
+// 书皮：漆器底 + 电路/点阵 + 边框；withBase=false 时输出透明底（玻璃封面用）
+function makeCoverTex(withBase){const c=cnv(512,704),x=c.getContext('2d');
+  if(withBase){
+    const g=x.createLinearGradient(0,0,0,704);
+    g.addColorStop(0,COL.coverTop);g.addColorStop(.5,COL.coverMid);g.addColorStop(1,COL.coverBot);
+    x.fillStyle=g;x.fillRect(0,0,512,704);
+  }
   if(COL.coverCircuit){
     // PCB 地纹网格（整幅细线，任何镜头距离都读得出"电路板"）
     x.strokeStyle=COL.coverGrid;x.lineWidth=1;
@@ -428,6 +438,155 @@ const coverTex=(()=>{const c=cnv(512,704),x=c.getContext('2d');
   x.strokeStyle=COL.coverBorder1;x.lineWidth=3;x.strokeRect(22,22,468,660);
   x.restore();
   x.strokeStyle=COL.coverBorder2;x.lineWidth=1.5;x.strokeRect(34,34,444,636);
+  return tex(c)}
+const coverTex=makeCoverTex(true);
+const coverArtTex=makeCoverTex(false);
+
+/* ================= v1.2 书封：四子封印 / 半透明玻璃 ================= */
+// 四子方位：菱形圆阵（45°/135°/225°/315°），半径 0.30
+const BOOK_STONE_POS=[[0.212,0.212],[-0.212,0.212],[-0.212,-0.212],[0.212,-0.212]];
+// 每颗棋子的能量焰（程序化，透明底；blending=Additive）
+function makeFlameTex(i){
+  const S=256,c=cnv(S,S),x=c.getContext('2d'),R=mulberry32(900+i*37),cx=128,cy=128;
+  const kind=BKC.flame;
+  x.globalCompositeOperation='lighter';x.lineCap='round';
+  const arc=(rad,a0,span,dir,lw,col,blur,wob)=>{
+    x.strokeStyle=col;x.lineWidth=lw;x.shadowColor=col;x.shadowBlur=blur;
+    x.beginPath();
+    for(let q=0;q<=24;q++){
+      const u=q/24,ang=a0+dir*span*u;
+      const rr=rad+(wob?wob*(0.55+0.45*Math.sin(u*9))*Math.sin(u*Math.PI):0);
+      const px=cx+Math.cos(ang)*rr,py=cy+Math.sin(ang)*rr;
+      q?x.lineTo(px,py):x.moveTo(px,py);
+    }
+    x.stroke();
+  };
+  if(kind==='plasma'){
+    const TAU=Math.PI*2;
+    // 柔光底：石缘一圈红色能量雾
+    const rg=x.createRadialGradient(cx,cy,44,cx,cy,122);
+    rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(.34,rgba(COL.crimson,.20));
+    rg.addColorStop(.62,rgba(COL.crimson,.09));rg.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=rg;x.beginPath();x.arc(cx,cy,122,0,TAU);x.fill();
+    // 宽焰 / 主焰 / 亮焰 / 青高光：长弧旋绕，留出缺口，避免糊成一圈
+    for(let n=0;n<8;n++)arc(58+R()*10,R()*TAU,1.2+R()*1.4,R()<.5?1:-1,10+R()*8,rgba(COL.crimson,.12),24,16);
+    for(let n=0;n<14;n++)arc(54+R()*14,R()*TAU,0.9+R()*1.2,R()<.5?1:-1,3.5+R()*4,rgba(COL.crimson,.30),11,9);
+    for(let n=0;n<9;n++)arc(58+R()*10,R()*TAU,0.5+R()*.9,R()<.5?1:-1,1.5+R()*1.4,rgba(COL.crimsonHi,.38),6,5);
+    for(let n=0;n<5;n++)arc(62+R()*10,R()*TAU,0.4+R()*.5,R()<.5?1:-1,1.1+R()*.8,rgba(COL.goldHi,.36),5,4);
+    // 向外火舌（切向甩出，二次曲线）
+    for(let n=0;n<12;n++){
+      const a=R()*TAU,r0=64+R()*10,r1=r0+8+R()*22,bend=(R()-.5)*1.1;
+      x.strokeStyle=rgba(n%3?COL.crimsonHi:COL.gold,.18);
+      x.lineWidth=1.2+R()*1.3;x.shadowColor=COL.crimsonHi;x.shadowBlur=7;
+      const p0=[cx+Math.cos(a)*r0,cy+Math.sin(a)*r0];
+      const p1=[cx+Math.cos(a+bend)*((r0+r1)/2),cy+Math.sin(a+bend)*((r0+r1)/2)];
+      const p2=[cx+Math.cos(a+bend*1.6)*r1,cy+Math.sin(a+bend*1.6)*r1];
+      x.beginPath();x.moveTo(p0[0],p0[1]);x.quadraticCurveTo(p1[0],p1[1],p2[0],p2[1]);x.stroke();
+    }
+  }else if(kind==='vector'){
+    for(let n=0;n<6;n++)arc(52+R()*6,n*Math.PI/3+R()*.4,1.0+R()*.5,1,1.6,rgba(COL.gold,.75),8,3);
+    for(let n=0;n<4;n++)arc(62+R()*10,R()*Math.PI*2,0.6+R()*.6,-1,1.2,rgba(COL.crimsonHi,.8),7,2);
+    for(let n=0;n<12;n++){
+      const a=R()*Math.PI*2,rr=74+R()*20;
+      x.fillStyle=rgba(COL.goldHi,.8);x.shadowColor=COL.gold;x.shadowBlur=6;
+      x.beginPath();x.arc(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,1.6+R()*1.4,0,7);x.fill();
+    }
+  }else{ // spark：玻璃刻印的细碎迸发
+    for(let n=0;n<30;n++){
+      const a=R()*Math.PI*2,r0=48+R()*6,r1=r0+3+R()*15;
+      x.strokeStyle=n%4?rgba(COL.crimsonHi,.48):rgba(COL.gold,.6);
+      x.lineWidth=n%4?1.1:1.5;x.shadowColor=COL.crimsonHi;x.shadowBlur=2;
+      x.beginPath();x.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);x.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);x.stroke();
+    }
+    x.setLineDash([5,7]);
+    for(let n=0;n<2;n++){
+      x.strokeStyle=rgba(COL.crimsonHi,.35);x.lineWidth=1.4;
+      x.beginPath();x.arc(cx,cy,70+n*7,0,7);x.stroke();
+    }
+    x.setLineDash([]);
+  }
+  return tex(c);
+}
+// 封印外环：主环 + 刻度环 + 四段连接弧 + 柔光带（1024 贴图，石位半径 384px = 0.30 世界）
+const sealRingTex=(()=>{const S=1024,c=cnv(S,S),x=c.getContext('2d'),cx=512,cy=512;
+  x.globalCompositeOperation='lighter';
+  const g=x.createRadialGradient(cx,cy,320,cx,cy,440);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.62,rgba(COL.crimson,.16));
+  g.addColorStop(.72,rgba(COL.crimsonHi,.10));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.beginPath();x.arc(cx,cy,440,0,7);x.fill();
+  x.strokeStyle=rgba(COL.crimson,.55);x.lineWidth=10;x.shadowColor=COL.crimsonHi;x.shadowBlur=24;
+  x.beginPath();x.arc(cx,cy,384,0,7);x.stroke();
+  x.strokeStyle=rgba(COL.gold,.45);x.lineWidth=2;x.shadowColor=COL.gold;x.shadowBlur=10;
+  x.beginPath();x.arc(cx,cy,348,0,7);x.stroke();
+  x.setLineDash([10,14]);x.strokeStyle=rgba(COL.goldHi,.5);x.lineWidth=2;
+  x.beginPath();x.arc(cx,cy,420,0,7);x.stroke();x.setLineDash([]);
+  for(let k=0;k<4;k++){
+    const a0=Math.PI/4+k*Math.PI/2+0.28,span=Math.PI/2-0.56;
+    x.strokeStyle=rgba(COL.crimsonHi,.35);x.lineWidth=6;x.shadowColor=COL.crimsonHi;x.shadowBlur=18;
+    x.beginPath();x.arc(cx,cy,384,a0,a0+span);x.stroke();
+  }
+  return tex(c)})();
+// 中央点阵：7×7 圆域点阵（circuit 方案用焊盘方块）
+const latticeTex=(()=>{const S=512,c=cnv(S,S),x=c.getContext('2d'),cx=256,cy=256;
+  x.globalCompositeOperation='lighter';const clipR=232,step=60;
+  for(let iy=-3;iy<=3;iy++)for(let ix=-3;ix<=3;ix++){
+    const px=cx+ix*step,py=cy+iy*step;
+    if(Math.hypot(ix*step,iy*step)>clipR)continue;
+    if(BKC.lattice==='pads'){
+      x.fillStyle=rgba(COL.gold,.55);x.shadowColor=COL.gold;x.shadowBlur=8;x.fillRect(px-3,py-3,6,6);
+    }else{
+      x.fillStyle=rgba(COL.goldHi,.75);x.shadowColor=COL.gold;x.shadowBlur=9;
+      x.beginPath();x.arc(px,py,3.4,0,7);x.fill();
+    }
+  }
+  x.strokeStyle=rgba(COL.gold,.35);x.lineWidth=1.5;x.shadowColor=COL.gold;x.shadowBlur=8;
+  x.beginPath();x.arc(cx,cy,clipR+8,0,7);x.stroke();
+  return tex(c)})();
+// 内衬：透过玻璃看到的暗色内层（中心实、边缘透）+ 三道内光
+const innerPlateTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  const g=x.createRadialGradient(256,352,60,256,352,430);
+  g.addColorStop(0,'rgba(3,14,26,.70)');g.addColorStop(.55,'rgba(3,12,22,.62)');
+  g.addColorStop(.8,'rgba(3,12,22,.30)');g.addColorStop(1,'rgba(3,12,22,0)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.globalCompositeOperation='lighter';
+  for(const yy of [0.32,0.5,0.68]){
+    const lg=x.createLinearGradient(70,0,W-70,0);
+    lg.addColorStop(0,'rgba(0,0,0,0)');lg.addColorStop(.35,rgba(COL.gold,.22));
+    lg.addColorStop(.65,rgba(COL.gold,.22));lg.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=lg;x.fillRect(70,H*yy-1.2,W-140,2.4);
+  }
+  return tex(c)})();
+// 封面霓虹框（圆角，盖在最上层）
+const coverFrameTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  x.strokeStyle=COL.frameCol;x.lineWidth=7;x.shadowColor=COL.frameCol;x.shadowBlur=24;
+  x.beginPath();x.roundRect(20,20,472,664,26);x.stroke();
+  x.strokeStyle=rgba(COL.goldHi,.55);x.lineWidth=1.5;x.shadowColor=COL.frameCol;x.shadowBlur=8;
+  x.beginPath();x.roundRect(28,28,456,648,20);x.stroke();
+  return tex(c)})();
+// 全息扫描线（holo 方案）
+const holoScanTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  x.globalCompositeOperation='lighter';x.fillStyle=rgba(COL.gold,.5);
+  for(let y=0;y<H;y+=5)x.fillRect(0,y,W,1);
+  const g=x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.5,rgba(COL.gold,.10));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  return tex(c)})();
+// 玻璃内部的书页层线（加色；透过封面看到的一叠"光页"）
+const innerPagesTex=(()=>{const W=256,H=512,c=cnv(W,H),x=c.getContext('2d');
+  x.globalCompositeOperation='lighter';
+  for(let y=6;y<H;y+=7){x.fillStyle=rgba(COL.gold,.075);x.fillRect(0,y,W,1.2);}
+  const g=x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.5,rgba(COL.gold,.10));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  return tex(c)})();
+// 玻璃高光条（竖向导光，读作玻璃反射）
+const glassGlareTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  x.globalCompositeOperation='lighter';
+  for(const [ox,wd,a] of [[64,36,.11],[150,12,.05],[326,48,.08],[426,10,.045]]){
+    const g=x.createLinearGradient(ox,0,ox+wd,0);
+    g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.5,rgba(COL.goldHi,a));g.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=g;x.fillRect(ox,0,wd,H);
+  }
   return tex(c)})();
 
 // 卡面底图（无名称版，§5）：黑曜玻璃 + 描边 + 软影；kind: gold/crimson；hero=true 时不画网格棋子（用 3D）
@@ -572,43 +731,109 @@ const coverPivot=new THREE.Group();          // 绕书脊（局部 -x 端）翻�
 {
   const W=0.95,H=1.30,SP=-W/2;               // 书脊在局部 x=-0.475
   coverPivot.position.set(SP,0,0);
-  const front=new THREE.MeshStandardMaterial({map:coverTex,roughness:.42,metalness:.25,emissive:COL.coverEmissive,emissiveIntensity:COL.coverEmInt});
-  const darkM=new THREE.MeshStandardMaterial({color:COL.coverSide,roughness:.5,metalness:.2});
-  const cover=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.035),[darkM,darkM,darkM,darkM,front,darkM]);
-  cover.position.x=W/2;coverPivot.add(cover);
+  // 半透明玻璃封面（v1.2）：深蓝玻璃基板 + 透明底电路图 + 内衬 + 霓虹框
+  const glassM=new THREE.MeshStandardMaterial({color:0x081624,roughness:.08,metalness:.35,
+    transparent:true,opacity:BKC.glass,depthWrite:false});
+  const darkM=new THREE.MeshStandardMaterial({color:COL.coverSide,roughness:.45,metalness:.25});
+  const edgeM=new THREE.MeshStandardMaterial({color:0x06202E,roughness:.25,metalness:.4,
+    emissive:COL.gold,emissiveIntensity:.55});
+  const cover=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.035),[edgeM,darkM,darkM,darkM,glassM,darkM]);
+  cover.position.x=W/2;cover.renderOrder=1;coverPivot.add(cover);
   book.add(coverPivot);
-  // 书页 + 封底（书体，不随封面翻）
-  const pageMat=new THREE.MeshStandardMaterial({map:pageTex,roughness:1.0});
+  // 内衬（透过玻璃看到的暗色内层；holo 方案不设，直接透见书页）
+  var innerPlate=new THREE.Mesh(new THREE.PlaneGeometry(W*0.94,H*0.96),
+    new THREE.MeshBasicMaterial({map:innerPlateTex,transparent:true,depthWrite:false}));
+  innerPlate.position.set(W/2,0,-0.004);innerPlate.renderOrder=0;
+  innerPlate.visible=BKC.innerPlate;coverPivot.add(innerPlate);
+  // 玻璃内透光（半透明的关键读感：封面板下有微光）
+  var innerCore=new THREE.Mesh(new THREE.PlaneGeometry(W*0.86,H*0.88),
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.gold,transparent:true,opacity:.30,
+      depthWrite:false,blending:THREE.AdditiveBlending}));
+  innerCore.position.set(W/2,0,-0.012);innerCore.renderOrder=0;coverPivot.add(innerCore);
+  // 透过玻璃可见的书页层线（加色，仅亮线参与）
+  var innerPages=new THREE.Mesh(new THREE.PlaneGeometry(0.90,1.24),
+    new THREE.MeshBasicMaterial({map:innerPagesTex,transparent:true,opacity:.9,
+      depthWrite:false,blending:THREE.AdditiveBlending}));
+  innerPages.position.set(W/2,0,-0.016);innerPages.renderOrder=0;coverPivot.add(innerPages);
+  // 玻璃上的电路图（透明底，加色）
+  var coverArt=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
+    new THREE.MeshBasicMaterial({map:coverArtTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.5}));
+  coverArt.position.set(W/2,0,0.0185);coverArt.renderOrder=2;coverPivot.add(coverArt);
+  // 玻璃高光条
+  var glassGlare=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
+    new THREE.MeshBasicMaterial({map:glassGlareTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.9}));
+  glassGlare.position.set(W/2,0,0.0192);glassGlare.renderOrder=2;coverPivot.add(glassGlare);
+  // 书页 + 封底（书体，不随封面翻）；半透明，星空可隐约透过
+  const pageMat=new THREE.MeshStandardMaterial({map:pageTex,roughness:.85,
+    transparent:true,opacity:BKC.pageOp});
   const pages=new THREE.Mesh(new THREE.BoxGeometry(0.90,1.24,0.075),pageMat);
   pages.position.set(0.01,0,-0.06);book.add(pages);
-  const back=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.03),darkM);back.position.set(0,0,-0.098);book.add(back);
-  // 书脊金线（激活时亮起蔓延）
+  const backMat=new THREE.MeshStandardMaterial({color:COL.coverSide,roughness:.4,metalness:.3,
+    transparent:true,opacity:BKC.backOp,depthWrite:false});
+  const back=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.03),backMat);back.position.set(0,0,-0.098);book.add(back);
+  // 书脊光线（激活时亮起蔓延）
   var spineA=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:COL.goldHi,transparent:true,opacity:0}));
   spineA.position.set(SP,0,0);book.add(spineA);
   var spineB=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:COL.goldHi,transparent:true,opacity:0}));
   spineB.position.set(SP-0.028,0,0);book.add(spineB);
-  // 封面元素组（随封面翻）
-  var coverDeco=new THREE.Group();coverDeco.position.set(W/2,0,0.02);coverPivot.add(coverDeco);
-  var vortex=new THREE.Mesh(new THREE.PlaneGeometry(0.40,0.40),
-    new THREE.MeshBasicMaterial({map:vortexTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
-  coverDeco.add(vortex);
-  // 四颗黑曜棋子 + 橙金火环（上/左/右/下，呼吸相位依次差 0.4s）
+  // 封面封印组（随封面翻）
+  var coverDeco=new THREE.Group();coverDeco.position.set(W/2,0,0.020);coverPivot.add(coverDeco);
+  // 封印外环
+  var sealRing=new THREE.Mesh(new THREE.PlaneGeometry(0.88,0.88),
+    new THREE.MeshBasicMaterial({map:sealRingTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:BKC.sealOp}));
+  sealRing.renderOrder=3;coverDeco.add(sealRing);
+  // 每颗棋子一圈能量焰（可独立旋转）
+  var bookFlames=[];
+  BOOK_STONE_POS.forEach((p,i)=>{
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(BKC.flameSize,BKC.flameSize),
+      new THREE.MeshBasicMaterial({map:makeFlameTex(i),transparent:true,depthWrite:false,
+        blending:THREE.AdditiveBlending,opacity:.95}));
+    fl.position.set(p[0],p[1],0);fl.renderOrder=5;coverDeco.add(fl);
+    bookFlames.push(fl);
+  });
+  // 中央点阵（取代原漩涡）
+  var bookLattice=new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.62),
+    new THREE.MeshBasicMaterial({map:latticeTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.95}));
+  bookLattice.position.z=0.001;bookLattice.renderOrder=4;coverDeco.add(bookLattice);
+  // 四颗棋子（菱形圆阵）+ 霓虹环；呼吸相位依次差 0.4s
   var ringStones=[];
   const rseed=mulberry32(7);
-  [[0,0.30],[-0.30,0],[0.30,0],[0,-0.30]].forEach((p,i)=>{
-    const st=new THREE.Mesh(new THREE.SphereGeometry(0.048,20,14),
-      new THREE.MeshStandardMaterial({color:COL.obsidian,roughness:.2,metalness:.4}));
-    st.position.set(p[0],p[1],0.012);coverDeco.add(st);
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.064,0.011,10,40),
-      new THREE.MeshStandardMaterial({color:COL.fireRing,emissive:COL.fireRing,emissiveIntensity:.6,roughness:.4}));
-    ring.position.set(p[0],p[1],0.012);coverDeco.add(ring);
-    ringStones.push({ring,i,ph:i*0.4,base:rseed()});
+  BOOK_STONE_POS.forEach((p,i)=>{
+    const stMat=new THREE.MeshStandardMaterial({color:COL.obsidian,roughness:.16,metalness:.62,
+      emissive:BKC.stones==='wire'?COL.coverEmissive:0x000000,
+      emissiveIntensity:BKC.stones==='wire'?.10:0,
+      transparent:BKC.stones==='wire',opacity:BKC.stones==='wire'?.82:1});
+    const st=new THREE.Mesh(new THREE.SphereGeometry(BKC.stoneR,24,16),stMat);
+    st.scale.z=.62;st.position.set(p[0],p[1],0.004);st.renderOrder=6;coverDeco.add(st);
+    const rimMat=new THREE.MeshBasicMaterial({color:COL.gold,transparent:true,
+      opacity:BKC.stones==='wire'?.28:.14,blending:THREE.AdditiveBlending,side:THREE.BackSide});
+    const rim=new THREE.Mesh(new THREE.SphereGeometry(BKC.stoneR*1.08,20,14),rimMat);
+    rim.scale.z=.62;rim.position.copy(st.position);rim.renderOrder=6;coverDeco.add(rim);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(BKC.stoneR*1.26,BKC.stoneR*.11,10,40),
+      new THREE.MeshStandardMaterial({color:COL.crimson,emissive:COL.crimsonHi,emissiveIntensity:.28,roughness:.35,metalness:.25}));
+    ring.position.set(p[0],p[1],0.006);ring.renderOrder=7;coverDeco.add(ring);
+    ringStones.push({ring,rim,i,ph:i*0.4,base:rseed()});
   });
+  // 封面霓虹框（最上层）
+  var coverFrame=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
+    new THREE.MeshBasicMaterial({map:coverFrameTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.9}));
+  coverFrame.position.set(W/2,0,0.0235);coverFrame.renderOrder=8;coverPivot.add(coverFrame);
+  // 全息扫描线（holo）
+  var holoScan=new THREE.Mesh(new THREE.PlaneGeometry(W*0.98,H*0.99),
+    new THREE.MeshBasicMaterial({map:holoScanTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:BKC.scan}));
+  holoScan.position.set(W/2,0,0.0215);holoScan.renderOrder=7;
+  holoScan.visible=BKC.scan>0;coverPivot.add(holoScan);
   // 激活脉冲辉光覆盖层
   var pulseGlow=new THREE.Mesh(new THREE.PlaneGeometry(W*1.04,H*1.04),
     new THREE.MeshBasicMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
   pulseGlow.position.set(W/2,0,0.05);coverPivot.add(pulseGlow);
-  // 翻开过半：书页缝白金辉光
+  // 翻开过半：书页缝辉光
   var pageGlow=new THREE.Mesh(new THREE.PlaneGeometry(0.10,1.26),
     new THREE.MeshBasicMaterial({map:glowTex,color:COL.pageSeam,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
   pageGlow.position.set(-0.40,0,0.035);book.add(pageGlow);
@@ -908,17 +1133,31 @@ function frame(t){
     book.position.set(0,0.05*Math.sin(2*Math.PI*t/3)-sink,0);
     book.rotation.y=4*DEG*Math.sin(2*Math.PI*t/6);
     coverPivot.rotation.y=178*DEG*ease.inOutCubic(remap(t,2.6,3.4));
-    // 漩涡：渐升转速 + 1.6 后亮度爬升
-    vortex.rotation.z=-vortexAngle(t);
+    // 封印：外环慢转，四团能量焰各自反向自转/呼吸；1.6 后整体亮度爬升
+    const heat=env(t,[[0,.72],[1.6,.72],[2.2,1.25],[2.7,1.05],[3.4,.9]]);
+    sealRing.rotation.z=0.16*t;
+    bookLattice.rotation.z=-0.05*t;
+    bookLattice.material.opacity=.82+.14*Math.sin(2*Math.PI*t/2.4);
+    for(let i=0;i<bookFlames.length;i++){
+      const f=bookFlames[i];
+      f.rotation.z=(i%2?1:-1)*0.28*t+i*1.57;
+      f.scale.setScalar(1+0.10*Math.sin(2*Math.PI*t/1.9+i*1.4));
+      f.material.opacity=(0.72+0.20*Math.sin(2*Math.PI*t/1.7+i*1.2))*heat;
+    }
+    if(BKC.scan>0){ // 全息：轻微高频闪烁
+      const fl=.93+.05*Math.sin(41*t)+.02*Math.sin(97*t);
+      for(const f of bookFlames)f.material.opacity*=fl;
+      holoScan.material.opacity=BKC.scan*(.7+.3*Math.sin(2*Math.PI*t/0.7));
+    }
     const bph=breathPhase(t);
     for(const rs of ringStones){
       const p=0.5+0.5*Math.sin(bph-2*Math.PI*rs.ph/1.6);
       rs.ring.scale.setScalar(1+0.16*p);
-      rs.ring.material.emissiveIntensity=0.5+1.7*p;
-      rs.ring.material.color.set(COL.fireRing);
+      rs.ring.material.emissiveIntensity=(0.18+0.55*p)*heat;
+      rs.rim.material.opacity=(BKC.stones==='wire'?.28:.14)*(0.6+0.8*p);
     }
     // 封面脉冲两次（2.2–2.6）
-    pulseGlow.material.opacity=(t>=2.2&&t<2.4?Math.sin(Math.PI*(t-2.2)/0.2):0)+(t>=2.4&&t<2.6?Math.sin(Math.PI*(t-2.4)/0.2)*0.8:0);
+    pulseGlow.material.opacity=(t>=2.2&&t<2.4?Math.sin(Math.PI*(t-2.2)/0.2)*0.58:0)+(t>=2.4&&t<2.6?Math.sin(Math.PI*(t-2.4)/0.2)*0.46:0);
     // 书脊金线蔓延
     spineA.material.opacity=0.9*ease.outCubic(remap(t,2.2,2.35));
     spineB.material.opacity=0.9*ease.outCubic(remap(t,2.3,2.5));
