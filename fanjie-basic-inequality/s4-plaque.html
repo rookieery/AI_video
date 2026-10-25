@@ -5,22 +5,38 @@
 <link rel="stylesheet" href="shared.css">
 <style>
   #grp{position:absolute;inset:0;transform-origin:960px 540px;}
-  #stele{left:620px;top:140px;width:680px;height:430px;}
-  #ttl{position:absolute;left:0;right:0;top:250px;text-align:center;font-size:128px;color:var(--pri-hi);opacity:0;
-    text-shadow:0 0 46px rgba(232,182,76,.4);letter-spacing:.08em;}
-  #cor{position:absolute;left:664px;top:172px;font-size:26px;color:var(--muted);opacity:0;letter-spacing:.2em;}
-  /* 匾内 F4 缩影（.fx-row 行容器；匾内为 stele 相对坐标，随组降落） */
-  #f4m{position:absolute;left:0;right:0;top:414px;font-size:34px;color:var(--pri);opacity:0;}
-  #b1{position:absolute;left:700px;top:420px;font-size:24px;color:var(--ter);border:2px dashed var(--ter);border-radius:10px;padding:6px 16px;opacity:0;}
-  #b2{position:absolute;left:1130px;top:420px;font-size:24px;color:var(--pri-hi);border:2px solid var(--pri);border-radius:10px;padding:6px 16px;opacity:0;}
-  #abc{position:absolute;left:0;right:0;top:470px;text-align:center;opacity:0;font-size:24px;color:var(--sec-hi);}
-  /* F6 三步证明行（H28）：行中心线 540/644/748，等距 104px=2.0×52px 行距网格 */
-  .step{position:absolute;left:0;right:0;font-size:52px;opacity:0;}
-  #s1{top:510px;} #s2{top:614px;} #s3{top:718px;}
-  #f7{position:absolute;left:0;right:0;top:803px;font-size:40px;color:var(--muted);opacity:0;}
-  #f7l{position:absolute;left:0;right:0;top:906px;text-align:center;font-size:26px;color:var(--muted);opacity:0;}
-  #qed{position:absolute;left:1268px;top:714px;font-size:64px;color:var(--pri-hi);opacity:0;}
-  #stamp2{left:1100px;top:300px;font-size:44px;}
+  #stele{left:620px;top:140px;width:680px;height:430px;transform-origin:50% 50%;}
+  /* 128px+.08em=691px>匾宽680，「式」曾折行压匾文；118px+.06em=625px 单行，nowrap 兜底 */
+  #ttl{position:absolute;left:0;right:0;top:119px;text-align:center;font-size:118px;color:var(--pri-hi);opacity:0;
+    text-shadow:0 0 46px rgba(232,182,76,.4);letter-spacing:.06em;white-space:nowrap;}
+  /* left:664 曾只剩 16px 可用宽 → 竖排贴右缘；改通栏居中，作匾额"题款"行 */
+  #cor{position:absolute;left:0;right:0;top:62px;text-align:center;font-size:26px;color:var(--muted);opacity:0;letter-spacing:.2em;}
+  /* 匾内 F4 匾文（金匾唯一随行元素——双徽章/条件 chip 已随 v1.2 剧本级删除）。
+     按"墨迹"而非行盒排位：.frac 分母带 vertical-align:-0.75em 系统性下探，
+     34px 匾文实测墨迹 top+11..top+115（盒高仅 73）——旧版 top:414 墨迹穿匾沿 60px */
+  #f4m{position:absolute;left:0;right:0;top:275px;font-size:34px;color:var(--pri);opacity:0;}
+  /* ===== 主行：四站综合法（≥ 钉 x=960 为全程不动点，行居画面正中）=====
+     ①(√a−√b)² ≥ 0 已知（S1 的砖）→ ②展开 a+b−2√(ab) ≥ 0 → ③移项 a+b ≥ 2√(ab)
+     → ④同除以2 (a+b)/2 ≥ √(ab)：分式在终点长出，右边的 2 飞来当分母，终式与匾文 F4 互为镜像
+     → ⑤定线 10.95–11.75：分式升 37.5 落轴（杠对齐 ≥/√(ab) 中心），整行会于 y540 一条水平线 */
+  #row{position:absolute;left:0;right:0;top:470px;height:150px;opacity:0;white-space:nowrap;}
+  #row>span{position:absolute;font-size:52px;opacity:0;}
+  #n3{left:672px;top:45px;}                             /* ① 左：平方式，右缘贴 900 缝 */
+  #n1{left:588px;top:45px;}                             /* ② 左前段 a+b，③ 右滑愈合至 794（分式位） */
+  #n2{left:701px;top:45px;}                             /* ② 中段 −2√(ab)，③ 整体右飞 309 落零位 */
+  #ge{left:938px;top:45px;}                             /* ≥ 号钉 960 不动：两次越界各脉动一闪 */
+  #z0{left:1006px;top:45px;}                            /* 右侧 0：③ 移项落位时让位 */
+  #fbar{left:766px;top:111px;width:0;height:4px;background:var(--white);}   /* ④ 分数杠 0→150 长出 */
+  #fden{left:826px;top:117px;}                          /* ④ 分母 2（cf2 飞来化身） */
+  #axl{position:absolute;left:916px;top:540px;width:225px;height:2px;background:rgba(255,215,106,.4);
+    transform:scaleX(0);transform-origin:left center;}  /* ⑤ 定线金线：沿分数杠轴掠过 ≥ 与 √(ab) 印证同线 */
+  #sgrp{position:relative;display:inline-block;}        /* − 记号组：vbar 竖笔落下变 +（移项变号） */
+  #vbar{position:absolute;left:50%;top:14px;width:5px;height:34px;margin-left:-2.5px;
+    background:var(--white);transform:scaleY(0);}
+  #rc1,#rc2,#cf2{display:inline-block;}                 /* 需 transform 的行内件 */
+  #qed{position:absolute;left:1210px;top:510px;font-size:58px;color:var(--pri-hi);opacity:0;}
+  #cap6{top:822px;}                                    /* 下置避让主行（本镜唯一字幕） */
+  #stamp2{left:839px;top:312px;font-size:44px;}        /* B案：盖在金匾腾空后的原位（印章实测 242×111，据此居中） */
 </style>
 </head>
 <body>
@@ -35,22 +51,25 @@
     <div id="cor">凡阶 · 第一式</div>
     <div id="ttl" class="kai">基本不等式</div>
     <div id="f4m" class="fx fx-row"><span class="surd">√(ab)</span> ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div>
-    <span id="b1" class="fx">几何平均 <span class="surd">√ab</span></span><span id="b2" class="fx">算术平均 (a+b)/2</span>
-    <div id="abc" class="chip" style="display:inline-block;">a, b ≥ 0</div>
   </div>
-  <div id="s1" class="step fx fx-row">(a+b)/2 − <span class="surd">√(ab)</span></div>
-  <div id="s2" class="step fx fx-row">= (a+b−2<span class="surd">√(ab)</span>)/2</div>
-  <div id="s3" class="step fx fx-row">= (<span data-tok>(<span class="surd">√a</span>−<span class="surd">√b</span>)²</span>)/2 <span id="ge0">≥ 0</span></div>
+
+  <div id="row" class="fx">
+    <span id="n3"><span data-tok>(<span class="surd"><span id="rc1">√</span>a</span>−<span class="surd"><span id="rc2">√</span>b</span>)²</span></span>
+    <span id="n1"><span data-tok>a+b</span></span>
+    <span id="n2"><span id="sgrp"><span id="mnr">−</span><span id="vbar"></span></span><span id="cf2">2</span><span id="rsurd" class="surd"><span data-tok>√(ab)</span></span></span>
+    <span id="ge">≥</span>
+    <span id="z0">0</span>
+    <span id="fbar"></span>
+    <span id="fden">2</span>
+  </div>
+  <div id="axl"></div>
   <div id="qed" class="fx">∎</div>
 </div>
 
-<div id="f7" class="fx fx-row"><span class="surd">√(ab)</span> ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span> ≤ <span class="surd">√((a²+b²)/2)</span></div>
-<div id="f7l">链条还能往上接</div>
 <div id="burstHost" style="position:absolute;inset:0;"></div>
 <div id="stamp2" class="stamp kai">∎ 得证</div>
 <div class="flash" id="fl"></div>
 <div class="vign"></div>
-<div class="cap">正方形，赢麻了</div>
 <div class="cap" id="cap6">基本不等式 · 凡阶</div>
 
 <script src="shared.js"></script>
@@ -58,81 +77,127 @@
 var $ = function (id) { return document.getElementById(id); };
 var rise = F.makeRise($('riseHost'), 960, 380, 700, 26, 11, 'rgba(255,215,106,.75)');
 var burst1 = F.makeBurst($('burstHost'), 960, 560, 16, 11, 'rgba(255,215,106,.9)', 120);   /* 落地金尘二次激扬（种子 11 变奏） */
-var burst2 = F.makeBurst($('burstHost'), 960, 505, 30, 13, 'rgba(255,215,106,.95)', 300);  /* ∎ 爆发（种子 13） */
+var burst2 = F.makeBurst($('burstHost'), 1000, 540, 30, 13, 'rgba(255,215,106,.95)', 300);  /* ∎ 爆发（种子 13） */
 
 window.film = {
-  duration: 17,
+  duration: 16,
   frame: function (t) {
     /* 0–0.5 转场：星尘汇拢（上升金尘 26 粒，种子 11）【H15】 */
     rise.update(t);
 
-    /* 字幕⑤跨镜承接（H26 有意跨镜延续登记）：t0 全亮续驻，0.6–1.0 淡出 */
-    document.querySelector('.cap').style.opacity = 1 - F.seg(t, .6, 1.0);
-
-    /* 0.5–3.0 金匾自 −480px 降落（eob 过冲）+ 落地金尘 + 双金环（520/760px）；
-       3.0 F6 行1 进场，同刻金匾组降权微暗 0.75 转沉淀（H27 交接） */
-    var du = F.eob(F.seg(t, .5, 3.0));
-    var stDim = F.lerp(1, .75, F.seg(t, 3.0, 3.5));
-    $('stele').style.transform = 'translateY(' + (F.lerp(-480, 0, Math.min(1, du)) + (du > 1 ? (du - 1) * 60 : 0)) + 'px)';
+    /* ===== 0.5–2.6 金匾自 −480px 降落（eob 过冲）+ 落地金尘 + 双金环，2.6–3.2 全匾定格交付；
+       3.2–4.0「化印驻左」：金匾高抛弧线飞页面左侧垂直居中 (300,540) 缩 .30 成印常驻
+       （匾文/题款飞行中淡出，题字留存），3.7 起画布正中交给主行 ===== */
+    var du = F.eob(F.seg(t, .5, 2.6));
+    var stDim = F.lerp(1, .75, F.seg(t, 3.2, 3.7));
+    var em = F.eic(F.seg(t, 3.2, 4.0));                  /* 化印进度：中心 (960,355)→(300,540) 左侧垂直居中 */
+    var stSc = F.lerp(1, .30, em);
+    var emx = F.lerp(0, -660, em) + Math.sin(Math.PI * em) * 36;   /* 外抛弧线：先扬右再收左 */
+    var emy = F.lerp(0, 185, em) - Math.sin(Math.PI * em) * 60;    /* 下落段先上抛成 lob，从主行头顶绕行 */
+    $('stele').style.transform = 'translate(' + emx + 'px,' + (F.lerp(-480, 0, du) + emy) + 'px) scale(' + stSc + ')';
     $('stele').style.opacity = Math.min(1, F.seg(t, .5, 1.0) * 2) * stDim;
     var gl = .5 + .5 * Math.sin(2 * Math.PI * 2 * t);
     $('stele').style.boxShadow = '0 0 ' + (40 + 50 * gl) + 'px rgba(232,182,76,' + (.12 + .18 * gl) + ') inset';
-    burst1.update(t, 2.6, .8);
-    var r1 = F.eoc(F.seg(t, 2.6, 3.4));
+    burst1.update(t, 2.55, .8);
+    var r1 = F.eoc(F.seg(t, 2.55, 3.35));
     $('ring1').setAttribute('cx', 960); $('ring1').setAttribute('cy', 560);
     $('ring1').setAttribute('r', 520 * r1); $('ring1').style.opacity = (1 - r1) * .7;
-    var r2 = F.eoc(F.seg(t, 2.8, 3.8));
+    var r2 = F.eoc(F.seg(t, 2.75, 3.75));
     $('ring2').setAttribute('cx', 960); $('ring2').setAttribute('cy', 560);
     $('ring2').setAttribute('r', 760 * r2); $('ring2').style.opacity = (1 - r2) * .5;
-    /* 匾内题字点亮；匾下 F4 缩影+双徽章+chip 归位（4.0 起降权 0.6） */
-    $('ttl').style.opacity = F.eoc(F.seg(t, 2.4, 3.0));
-    $('cor').style.opacity = F.eoc(F.seg(t, 2.6, 3.2)) * .9;
-    var dock = F.eic(F.seg(t, 3.0, 3.5));
-    var dimS = F.lerp(1, .6, F.seg(t, 4.0, 4.5));
-    $('f4m').style.opacity = dock * dimS;
-    $('b1').style.opacity = F.eic(F.seg(t, 3.2, 3.6)) * dimS;
-    $('b2').style.opacity = F.eic(F.seg(t, 3.4, 3.8)) * dimS;
-    $('abc').style.opacity = F.eoc(F.seg(t, 3.6, 4.0)) * dimS;
-    $('abc').style.left = '0px'; $('abc').style.top = '480px';
+    /* 匾内题字/题款/匾文随降落依次点亮（1.9–2.7 全文交付），化印飞行中题款+匾文淡出（.30 下不可读） */
+    var emOut = 1 - F.seg(t, 3.2, 3.6);
+    $('ttl').style.opacity = F.eoc(F.seg(t, 1.9, 2.5));
+    $('cor').style.opacity = F.eoc(F.seg(t, 2.0, 2.5)) * .9 * emOut;
+    $('f4m').style.opacity = F.eic(F.seg(t, 2.1, 2.7)) * emOut;
 
-    /* 3.0–6.0 字幕⑥（3.0s，H26） */
+    /* 3.0–6.0 字幕⑥（H26；下置条避让主行） */
     F.capShow($('cap6'), t, 3.0, 6.0);
 
-    /* 3.0–12.0 F6 三步整式 morph（每行整式入场，token 高亮平方项，"≥0" 金晕呼吸）；
-       H27 交接：6.0 行2 进场→行1 降权 0.6；9.0 行3 进场→行2 降权 0.6；12.0 F7→三行降暗 0.45 */
-    var sd = F.lerp(1, .45, F.seg(t, 12.0, 12.4));
-    var u1 = F.eic(F.seg(t, 3.0, 3.6));
-    $('s1').style.opacity = u1 * F.lerp(1, .6, F.seg(t, 6.0, 6.5)) * sd;
-    $('s1').style.transform = 'translateY(' + ((1 - u1) * 16) + 'px)';
-    var u2 = F.eic(F.seg(t, 6.0, 6.6));
-    $('s2').style.opacity = u2 * F.lerp(1, .6, F.seg(t, 9.0, 9.5)) * sd;
-    $('s2').style.transform = 'translateY(' + ((1 - u2) * 16) + 'px)';
-    var u3 = F.eic(F.seg(t, 9.0, 9.6));
-    $('s3').style.opacity = u3 * sd;
-    $('s3').style.transform = 'translateY(' + ((1 - u3) * 16) + 'px)';
-    F.token($('s3'), t, [[9.6, .8]]);
-    $('ge0').style.textShadow = t > 10 ? '0 0 ' + (10 + 16 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(255,215,106,.85)' : '';
+    /* ===== 主行四站综合法（≥ 钉 x=960 全程不动点，行居画面正中；金匾 3.2 起飞、3.7 才入场避让）===== */
+    var rIn = F.eic(F.seg(t, 3.7, 4.3));
+    var ali = F.eic(F.seg(t, 10.95, 11.75));             /* ⑤ 定线：分式三件升 37.5 落轴（杠对齐 ≥/√(ab) 中心线） */
+    var axY = -37.5 * ali;
+    var lift = -34 * F.eic(F.seg(t, 8.6, 9.8)) + 30 * ali;  /* ④ 微升避垂 → ⑤ 回落至 −4，轴线恰会于画面正中 y540 */
+    $('row').style.opacity = rIn;
+    $('row').style.transform = 'translate(0,' + ((1 - rIn) * 16 + lift) + 'px)';
 
-    /* 12.0–12.6 F7 均值链小字（行中心 y=850）+ 跟随小标；14.0–14.5 退场 */
-    var fu = F.eic(F.seg(t, 12.0, 12.6));
-    $('f7').style.opacity = fu * F.lerp(1, .08, F.seg(t, 14.0, 14.5));
-    $('f7l').style.opacity = F.eoc(F.seg(t, 12.4, 12.8)) * F.lerp(1, .08, F.seg(t, 14.0, 14.5));
+    /* ① 完整命题入场 (√a−√b)² ≥ 0：0 微弹落位；token 认清起点；橙晕 = S1 派生量（递过来的砖） */
+    var unr = F.eic(F.seg(t, 5.0, 5.8));
+    $('n3').style.opacity = 1 - unr;
+    $('n3').style.transform = 'translate(0,' + (-10 * unr) + 'px) scale(' + F.lerp(1, .88, unr) + ')';
+    var rcOut = 1 - F.seg(t, 5.0, 5.45);                  /* 展开先行：根号字符褪去（开方完成） */
+    $('rc1').style.opacity = rcOut; $('rc2').style.opacity = rcOut;
+    F.token($('n3'), t, [[4.55, .75]]);
+    var og = Math.sin(Math.PI * F.seg(t, 4.9, 6.0));
+    $('n3').style.textShadow = og > .03 ? '0 0 ' + (18 * og) + 'px rgba(255,154,61,.55)' : '';
+    $('ge').style.opacity = 1;
+    var zu = F.eob(F.seg(t, 4.05, 4.45));
+    $('z0').style.opacity = zu * (1 - F.seg(t, 7.55, 7.85));   /* ③ 移项落位时让位给 +2√(ab) */
+    $('z0').style.transform = 'scale(' + F.lerp(.5, 1, zu) + ')';
 
-    /* 14.0–14.8 收官牌组整理：金匾+F4缩影+F6 合体降权（缩放+透明度复合），不清场（沉淀区） */
-    var gu = F.eic(F.seg(t, 14.0, 14.8));
+    /* ② 展开 5.0–6.1：平方拆开，a+b 与 −2√(ab) 两件自平方内滑出落位（右缘贴 900 缝） */
+    var s1 = F.eic(F.seg(t, 5.25, 5.95));
+    var s2 = F.eic(F.seg(t, 5.4, 6.1));
+
+    /* ③ 移项 6.7–7.7：−2√(ab) 脱队右飞越 ≥（弧顶 −55），− 竖笔落下变 +，落在 0 上；
+       a+b 右滑愈合；7.9–8.25 加号淡出、右件左移补位 → a+b ≥ 2√(ab) */
+    var mv = F.eic(F.seg(t, 6.7, 7.7));
+    var tid = F.eic(F.seg(t, 7.9, 8.25));
+    var h1 = F.eic(F.seg(t, 7.6, 8.05));                  /* a+b 愈合至分式位 794 */
+    $('n1').style.opacity = s1;
+    $('n1').style.transform = 'translate(' + (20 * (1 - s1) + 206 * h1) + 'px,' + axY + 'px)';
+    $('n2').style.opacity = s2;
+    $('n2').style.transform = 'translate(' + (20 * (1 - s2) + 309 * mv) + 'px,' + (-55 * Math.sin(Math.PI * mv)) + 'px)';
+    $('vbar').style.transform = 'scaleY(' + F.eic(F.seg(t, 7.0, 7.4)) + ')';
+    $('sgrp').style.opacity = 1 - F.seg(t, 7.9, 8.25);
+
+    /* ④ 同除以2 8.6–9.7：右边的系数 2 起飞、再越 ≥（渡口二闪）、俯冲 a+b 下方化身分母；
+       分数杠 0→150 长出（分式在终点诞生）；右边愈合为 √(ab) → (a+b)/2 ≥ √(ab)，与匾文互为镜像 */
+    var fu2 = F.eic(F.seg(t, 8.7, 9.5));
+    $('cf2').style.opacity = 1 - F.seg(t, 9.3, 9.5);      /* 落位交叉淡切给 fden */
+    $('cf2').style.transform = 'translate(' + (-39 * tid - 184 * fu2) + 'px,' + (72 * fu2 - 48 * Math.sin(Math.PI * fu2)) + 'px)';
+    $('rsurd').style.transform = 'translate(' + (-39 * tid - 29 * F.eic(F.seg(t, 9.3, 9.6))) + 'px,0)';
+    $('fbar').style.opacity = 1;
+    $('fbar').style.width = (150 * F.eoc(F.seg(t, 8.8, 9.3))) + 'px';
+    $('fbar').style.transform = 'translateY(' + axY + 'px)';   /* ⑤ 随分式整体升轴 */
+    var du2 = F.eob(F.seg(t, 9.35, 9.7));
+    $('fden').style.opacity = du2;
+    $('fden').style.transform = 'translateY(' + axY + 'px) scale(' + F.lerp(.5, 1, du2) + ')';
+
+    /* ≥ 渡口脉动（两次越界各一闪）+ 定理态金晕呼吸（H15） */
+    var gp = Math.sin(Math.PI * F.seg(t, 7.0, 7.7)) + Math.sin(Math.PI * F.seg(t, 8.95, 9.45));
+    $('ge').style.textShadow = t > 10.2
+      ? '0 0 ' + (10 + 14 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(255,215,106,.85)'
+      : (gp > .03 ? '0 0 ' + (16 * Math.min(1, gp)) + 'px rgba(255,215,106,.9)' : '');
+
+    /* 终式定格：左右两侧依次 token（接匾文 F4 两半），分式金晕脉动（结论拍，不用白闪） */
+    F.token($('n1'), t, [[9.85, .7]]);
+    F.token($('n2'), t, [[10.1, .7]]);
+    var bl = Math.sin(Math.PI * F.seg(t, 10.15, 10.8));
+    var gl2 = bl > .03 ? 'drop-shadow(0 0 ' + (30 * bl) + 'px rgba(255,215,106,.55))' : '';
+    $('n1').style.filter = gl2; $('fbar').style.filter = gl2; $('fden').style.filter = gl2;
+
+    /* ⑤ 定线金线 11.7–12.65：杠右缘沿轴掠过 ≥ 与 √(ab)——左右同线的印证一闪，随即退场 */
+    var axd = F.eoc(F.seg(t, 11.7, 12.0)) * (1 - F.seg(t, 12.25, 12.65));
+    $('axl').style.transform = 'scaleX(' + axd + ')';
+    $('axl').style.opacity = Math.min(1, 1.2 * axd);
+
+    /* 12.4–13.2 收官牌组整理：金匾印+主行合体降权（缩放+透明度复合），不清场（沉淀区） */
+    var gu = F.eic(F.seg(t, 12.4, 13.2));
     $('grp').style.transform = 'scale(' + F.lerp(1, .96, gu) + ')';
     $('grp').style.opacity = F.lerp(1, .82, gu);
 
-    /* 14.8（影片 1:07.8）∎ 落笔（eob 1.9→1）→ 白闪 W2（0.16s）+ 爆发 30 粒（种子 13） */
-    var qu = F.eob(F.seg(t, 14.8, 15.15));
+    /* 13.2（影片 0:55.2）∎ 落笔（eob 1.9→1）→ 白闪 W2（0.16s）+ 爆发 30 粒（种子 13） */
+    var qu = F.eob(F.seg(t, 13.2, 13.55));
     $('qed').style.opacity = qu;
     $('qed').style.transform = 'scale(' + F.lerp(1.9, 1, qu) + ')';
-    $('qed').style.textShadow = t > 15.4 ? '0 0 ' + (10 + 14 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(255,215,106,.9)' : '';
-    $('fl').style.opacity = .16 * Math.sin(Math.PI * F.seg(t, 14.8, 14.96));
-    burst2.update(t, 14.85, .9);
+    $('qed').style.textShadow = t > 13.8 ? '0 0 ' + (10 + 14 * (.5 + .5 * Math.sin(2 * Math.PI * 2 * t))) + 'px rgba(255,215,106,.9)' : '';
+    $('fl').style.opacity = .5 * Math.sin(Math.PI * F.seg(t, 13.2, 13.36));
+    burst2.update(t, 13.25, .9);
 
-    /* 15.2（影片 1:08.2）印章 S2「∎ 得证」（−6° 过冲落场） */
-    var su = F.eob(F.seg(t, 15.2, 15.7));
+    /* 13.6（影片 0:55.6）印章 S2「∎ 得证」（−6° 过冲落场） */
+    var su = F.eob(F.seg(t, 13.6, 14.1));
     var st2 = $('stamp2');
     st2.style.opacity = su;
     st2.style.transform = 'rotate(-6deg) scale(' + F.lerp(.5, 1, su) + ')';

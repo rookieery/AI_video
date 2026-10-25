@@ -9,21 +9,17 @@
     background:radial-gradient(50% 50% at 50% 50%,rgba(232,182,76,.10),transparent 70%);opacity:0;}
   #svg{position:absolute;inset:0;}
   /* 读数列（换算三柱 HUD：一行三读数，挂账本右列） */
-  .ro{position:absolute;left:1300px;width:340px;font-size:28px;opacity:0;white-space:nowrap;}
+  .ro{position:absolute;left:1300px;width:340px;font-size:28px;opacity:0;white-space:nowrap;transform-origin:0 0;}
   .ro b{font-weight:400;}
   #ro1{top:790px;} #ro2{top:834px;} #ro3{top:878px;}
-  /* 底部账本条：F1/F2/F3 三行小字只增不减；F4 走中央主式位 */
+  /* 底部账本条：F1/F2 两行小字（v1.1f 删 F3 行）；v1.3 方案C 收尾——F1 行 9.55–9.9 清场，
+     F2 行不随账本清空：原地加冕金框 → 浮升画面正中升格 56px 主式（#r2 单元素连续 morph，删 #f4） */
   #led{position:absolute;left:520px;top:850px;width:660px;}
   #led .row{position:absolute;left:0;font-size:32px;opacity:0;white-space:nowrap;}
-  #r1{top:0;} #r2{top:48px;} #r3{top:96px;}
+  #r1{top:0;} #r2{top:48px;border:0 solid var(--pri);transform-origin:50% 50%;}
   #r2b{position:absolute;left:0;top:0;}
+  #r2b span{display:inline-block;}
   #mA{display:inline-block;}
-  /* a,b≥0 声明 chip */
-  #abchip{position:absolute;left:1350px;top:150px;opacity:0;font-size:30px;color:var(--sec-hi);border-color:rgba(88,196,212,.4);}
-  /* F4 主式 → 顶部定理牌 */
-  #f4w{position:absolute;left:0;right:0;top:196px;text-align:center;transform-origin:50% 0;}
-  #f4{display:inline-block;font-size:56px;padding:16px 44px;border:2.5px solid var(--pri);border-radius:18px;opacity:0;}
-  #plate{position:absolute;left:0;right:0;top:86px;text-align:center;font-size:34px;color:var(--pri);opacity:0;}
   .vign{}
 </style>
 </head>
@@ -36,53 +32,45 @@
       <rect width="18" height="18" fill="rgba(232,182,76,.14)"/>
       <rect width="9" height="18" fill="rgba(88,196,212,.16)"/>
     </pattern>
+    <!-- 卷幅分色：布位 420px 上金 2|青 5（分界 120/420≈.2857），v1.2 扁带随 gCloth 9.7–9.95 淡出收场 -->
+    <linearGradient id="bg2" x1="460" y1="0" x2="880" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="rgba(232,182,76,.30)"/>
+      <stop offset=".2857" stop-color="rgba(232,182,76,.30)"/>
+      <stop offset=".2857" stop-color="rgba(88,196,212,.30)"/>
+      <stop offset="1" stop-color="rgba(88,196,212,.30)"/>
+    </linearGradient>
   </defs>
 
   <g id="gL">
-    <!-- 布：(a+b)² 方格，BL 角固定 (460,720)，60px/单位，b=5 -->
-    <rect id="cborder" fill="none" stroke="rgba(255,255,255,.30)" stroke-width="2" pathLength="100"
-          stroke-dasharray="100" stroke-dashoffset="100"/>
-    <rect id="rTL" fill="rgba(232,182,76,.20)" stroke="var(--pri)" stroke-width="2.5"/>
+    <!-- 摞房 2ab（2.0–3.0 自布飞驻右列；9.4–9.8 清场消失，拍② 12.1 于摞位重生成飞行） -->
     <rect id="rTR" fill="url(#stp)" stroke="rgba(255,255,255,.45)" stroke-width="2"/>
     <rect id="rBL" fill="url(#stp)" stroke="rgba(255,255,255,.45)" stroke-width="2"/>
-    <rect id="rBR" fill="rgba(88,196,212,.16)" stroke="var(--sec)" stroke-width="2.5"/>
-    <!-- 抽走后布上的虚线空槽 -->
-    <rect id="gTR" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="8 7" opacity="0"/>
-    <rect id="gBL" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="8 7" opacity="0"/>
-    <text id="lTL" class="fx" font-size="26" fill="var(--pri-hi)" text-anchor="middle" opacity="0">a²</text>
     <text id="lTR" class="fx" font-size="26" fill="var(--white)" text-anchor="middle" opacity="0">ab</text>
     <text id="lBL" class="fx" font-size="26" fill="var(--white)" text-anchor="middle" opacity="0">ab</text>
-    <text id="lBR" class="fx" font-size="26" fill="var(--sec-hi)" text-anchor="middle" opacity="0">b²</text>
-    <!-- 底边 a|b 分段（与 S2 直径分点同语言） -->
-    <line id="braL" stroke="rgba(232,182,76,.55)" stroke-width="2" opacity="0"/>
-    <line id="brbL" stroke="rgba(88,196,212,.55)" stroke-width="2" opacity="0"/>
-    <text id="braT" class="fx" font-size="24" fill="var(--pri-hi)" text-anchor="middle" opacity="0">a</text>
-    <text id="brbT" class="fx" font-size="24" fill="var(--sec-hi)" text-anchor="middle" opacity="0">b</text>
-    <!-- 顶边差段 + (a−b)² 方洞（自右上角生长）；角点橙钉把洞锚在顶边上 -->
-    <line id="dseg" stroke="var(--ter)" stroke-width="7" opacity="0"/>
-    <rect id="holeR" fill="rgba(255,154,61,.07)" stroke="var(--ter)" stroke-width="3" stroke-dasharray="10 8"/>
-    <circle id="holeP" r="5" fill="var(--ter)" opacity="0"/>
-    <text id="holeT" class="fx" font-size="26" fill="var(--ter)" text-anchor="middle" opacity="0">(a−b)²</text>
-    <circle id="halo2" fill="none" stroke="var(--pri-hi)" stroke-width="3" opacity="0"/>
-  </g>
-
-  <g id="gR">
-    <!-- 熔铸：a×b 长方形 → 等积青方（100px/单位，底固定于尺左端） -->
-    <rect id="mRectS" fill="url(#stp)" stroke="rgba(255,255,255,.45)" stroke-width="2" opacity="0"/>
-    <rect id="mRectC" fill="rgba(88,196,212,.20)" stroke="var(--sec)" stroke-width="3" opacity="0"/>
-    <text id="labS" class="fx" font-size="30" fill="var(--sec-hi)" text-anchor="middle" opacity="0">√(ab)</text>
-    <!-- 同一把尺：a+b 全线 → 金半段 (a+b)/2；青方边即 √(ab)，差段收口 -->
-    <line id="rul" stroke="rgba(255,255,255,.5)" stroke-width="3" pathLength="100"
-          stroke-dasharray="100" stroke-dashoffset="100" opacity="0"/>
-    <line id="tA" stroke="rgba(255,255,255,.5)" stroke-width="3" opacity="0"/>
-    <line id="tB" stroke="rgba(255,255,255,.5)" stroke-width="3" opacity="0"/>
-    <text id="labAB" class="fx" font-size="24" fill="var(--muted)" text-anchor="end" opacity="0">a+b</text>
-    <line id="tM" stroke="var(--pri)" stroke-width="3" opacity="0"/>
-    <line id="gseg" stroke="var(--pri)" stroke-width="7" opacity="0"/>
-    <text id="labG" class="fx" font-size="28" fill="var(--pri-hi)" text-anchor="middle" opacity="0">(a+b)/2 = 3.5</text>
-    <line id="gseg2" stroke="var(--ter)" stroke-width="7" opacity="0"/>
-    <path id="gapB" fill="none" stroke="var(--ter)" stroke-width="2" opacity="0"/>
-    <text id="gapT" font-size="22" fill="var(--ter)" text-anchor="middle" opacity="0">差</text>
+    <!-- 布：(a+b)² 方格，BL 角固定 (460,720)，60px/单位，b=5；9.1–9.7 沿底边卷幅成扁带（方案A 退场） -->
+    <g id="gCloth">
+      <rect id="cborder" fill="none" stroke="rgba(255,255,255,.30)" stroke-width="2" pathLength="100"
+            stroke-dasharray="100" stroke-dashoffset="100"/>
+      <rect id="rTL" fill="rgba(232,182,76,.20)" stroke="var(--pri)" stroke-width="2.5"/>
+      <rect id="rBR" fill="rgba(88,196,212,.16)" stroke="var(--sec)" stroke-width="2.5"/>
+      <!-- 抽走后布上的虚线空槽 -->
+      <rect id="gTR" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="8 7" opacity="0"/>
+      <rect id="gBL" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="8 7" opacity="0"/>
+      <text id="lTL" class="fx" font-size="26" fill="var(--pri-hi)" text-anchor="middle" opacity="0">a²</text>
+      <text id="lBR" class="fx" font-size="26" fill="var(--sec-hi)" text-anchor="middle" opacity="0">b²</text>
+      <!-- 底边 a|b 分段（与 S2 直径分点同语言） -->
+      <line id="braL" stroke="rgba(232,182,76,.55)" stroke-width="2" opacity="0"/>
+      <line id="brbL" stroke="rgba(88,196,212,.55)" stroke-width="2" opacity="0"/>
+      <text id="braT" class="fx" font-size="24" fill="var(--pri-hi)" text-anchor="middle" opacity="0">a</text>
+      <text id="brbT" class="fx" font-size="24" fill="var(--sec-hi)" text-anchor="middle" opacity="0">b</text>
+      <!-- 顶边差段 + (a−b)² 方洞（自右上角生长）；角点橙钉把洞锚在顶边上 -->
+      <line id="dseg" stroke="var(--ter)" stroke-width="7" opacity="0"/>
+      <rect id="holeR" fill="rgba(255,154,61,.07)" stroke="var(--ter)" stroke-width="3" stroke-dasharray="10 8"/>
+      <circle id="holeP" r="5" fill="var(--ter)" opacity="0"/>
+      <text id="holeT" class="fx" font-size="26" fill="var(--ter)" text-anchor="middle" opacity="0">(a−b)²</text>
+      <circle id="halo2" fill="none" stroke="var(--pri-hi)" stroke-width="3" opacity="0"/>
+      <rect id="bandGrad" fill="url(#bg2)" opacity="0"/>
+    </g>
   </g>
 </svg>
 
@@ -92,43 +80,33 @@
 
 <div id="led">
   <div class="row fx" id="r1">(a−b)² <span data-tok>≥ 0</span></div>
-  <div class="row fx" id="r2"><span id="r2a">a² <span id="mA">− 2ab</span> + b² ≥ 0</span><span id="r2b" style="position:absolute;left:0;">a² + b² <span data-tok id="mC">≥ 2ab</span></span></div>
-  <div class="row fx" id="r3">a + b ≥ 2<span class="surd">√(ab)</span></div>
+  <div class="row fx" id="r2"><span id="r2a">a² <span id="mA">− 2ab</span> + b² ≥ 0</span><span id="r2b" style="position:absolute;left:0;"><span data-tok>a² + b²</span> <span data-tok>≥</span> <span data-tok>2ab</span></span></div>
 </div>
 
-<div id="abchip" class="chip">a, b ≥ 0</div>
-
-<div id="f4w"><div id="f4" class="fx"><span class="surd">√(ab)</span> ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div></div>
-<div id="plate" class="fx"><span class="surd">√(ab)</span> ≤ <span class="frac"><span class="top">a+b</span><span class="bot">2</span></span></div>
-
 <div class="vign"></div>
-<div class="cap">平方，永不小于零</div>
-<div class="cap" id="cap3">两个平均，正式见面</div>
 
 <script src="shared.js"></script>
 <script type="module">
 var $ = function (id) { return document.getElementById(id); };
 var PX = 60, X0 = 460, YB = 720;              /* 布比例尺：60px/单位，布左下角 (460,720)，底边让开字幕带 */
 var PILE_X = 1250, PILE_T = 120, PILE_B = 440; /* 2ab 摞：右列 x1250，上槽 y120 / 下槽 y440（b=5 高 300 恒定，滑行不垂出布底） */
-var RUL_Y = 616, RUL_X = 900, PR = 100;        /* 尺：100px/单位，基线 y616，左端 x900（右移避开暗布），右端 x1600 */
-var SQ = Math.sqrt(10) * PR;                   /* √(ab)=√10 ≈ 316.2px，等积方边长 */
 
-/* a(t)：2 固定 → 5.0–8.0 心跳扫描 → 取等驻留 → 8.7–9.7 回摆重开洞 → 2 驻留 */
+/* a(t)：2 固定 → 5.0–8.0 心跳扫描 → 取等驻留 → 8.5–9.1 回摆重开洞 → 2 驻留（9.1 起卷幅退场） */
 function aOf(t) {
   if (t < 5.0) return 2;
   if (t < 8.0) return 2 + 3 * F.eic(F.seg(t, 5.0, 8.0));
-  if (t < 8.7) return 5;
-  if (t < 9.7) return 5 - 3 * F.eic(F.seg(t, 8.7, 9.7));
+  if (t < 8.5) return 5;
+  if (t < 9.1) return 5 - 3 * F.eic(F.seg(t, 8.5, 9.1));
   return 2;
 }
 
 window.film = {
-  duration: 15,
+  duration: 11,
   frame: function (t) {
     var a = aOf(t), cA = a * PX, S = (a + 5) * PX, y0 = YB - S, hs = (5 - a) * PX;
 
-    /* 转场：公式区光晕呼吸【H15】（S0 矩形余像已删，开场即净台） */
-    $('glow').style.opacity = F.eoc(F.seg(t, 0, .6)) * (.55 + .45 * Math.sin(2 * Math.PI * .5 * t));
+    /* 转场：公式区光晕呼吸【H15】（S0 矩形余像已删，开场即净台）；v1.2 切点前 0.3s 随主式一并收束 */
+    $('glow').style.opacity = F.eoc(F.seg(t, 0, .6)) * (.55 + .45 * Math.sin(2 * Math.PI * .5 * t)) * (1 - F.seg(t, 10.7, 11.0));
 
     /* —— 布 unfolding 0.6–2.0：外框描边 + 四室与标签、底边 a|b 分段 —— */
     $('cborder').setAttribute('x', X0); $('cborder').setAttribute('y', y0);
@@ -151,31 +129,42 @@ window.film = {
     setR('rBL', blX2, blY2, blW, 300);
     setR('rBR', X0 + cA, y0 + cA, 300, 300);
     var roomU = rmU;
-    var leave = 1 - F.seg(t, 10.1, 10.3);          /* 10.1 摞上一间 ab 请走（原位让空） */
-    var leave2 = 1 - F.seg(t, 10.3, 10.6);         /* 摞下一间随后隐去，清台面给终局 */
-    $('rTL').style.opacity = roomU; $('rBR').style.opacity = roomU;
-    $('rTR').style.opacity = roomU * leave; $('rBL').style.opacity = roomU * leave2;
+    var clr = 1 - F.seg(t, 9.4, 9.8);              /* v1.1f 清场：两间摞房退场消失（拍② 12.1 于摞位重生成飞行） */
+    /* —— 方案A 卷幅退场 9.1–9.7：布沿底边压扁成 28px 扁带（细节淡出、金a|青b 分色渐显） —— */
+    var sq = F.eic(F.seg(t, 9.1, 9.7));
+    var sqF = 1 - F.seg(t, 9.15, 9.55);            /* 室/标签/刻线/洞随压扁淡出 */
+    var kS = 1 - sq * (1 - 28 / S);
+    $('gCloth').setAttribute('transform', 'translate(0,' + YB + ') scale(1,' + kS + ') translate(0,' + (-YB) + ')');
+    $('gCloth').style.opacity = 1 - F.seg(t, 9.7, 9.95);   /* 扁带渐隐收场（v1.2 不再滑落尺测台） */
+    setR('bandGrad', X0, y0, S, S);
+    $('bandGrad').style.opacity = F.seg(t, 9.1, 9.55);
+    $('rTL').style.opacity = roomU * sqF; $('rBR').style.opacity = roomU * sqF;
+    $('rTR').style.opacity = roomU * clr; $('rBL').style.opacity = roomU * clr;
     /* 布上空槽（抽走后虚线驻留，随 a 呼吸） */
     var gU = F.eoc(F.seg(t, 2.6, 3.0)) * .18;
     setR('gTR', trX, trY, trW, trH); setR('gBL', blX, blY, blW, blH);
-    $('gTR').style.opacity = gU; $('gBL').style.opacity = gU;
+    $('gTR').style.opacity = gU * sqF; $('gBL').style.opacity = gU * sqF;
     /* 室标签随室走 */
     var setT = function (id, x, y, u) {
       var e = $(id); e.setAttribute('x', x); e.setAttribute('y', y); e.style.opacity = u;
     };
     var labU = F.eoc(F.seg(t, 1.5, 2.0));
-    setT('lTL', X0 + cA / 2, y0 + cA / 2 + 9, labU);
-    setT('lTR', trX2 + trW2 / 2, trY2 + trH2 / 2 + 9, labU * leave);
-    setT('lBL', blX2 + blW / 2, blY2 + 150 + 9, labU * leave2);
-    setT('lBR', X0 + cA + 150, y0 + cA + 150 + 9, labU);
+    setT('lTL', X0 + cA / 2, y0 + cA / 2 + 9, labU * sqF);
+    setT('lTR', trX2 + trW2 / 2, trY2 + trH2 / 2 + 9, labU * clr);
+    setT('lBL', blX2 + blW / 2, blY2 + 150 + 9, labU * clr);
+    setT('lBR', X0 + cA + 150, y0 + cA + 150 + 9, labU * sqF);
     /* 底边 a|b 分段刻 */
     var brU = F.eoc(F.seg(t, 1.6, 2.0));
     $('braL').setAttribute('x1', X0); $('braL').setAttribute('x2', X0 + cA);
-    $('braL').setAttribute('y1', 774); $('braL').setAttribute('y2', 774); $('braL').style.opacity = brU * .8;
+    $('braL').setAttribute('y1', 774); $('braL').setAttribute('y2', 774); $('braL').style.opacity = brU * .8 * sqF;
     $('brbL').setAttribute('x1', X0 + cA); $('brbL').setAttribute('x2', X0 + S);
-    $('brbL').setAttribute('y1', 774); $('brbL').setAttribute('y2', 774); $('brbL').style.opacity = brU * .8;
-    setT('braT', X0 + cA / 2, 806, brU);
-    setT('brbT', X0 + cA + 150, 806, brU);
+    $('brbL').setAttribute('y1', 774); $('brbL').setAttribute('y2', 774); $('brbL').style.opacity = brU * .8 * sqF;
+    /* 4.0 起底边标签升级为实时数值，与拍① 布带标签 a = 2 / b = 5 同语言（b 恒 5） */
+    var dip = 1 - .55 * Math.sin(Math.PI * F.seg(t, 3.9, 4.35));
+    $('braT').textContent = t >= 4.0 ? 'a = ' + a.toFixed(1).replace(/\.0$/, '') : 'a';
+    $('brbT').textContent = t >= 4.0 ? 'b = 5' : 'b';
+    setT('braT', X0 + cA / 2, 806, brU * dip * sqF);
+    setT('brbT', X0 + cA + 150, 806, brU * dip * sqF);
 
     /* —— 顶边差段 + (a−b)² 方洞（自右上角生长 3.1–3.6；随 a 连续开合） —— */
     var holeSide = hs * F.eic(F.seg(t, 3.1, 3.6));
@@ -183,11 +172,11 @@ window.film = {
     $('dseg').setAttribute('x1', X0 + S - holeSide); $('dseg').setAttribute('x2', X0 + S);
     $('dseg').setAttribute('y1', y0); $('dseg').setAttribute('y2', y0);
     var dg = F.eoc(F.seg(t, 3.0, 3.4));
-    $('dseg').style.opacity = dg * (.75 + .25 * Math.sin(2 * Math.PI * 1.2 * t));
+    $('dseg').style.opacity = dg * (.75 + .25 * Math.sin(2 * Math.PI * 1.2 * t)) * sqF;
     $('holeP').setAttribute('cx', X0 + S); $('holeP').setAttribute('cy', y0);
-    $('holeP').style.opacity = dg * (holeSide > 4 ? .95 : 0);
+    $('holeP').style.opacity = dg * (holeSide > 4 ? .95 : 0) * sqF;
     $('holeT').setAttribute('x', X0 + S - holeSide / 2); $('holeT').setAttribute('y', y0 - holeSide / 2 + 9);
-    $('holeT').style.opacity = F.eoc(F.seg(t, 3.4, 3.8)) * Math.max(0, Math.min(1, (holeSide - 90) / 60));
+    $('holeT').style.opacity = F.eoc(F.seg(t, 3.4, 3.8)) * Math.max(0, Math.min(1, (holeSide - 90) / 60)) * sqF;
 
     /* —— 8.0 取等小金晕（不用白闪）：洞闭合处右上角 —— */
     var hk = Math.sin(Math.PI * F.seg(t, 8.0, 8.6));
@@ -205,9 +194,9 @@ window.film = {
     $('ro3n').textContent = F.fmt((5 - a) * (5 - a));
     $('ro3n').style.textShadow = eqGlow > 0 ? '0 0 ' + (16 * eqGlow) + 'px rgba(255,215,106,.95)' : '';
 
-    /* —— 账本条：F1 3.2 / F2 3.8 入、4.2–4.7 移项（−2ab 跨 ≥ 号翻正）/ F3 11.6 —— */
+    /* —— 账本条：F1 3.2 / F2 3.8 入、4.2–4.7 移项（−2ab 跨 ≥ 号翻正）；F3 不入账（中央 F4 蕴含同式，v1.1f）—— */
     var r1u = F.eic(F.seg(t, 3.2, 3.7));
-    $('r1').style.opacity = r1u;
+    $('r1').style.opacity = r1u * (1 - F.seg(t, 9.55, 9.9));  /* F1 行随加冕同拍清场（方案C） */
     $('r1').style.transform = 'translateY(' + ((1 - r1u) * 12) + 'px)';
     F.token($('r1'), t, [[3.5, .6]]);
     var r2u = F.eic(F.seg(t, 3.8, 4.2));
@@ -219,86 +208,35 @@ window.film = {
     $('mA').style.transform = 'translateX(' + (mv * 130) + 'px)';
     $('r2b').style.opacity = mv;
     $('r2b').style.transform = 'translateX(' + ((1 - mv) * -40) + 'px)';
-    F.token($('r2'), t, [null, [4.7, .6]]);
-    var r3u = F.eic(F.seg(t, 11.6, 12.0));
-    $('r3').style.opacity = r3u;
-    $('r3').style.transform = 'translateY(' + ((1 - r3u) * 12) + 'px)';
+    /* 移项落定后 r2a 让位、r2b 转常规流：升格 morph 时盒宽随可见文本长、padding 对称生长（视觉无跳变） */
+    $('r2a').style.display = mv >= 1 ? 'none' : '';
+    $('r2b').style.position = mv >= 1 ? 'static' : 'absolute';
+    F.token($('r2'), t, [[10.55, .3], [10.72, .26], [10.88, .3]]);  /* 定格三连：左式/≥/右式 */
 
-    /* —— 9.7–10.1 左场降权（布+摞+读数收为背景） —— */
-    var dimL = F.lerp(1, .22, F.eic(F.seg(t, 9.7, 10.1))) * F.lerp(1, .8, F.seg(t, 13.2, 14.2));
-    $('gL').style.opacity = dimL;
-    var roDim = F.lerp(1, .35, F.eic(F.seg(t, 9.7, 10.1))) * F.lerp(1, .8, F.seg(t, 13.2, 14.2));
-    $('ro1').style.opacity = roDim * roU; $('ro2').style.opacity = roDim * roU; $('ro3').style.opacity = roDim * roU;
+    /* —— 清场 9.15–9.95（v1.1f 保留）：读数列随卷幅细节同拍淡出；F1 行 9.55–9.9 随加冕清空；
+       F2 行保留（收尾主式本体），#led 不再整体淡出 —— */
+    $('ro1').style.opacity = roU * sqF; $('ro2').style.opacity = roU * sqF; $('ro3').style.opacity = roU * sqF;
 
-    /* —— 点金术 10.1–11.4：摞上一间 ab 请到尺左端，等积熔铸为 √(ab) 青方 —— */
-    /* 飞行 10.1–10.4：自摞上槽 (1250,140,120,300) → 尺位 (900,116,200,500)（换 100px/单位比例尺） */
-    var fly = F.eic(F.seg(t, 10.1, 10.4));
-    var melt = F.eic(F.seg(t, 10.4, 11.4));
-    var wf = F.lerp(120, 200, fly), hf = F.lerp(300, 500, fly);
-    var w = wf * Math.pow(SQ / 200, melt);                     /* 熔铸段 w·h = 200·500 = 10 万 px² 恒定 */
-    var h = (wf * hf) / w;                                     /* h 由面积反解：全程严格等积 */
-    var xm = F.lerp(PILE_X, RUL_X, fly);                       /* 左端焊在尺左端，底边随熔铸贴齐基线 */
-    var ym = F.lerp(F.lerp(PILE_T, RUL_Y - 500, fly), RUL_Y - h, melt);
-    var mU = F.seg(t, 10.1, 10.4);
-    setR('mRectS', xm, ym, w, h);
-    $('mRectS').style.opacity = (mU > 0 ? 1 : 0) * dimR(t) * (1 - melt * .85);
-    setR('mRectC', xm, ym, w, h);
-    $('mRectC').style.opacity = melt * dimR(t);
-    setT('labS', RUL_X + SQ / 2, RUL_Y - SQ / 2 + 10, F.eoc(F.seg(t, 11.2, 11.6)) * dimR(t));
-
-    /* —— 同一把尺 11.0 起：全线 + 中点 + 金半段 (a+b)/2；差段收口 —— */
-    $('rul').setAttribute('x1', RUL_X); $('rul').setAttribute('x2', RUL_X + 700);
-    $('rul').setAttribute('y1', RUL_Y); $('rul').setAttribute('y2', RUL_Y);
-    $('rul').setAttribute('stroke-dashoffset', 100 - 100 * F.eoq(F.seg(t, 11.0, 11.3)));
-    $('rul').style.opacity = dimR(t);
-    var tkU = F.eoc(F.seg(t, 11.2, 11.4)) * dimR(t);
-    $('tA').setAttribute('x1', RUL_X); $('tA').setAttribute('x2', RUL_X);
-    $('tA').setAttribute('y1', RUL_Y - 10); $('tA').setAttribute('y2', RUL_Y + 10); $('tA').style.opacity = tkU;
-    $('tB').setAttribute('x1', RUL_X + 700); $('tB').setAttribute('x2', RUL_X + 700);
-    $('tB').setAttribute('y1', RUL_Y - 10); $('tB').setAttribute('y2', RUL_Y + 10); $('tB').style.opacity = tkU;
-    setT('labAB', RUL_X + 700, RUL_Y - 22, tkU);
-    $('tM').setAttribute('x1', RUL_X + 350); $('tM').setAttribute('x2', RUL_X + 350);
-    $('tM').setAttribute('y1', RUL_Y - 14); $('tM').setAttribute('y2', RUL_Y + 14);
-    $('tM').style.opacity = F.eoc(F.seg(t, 11.3, 11.5)) * dimR(t);
-    var gsU = F.eoc(F.seg(t, 11.4, 11.8));
-    $('gseg').setAttribute('x1', RUL_X); $('gseg').setAttribute('x2', RUL_X + 350 * gsU);
-    $('gseg').setAttribute('y1', RUL_Y); $('gseg').setAttribute('y2', RUL_Y);
-    $('gseg').style.opacity = dimR(t);
-    setT('labG', RUL_X + 175, RUL_Y - 56, F.eoc(F.seg(t, 11.7, 12.0)) * dimR(t));
-    /* 差段：青方边尽头 → 金半段尽头 */
-    var gpU = F.eoc(F.seg(t, 11.9, 12.2));
-    $('gseg2').setAttribute('x1', RUL_X + SQ); $('gseg2').setAttribute('x2', RUL_X + 350);
-    $('gseg2').setAttribute('y1', RUL_Y); $('gseg2').setAttribute('y2', RUL_Y);
-    $('gseg2').style.opacity = gpU * dimR(t);
-    var gx = RUL_X + (SQ + 350) / 2;
-    $('gapB').setAttribute('d', 'M ' + (RUL_X + SQ + 4) + ' ' + (RUL_Y - 26) + ' L ' + (RUL_X + SQ + 4) + ' ' + (RUL_Y - 34) + ' L ' + (RUL_X + 346) + ' ' + (RUL_Y - 34) + ' L ' + (RUL_X + 346) + ' ' + (RUL_Y - 26));
-    $('gapB').style.opacity = gpU * dimR(t);
-    setT('gapT', gx, RUL_Y - 44, gpU * dimR(t));
-
-    /* —— a,b≥0 声明 10.0（换元合法性，降权驻留至收束） —— */
-    var abU = F.eoc(F.seg(t, 10.0, 10.4));
-    $('abchip').style.opacity = abU * F.lerp(1, .55, F.seg(t, 12.5, 13.0)) * F.lerp(1, .7, F.seg(t, 13.2, 14.2));
-    $('abchip').style.transform = 'translateY(' + ((1 - abU) * 10) + 'px)';
-
-    /* —— F4 主式 12.0 中央落成 → 13.4–14.4 升为顶部定理牌（交棒 S2） —— */
-    var f4u = F.eic(F.seg(t, 12.0, 12.6));
-    $('f4').style.opacity = f4u;
-    $('f4').style.transform = 'translateY(' + ((1 - f4u) * 16) + 'px)';
-    var f4gl = .5 + .5 * Math.sin(2 * Math.PI * 2.5 * t);
-    $('f4').style.boxShadow = '0 0 ' + (12 + 30 * f4gl) + 'px rgba(232,182,76,' + (.15 + .3 * f4gl) + ')';
-    var pu = F.eic(F.seg(t, 13.4, 14.4));
-    $('f4w').style.transform = 'translateY(' + (-138 * pu) + 'px) scale(' + F.lerp(1, .6, pu) + ')';
-    $('f4w').style.opacity = 1 - F.seg(t, 14.4, 14.7);
-    $('plate').style.opacity = F.seg(t, 14.3, 14.7) * .5 * (.9 + .1 * Math.sin(2 * Math.PI * 1.5 * t));
-
-    /* —— 字幕② 2.9–5.9；字幕③ 11.6–14.6（各 3.0s，H26） —— */
-    F.capShow(document.querySelector('.cap'), t, 2.9, 5.9);
-    F.capShow($('cap3'), t, 11.6, 14.6);
+    /* —— v1.3 方案C 收尾 9.55–11.0（#r2 单元素连续 morph，替代 v1.2 #f4 另起入场）：
+       ① 9.55–9.95 原地加冕：金框 eob 微过冲"啪"地框住 F2 行 + 金光一闪 + 微弹——同拍 F1 行/
+         读数/摞房/卷幅扁带全部退净，起飞瞬间（9.95）页面只剩此行；
+       ② 9.95–10.5 浮升呈上：整框自账本位 (520,898) 直线升至画面正中 (960,500)，32→56px、
+         padding/圆角随行生长（逐帧实测 offsetWidth/Height，终点精确居中）；
+       ③ 10.5–11.0 定格：token 三连（左式/≥/右式）+ 2.5Hz 金晕呼吸，11.0 硬切 S2 —— */
+    var cr = F.seg(t, 9.55, 9.95), fl = F.eic(F.seg(t, 9.95, 10.5));
+    $('r2').style.borderWidth = (2.5 * F.eob(cr)) + 'px';
+    $('r2').style.borderRadius = (8 * F.eob(cr) + 10 * fl) + 'px';
+    $('r2').style.fontSize = (32 + 24 * fl) + 'px';
+    $('r2').style.padding = (16 * fl) + 'px ' + (44 * fl) + 'px';
+    var bw = 0, bh = 0;
+    if (fl > 0) { bw = $('r2').offsetWidth; bh = $('r2').offsetHeight; }
+    $('r2').style.left = F.lerp(0, 440 - bw / 2, fl) + 'px';   /* 440=960−520：终点水平居中 */
+    $('r2').style.top = F.lerp(48, -350 - bh / 2, fl) + 'px';  /* −350=500−850：终点垂直居中 */
+    if (t >= 9.55) $('r2').style.transform = 'scale(' + (1 + .06 * Math.sin(Math.PI * cr)) + ')';
+    var gI = Math.max(.9 * Math.sin(Math.PI * cr), (.5 + .5 * Math.sin(2 * Math.PI * 2.5 * t)) * fl);
+    $('r2').style.boxShadow = gI > 0 ? '0 0 ' + (12 + 30 * gI) + 'px rgba(232,182,76,' + (.15 + .3 * gI) + ')' : '';
   }
 };
-
-/* 右场（尺+熔铸）统一降权：13.2–14.2 收为背景驻留 */
-function dimR(t) { return F.lerp(1, .25, F.eic(F.seg(t, 13.2, 14.2))); }
 </script>
 </body>
 </html>
