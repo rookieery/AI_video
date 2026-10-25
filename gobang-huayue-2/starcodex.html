@@ -197,8 +197,17 @@ const BOOK_STYLES={
 const BKC=BOOK_STYLES[BOOK_ID]||BOOK_STYLES.seal;
 const S = 0.15;                 // 棋盘格距（世界单位）——卡面迷你盘与大盘共用，全程不变（§6 铁律）
 const CARD = 0.72;              // 卡片边长
-const ARC_R = 3.34;             // 双弧半径（3.2 时 0.72 卡在 12.5° 间距下互相压边）
-const DUR = 12.0;
+const ARC_R = 3.20;             // v1.4：26 等分环位（13.85° 间距）下 0.72 卡不再压边
+const DUR = 13.0;
+// v1.4 时间轴：6.0–7.1 游框选将；S4/S5 整体后移 0.7s；S6 同比例顺延至 13.0
+const T_SEL0=6.0,T_SEL1=7.1;          // 游框选将
+const T_HOLE0=7.1,T_HOLE1=7.4;        // 黑洞张开
+const T_ELIM0=7.4;                    // 淘汰起始（节拍 90→55ms 不变）
+const T_HOLE_C0=8.7,T_HOLE_C1=8.9;    // 黑洞收拢
+const T_FREEZE0=8.9,T_FREEZE1=9.9;    // 花月定格
+const T_GROW0=9.9;                    // S6 网格生长起点
+const S6_F=(13.0-9.9)/(12.0-9.2);     // S6 同比例顺延（2.8s → 3.1s）
+const s6=t=>9.2+(t-T_GROW0)/S6_F;     // 新时间 → 原 S6 节拍时间
 
 /* ================= 工具 ================= */
 function mulberry32(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -220,6 +229,12 @@ function env(t,stops){if(t<=stops[0][0])return stops[0][1];for(let i=0;i<stops.l
 const DEG=Math.PI/180;
 // '#RRGGBB' → 'rgba(r,g,b,a)'（贴图绘制用）
 const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
+// 两色混合（v1.4 哑光卡面用：珠光白向卡底深色收，压到 bloom 阈值下）
+const mixHex=(a,b,u)=>{const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16);
+  const r=Math.round((n>>16&255)*(1-u)+(m>>16&255)*u),
+        g=Math.round((n>>8&255)*(1-u)+(m>>8&255)*u),
+        bl=Math.round((n&255)*(1-u)+(m&255)*u);
+  return `#${((r<<16)|(g<<8)|bl).toString(16).padStart(6,'0')}`};
 // 故障脉冲包络（确定性）：t 落在 [a,b] 内给出 0→1→0
 const burst=(t,a,b)=>t<a||t>b?0:Math.sin(Math.PI*(t-a)/(b-a));
 // 封面呼吸相位：周期 1.6s，1.6–2.2 加速到 1.0s（闭式积分，无状态）
@@ -641,10 +656,13 @@ function cardBaseTex(kind,hero,stones){
   return tex(c)}
 function drawStone2D(x,px,py,r,white){
   if(white){
+    // v1.4：卡面白子改哑光（与卡底深色混 42%），不触发 bloom；点亮交给运行时
+    const mw=k=>mixHex(COL['white2d'+k],COL.lacquer,.42);
     const g=x.createRadialGradient(px-r*.3,py-r*.35,r*.1,px,py,r);
-    g.addColorStop(0,COL.white2d1);g.addColorStop(.35,COL.white2d2);g.addColorStop(.8,COL.white2d3);g.addColorStop(1,COL.white2d4);
+    g.addColorStop(0,mw(1));g.addColorStop(.35,mw(2));g.addColorStop(.8,mw(3));g.addColorStop(1,mw(4));
     x.fillStyle=g;x.beginPath();x.arc(px,py,r,0,7);x.fill();
-    x.fillStyle='rgba(255,255,255,.9)';x.beginPath();x.arc(px-r*.32,py-r*.38,r*.16,0,7);x.fill();
+    x.fillStyle=mixHex('#FFFFFF',COL.lacquer,.5);x.globalAlpha=.55;
+    x.beginPath();x.arc(px-r*.32,py-r*.38,r*.14,0,7);x.fill();x.globalAlpha=1;
   }else{
     const g=x.createRadialGradient(px-r*.3,py-r*.35,r*.1,px,py,r);
     g.addColorStop(0,COL.black2d1);g.addColorStop(.55,COL.black2d2);g.addColorStop(1,COL.black2d3);
@@ -700,17 +718,17 @@ const CK=[
   {t:2.2, p:[1.5,0.75,3.9], l:[0,0.05,0]},
   {t:3.4, p:[0.0,0.85,4.4], l:[0,0.55,0]},
   {t:5.2, p:[0.0,1.00,10.70],l:[0,0.10,0]},
-  {t:6.4, p:[0.0,1.05,10.90],l:[0,0.05,0]},
-  {t:7.4, p:[0.0,1.05,10.50],l:[0,0.10,0.08]},
-  {t:8.2, p:[0.0,1.15,7.0], l:[0,0.30,0.6]},
-  {t:8.8, p:[0.0,1.15,4.5], l:[0,0.78,2.75]},   // 卡到位于屏高52%，相机同步就位持镜
-  {t:9.2, p:[0.0,0.95,4.5], l:[0,0.78,2.75]},
-  {t:9.32,p:[1.15,0.72,2.9], l:[0,0.35,1.3]},   // 溶解期右侧绕行，避开卡面
-  {t:9.5, p:[0.0,0.52,1.58], l:[0,0,0]},          // 低角 20°
-  {t:10.3,p:[0.0,1.38,2.15], l:[0,0,0]},
-  {t:11.0,p:[0.0,2.55,1.35], l:[0,0,0]},
-  {t:11.5,p:[0.0,3.33,0.29], l:[0,0,0]},         // 俯角 85°，全盘入画占屏高82%
-  {t:12.0,p:[0.0,3.30,0.25], l:[0,0,0]},
+  {t:7.1, p:[0.0,1.05,10.90],l:[0,0.05,0]},     // v1.4：S4/S5 后移 0.7s
+  {t:8.1, p:[0.0,1.05,10.50],l:[0,0.10,0.08]},
+  {t:8.9, p:[0.0,1.15,7.0], l:[0,0.30,0.6]},
+  {t:9.5, p:[0.0,1.15,4.5], l:[0,0.78,2.75]},   // 卡到位于屏高52%，相机同步就位持镜
+  {t:9.9, p:[0.0,0.95,4.5], l:[0,0.78,2.75]},
+  {t:10.033,p:[1.15,0.72,2.9], l:[0,0.35,1.3]}, // 溶解期右侧绕行，避开卡面
+  {t:10.232,p:[0.0,0.52,1.58], l:[0,0,0]},       // 低角 20°
+  {t:11.118,p:[0.0,1.38,2.15], l:[0,0,0]},
+  {t:11.893,p:[0.0,2.55,1.35], l:[0,0,0]},
+  {t:12.446,p:[0.0,3.33,0.29], l:[0,0,0]},       // 俯角 85°，全盘入画占屏高82%
+  {t:13.0,p:[0.0,3.30,0.25], l:[0,0,0]},
 ];
 // 经典 CR 基（端点精确：u=0→k1，u=1→k2）
 const crSeg=(p0,p1,p2,p3,u)=>{const u2=u*u,u3=u2*u;
@@ -901,9 +919,11 @@ genGlow.position.set(0,0.25,0);genGlow.scale.setScalar(1.1);scene.add(genGlow);
 function mkSweepLike(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.setScalar(scale);s.visible=false;scene.add(s);return s}
 const glintDeal=[mkSweepLike(0.20),mkSweepLike(0.20)];
 
-/* ================= 26 卡 + 双弧阵 ================= */
-// 弧位角度（度）：直指 210→60（左上弧，金）；斜指 240→390（右下弧，绯红）
-const slotAngle=(set,j)=>set==='direct'?210-12.5*j:240+12.5*j;
+/* ================= 26 卡 + 等分闭环 ================= */
+// v1.4 环位角度（度）：26 等分（360/26≈13.85°），前 13 位直指青、后 13 位斜指绯；
+// 直指自 210° 顺时针铺 13 位，斜指接续铺满一圈，两处接缝仅换色不开口。
+const RING_STEP=360/26;
+const slotAngle=(set,j)=>210-RING_STEP*(set==='direct'?j:13+j);
 const HERO={set:SELECTED.set,j:SELECTED.index};
 const isHero=(set,j)=>set===HERO.set&&j===HERO.j;
 const heroOpening=(SELECTED.set==='direct'?DIRECT:INDIRECT)[SELECTED.index];
@@ -911,10 +931,11 @@ const heroOpening=(SELECTED.set==='direct'?DIRECT:INDIRECT)[SELECTED.index];
 const cardDefs=[];
 for(let j=0;j<13;j++)cardDefs.push({set:'direct',j});
 for(let j=0;j<13;j++)cardDefs.push({set:'indirect',j});
-// 淘汰序：两弧外端向内序贯（直指跳过花月），交替进行
-const ELIM=(()=>{const o=[],dq=[...Array(13).keys()].filter(j=>!isHero('direct',j)),iq=[...Array(13).keys()];
+// 淘汰序：自下方接缝（直指 #1 / 斜指 #13 相邻处）向两侧序贯，最后在右侧接缝收口；
+// 直指 j 递增、斜指 j 递减，交替进行（花月跳过）。
+const ELIM=(()=>{const o=[],dq=[...Array(13).keys()].filter(j=>!isHero('direct',j)),iq=[...Array(13).keys()].reverse();
   let d=0,i=0;while(o.length<25){if(d<dq.length)o.push({set:'direct',j:dq[d++]});if(i<iq.length)o.push({set:'indirect',j:iq[i++]})}
-  let t=6.7;return o.map((c,m)=>{const r={...c,tE:t};t+=lerp(0.054,0.022,m/24);return r})})();
+  let t=T_ELIM0;return o.map((c,m)=>{const r={...c,tE:t};t+=lerp(0.054,0.022,m/24);return r})})();
 const elimAt=(set,j)=>{const e=ELIM.find(e=>e.set===set&&e.j===j);return e?e.tE:99};
 
 // 单元线段→窄条四边形合并网格（卡面 XY 平面 / 盘面 XZ 平面）
@@ -1004,6 +1025,16 @@ const miniShadows=heroStonesPos.map(s=>{const m=new THREE.Mesh(new THREE.PlaneGe
   new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:.42,depthWrite:false}));
   m.position.set(s[0]*S,s[1]*S,0.0045);m.renderOrder=4;miniBoard.add(m);return m});
 const miniStones=heroStonesPos.map(s=>{const m=mkStone(!!s[2]);m.position.set(s[0]*S,s[1]*S,0.012);miniBoard.add(m);return m});
+// v1.4 花月运行时点亮：白子辉光 + 黑子冷边光（6.95 落定后亮起，S6 溶解时回落）
+const heroWhiteGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+heroWhiteGlow.position.set(heroStonesPos[1][0]*S,heroStonesPos[1][1]*S,0.030);
+heroWhiteGlow.scale.setScalar(0.24);miniBoard.add(heroWhiteGlow);
+const heroBlackGlows=heroStonesPos.filter(s=>s[2]).map(s=>{
+  const g=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.stoneRim,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  g.position.set(s[0]*S,s[1]*S,0.026);g.scale.setScalar(0.15);miniBoard.add(g);return g});
+const _rimC=new THREE.Color(COL.stoneRim);
+const _whiteBaseC=new THREE.Color(COL.whiteColor);
+const heroHi=t=>ease.outCubic(remap(t,6.95,7.10))*(1-remap(t,T_GROW0,T_GROW0+0.3));
 // 盘面三子软影（溶解期随卡面阴影交接着陆）
 const boardShadows=heroStonesPos.map(s=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.13,0.115),
   new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:0,depthWrite:false}));
@@ -1111,6 +1142,36 @@ function mkSweep(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:g
 const arcSweeps=[mkSweep(0.24),mkSweep(0.24),mkSweep(0.22),mkSweep(0.22)];
 const rimSweepA=mkSweep(0.16),rimSweepB=mkSweep(0.11);
 
+/* ================= v1.4 游框选将（6.0–7.1） ================= */
+// 青色圆角霓虹选框：自花月邻位沿环滑行一圈 → 锁定花月 → 收缩贴合+双脉冲 → 化光吸收
+const selFrameTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
+  x.strokeStyle='#FFFFFF';x.lineWidth=9;x.shadowColor='#FFFFFF';x.shadowBlur=16;
+  x.beginPath();x.roundRect(16,16,224,224,34);x.stroke();
+  x.globalAlpha=.5;x.lineWidth=3;x.shadowBlur=6;
+  x.beginPath();x.roundRect(29,29,198,198,26);x.stroke();
+  return tex(c)})();
+const selFrame=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+  new THREE.MeshBasicMaterial({map:selFrameTex,color:COL.goldHi,transparent:true,opacity:0,
+    depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+selFrame.renderOrder=7;selFrame.visible=false;scene.add(selFrame);
+const selGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.goldHi,
+  transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+selGlow.scale.setScalar(0.65);selGlow.visible=false;scene.add(selGlow);
+const ringIndex=(set,j)=>set==='direct'?j:13+j;
+const heroRingIdx=ringIndex(HERO.set,HERO.j);
+// 游框角度：起点=花月环位 +1，顺时针走 25 步回到花月（整整一圈少一格）
+function selAngleAt(t){
+  const e=ease.inOutCubic(remap(t,T_SEL0,T_SEL0+0.60));
+  return 210-RING_STEP*(heroRingIdx+1+25*e);
+}
+// 选框掠过卡片时的描边涟漪强度（0–1）
+function selRippleAt(cardAng,t){
+  if(t<T_SEL0||t>T_SEL0+0.62)return 0;
+  const a=selAngleAt(t);
+  let d=Math.abs(cardAng-a)%360;if(d>180)d=360-d;
+  return Math.exp(-(d*d)/(2*7.5*7.5));
+}
+
 /* ================= GPU 粒子（翻页金屑 / 吸积碎屑 / 星尘吹散） ================= */
 function particleSys(N,gen){
   const p0=new Float32Array(N*3),v=new Float32Array(N*3),t0=new Float32Array(N),
@@ -1152,11 +1213,11 @@ const debrisSys=particleSys(25*6,i=>{const m=(i/6)|0,k=i%6,rr=mulberry32(4000+i*
   return{p:[Math.cos(a)*0.12,Math.sin(a)*0.12,0.05],
     v:[Math.cos(a)*sp,Math.sin(a)*sp,(rr()-0.5)*0.3],
     t0,life:0.3+rr()*0.2,size:0.4+rr()*0.6,c:rr()<0.5?COL.debA:COL.debB,curv:0.85}});
-// 黑洞收拢时的星尘径向吹散（8.0–8.2）
+// 黑洞收拢时的星尘径向吹散（v1.4：8.7–8.9）
 const dustSys=particleSys(90,i=>{const r=mulberry32(9000+i*7);
   const a=r()*6.283,u=r()*2-1,sq=Math.sqrt(1-u*u),sp=1.4+r()*1.6;
   return{p:[0,0,0],v:[sp*sq*Math.cos(a),sp*u*0.8,sp*sq*Math.sin(a)],
-    t0:8.02+(i%18)*0.008,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?COL.dustA:COL.dustB,curv:0}});
+    t0:8.72+(i%18)*0.008,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?COL.dustA:COL.dustB,curv:0}});
 // fountain：书体羽化星屑（3.24–3.54 自书页喷涌，上飘成松散涡旋，不成柱）
 const burstSys=TR_ID==='fountain'?particleSys(150,i=>{const r=mulberry32(5200+i*17);
   const a=r()*6.283,rad=0.15+r()*0.45;
@@ -1183,7 +1244,7 @@ function frame(t){
 
   /* --- 星空 --- */
   starMat.uniforms.uTime.value=t;
-  starMat.uniforms.uBoost.value=env(t,[[0,1],[1.6,1],[2.2,1.55],[2.9,1.6],[3.1,2.0],[3.6,1.2],[6.4,1.1],[7.0,1.25],[8.4,1.0],[12,1]]);
+  starMat.uniforms.uBoost.value=env(t,[[0,1],[1.6,1],[2.2,1.55],[2.9,1.6],[3.1,2.0],[3.6,1.2],[7.1,1.1],[7.7,1.25],[9.1,1.0],[13,1]]);
   starGroup.rotation.y=0.007*t;
   nebP1.rotation.z=0.02+0.012*t*0.02;nebP2.rotation.z=-0.03-0.008*t*0.02;
 
@@ -1321,48 +1382,56 @@ function frame(t){
     }
   }
 
-  /* --- S6 波前与大盘 --- */
-  const wr=waveR(t);
-  const waveActive=t>=WAVE_T0&&t<11.55;
+  /* --- S6 波前与大盘（v1.4：同比例顺延，t6 为原节拍时间） --- */
+  const t6=s6(t);
+  const wr=waveR(t6);
+  const waveActive=t6>=WAVE_T0&&t6<11.55;
   waveRing.visible=waveGlow.visible=waveActive;
   if(waveActive){
-    const r=wr+0.012,o=0.9*(1-remap(t,11.35,11.55));
+    const r=wr+0.012,o=0.9*(1-remap(t6,11.35,11.55));
     setSquare(wavePts,r);waveGeo.attributes.position.needsUpdate=true;
     waveRing.material.opacity=o;waveGlow.material.opacity=o*0.3;
     setSquare(waveGlow.geometry.attributes.position.array,r+0.05);
     waveGlow.geometry.attributes.position.needsUpdate=true;
   }
-  boardBase.material.uniforms.uOp.value=ease.outCubic(remap(t,9.5,9.8));
+  boardBase.material.uniforms.uOp.value=ease.outCubic(remap(t6,9.5,9.8));
   boardBase.material.uniforms.uR.value=wr+0.07;
   for(const rm of ringMeshes){
     const tCross=kCross(rm.k);                    // 波前到达环 k 的时刻
     const d={N:0,E:0.0125,S:0.025,W:0.0375}[rm.side];
-    const a=remap(t,tCross+0.05+d,tCross+0.10+d); // 波后 0.05s 内凝出（0.05s 淡入）
+    const a=remap(t6,tCross+0.05+d,tCross+0.10+d);// 波后 0.05s 内凝出（0.05s 淡入）
     rm.mat.opacity=a*(COL.neonFrame?0.62:0.8);
     rm.mat.color.copy(rm.bright).lerp(rm.gold,a); // 亮起 → 沉为暗金
   }
   // 四角星位（±4,±4）：波前扫过时凝出
-  {const tc=kCross(4)+0.05,a=remap(t,tc,tc+0.10);
+  {const tc=kCross(4)+0.05,a=remap(t6,tc,tc+0.10);
    starMarks.forEach(m=>{m.material.opacity=a*(0.85+0.15*Math.sin(2*Math.PI*t/2.2))})}
-  boardFrame.material.opacity=COL.neonFrame?0:0.8*ease.outCubic(remap(t,11.5,11.85));
+  boardFrame.material.opacity=COL.neonFrame?0:0.8*ease.outCubic(remap(t6,11.5,11.85));
   // 霓虹圆角边框（仅赛博风格）：11.3 后凝出
   if(COL.neonFrame){
-    boardNeon.visible=t>11.28;
-    boardNeon.material.opacity=0.9*ease.outCubic(remap(t,11.3,11.75));
+    boardNeon.visible=t6>11.28;
+    boardNeon.material.opacity=0.9*ease.outCubic(remap(t6,11.3,11.75));
   }else boardNeon.visible=false;
-  // 波前扫过棋子：弹亮 0.1s（三子最大环半径 ≈1.5）
-  const stoneFlash=Math.max(0,1-Math.abs(t-(WAVE_T0+0.10))/0.1)*Math.sign(wr>1.4*S);
-  whiteMat.emissiveIntensity=COL.whiteEmInt+0.9*Math.max(0,stoneFlash);
-  blackMat.emissive.setRGB(COL.blackEm[0],COL.blackEm[1],COL.blackEm[2]);
-  blackMat.emissiveIntensity=COL.blackEmInt*(1+1.6*Math.max(0,stoneFlash));
-  if(stoneFlash>0){blackMat.emissive.setRGB(COL.blackEm[0]+0.35*stoneFlash,COL.blackEm[1]+0.30*stoneFlash,COL.blackEm[2]+0.26*stoneFlash)}
-  // 天元终式微光呼吸一次（11.5–12.0）
-  tyGlow.material.opacity=0.75*Math.sin(Math.PI*remap(t,11.5,11.95));
-  tyGlow.scale.setScalar(0.22+0.16*remap(t,11.5,11.95));
+  // 波前扫过棋子：弹亮 0.1s（三子最大环半径 ≈1.5）+ 花月运行时点亮（v1.4）
+  const hh=heroHi(t);
+  const stoneFlash=Math.max(0,1-Math.abs(t6-(WAVE_T0+0.10))/0.1)*Math.sign(wr>1.4*S);
+  heroWhiteGlow.material.opacity=0.9*hh;
+  heroBlackGlows.forEach(g=>g.material.opacity=0.38*hh);
+  stoneRimMat.opacity=(COL.neonFrame?.55:.42)+0.55*hh;
+  // 点亮前压成哑光；点亮后恢复到珠光白（S6 落盘后保持全白）
+  whiteMat.color.copy(_whiteBaseC).multiplyScalar(0.66+0.34*ease.outCubic(remap(t,6.95,7.10)));
+  whiteMat.emissiveIntensity=COL.whiteEmInt+0.9*Math.max(0,stoneFlash)+1.5*hh;
+  // 黑子只加冷边光（体色保持黑曜，只走 emissive 微亮 + 外圈 rim）
+  blackMat.emissive.setRGB(COL.blackEm[0]+_rimC.r*0.16*hh,COL.blackEm[1]+_rimC.g*0.16*hh,COL.blackEm[2]+_rimC.b*0.16*hh);
+  blackMat.emissiveIntensity=COL.blackEmInt*(1+1.6*Math.max(0,stoneFlash))+0.22*hh;
+  if(stoneFlash>0){blackMat.emissive.setRGB(COL.blackEm[0]+0.35*stoneFlash+_rimC.r*0.16*hh,COL.blackEm[1]+0.30*stoneFlash+_rimC.g*0.16*hh,COL.blackEm[2]+0.26*stoneFlash+_rimC.b*0.16*hh)}
+  // 天元终式微光呼吸一次（11.5–12.0 原节拍）
+  tyGlow.material.opacity=0.75*Math.sin(Math.PI*remap(t6,11.5,11.95));
+  tyGlow.scale.setScalar(0.22+0.16*remap(t6,11.5,11.95));
 
   /* --- S4 黑洞 --- */
   {
-    const open=ease.outQuart(remap(t,6.4,6.7))*(1-ease.inCubic(remap(t,8.0,8.2)));
+    const open=ease.outQuart(remap(t,T_HOLE0,T_HOLE1))*(1-ease.inCubic(remap(t,T_HOLE_C0,T_HOLE_C1)));
     hole.visible=open>0.001;
     hole.scale.setScalar(Math.max(open,0.001));
     if(hole.visible){
@@ -1388,9 +1457,9 @@ function frame(t){
 
   /* --- Bloom 呼吸 + 暗角 + 赛博后处理 --- */
   const bPeak=TR_PILLAR?[2.2,1.171,2.8,1.057,3.0,1.171,3.5,1.143]:[2.2,1.12,2.8,1.03,3.0,1.06,3.5,1.04];
-  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[6.4,1],[6.7,1.2],[7.6,1.029],[9.5,1.029],[10.1,1.171],[10.8,1],[11.5,1.071],[12,1.114]]);
-  vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,11.5,12))).toFixed(3);
-  postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,6.40,6.50)+burst(t,11.46,11.56));
+  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[7.1,1],[7.4,1.2],[8.3,1.029],[10.232,1.029],[10.896,1.171],[11.671,1],[12.446,1.071],[13,1.114]]);
+  vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,12.446,13))).toFixed(3);
+  postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,7.10,7.20)+burst(t,12.40,12.51));
 
   composer.render();
 }
@@ -1406,6 +1475,7 @@ function setSquare(arr,r){
 // 还原拉丝顶点（跨时刻无残留）
 function restoreVerts(c){if(c.stretched){c.geo.attributes.position.array.set(c.baseVerts);c.geo.attributes.position.needsUpdate=true;c.stretched=false}}
 function updateCards(t){
+  const t6=s6(t);                                 // S6 同比例顺延后的节拍时间
   for(const c of cards){
     const p=t-c.tFly;
     if(p<0){c.grp.visible=false;continue}
@@ -1449,20 +1519,21 @@ function updateCards(t){
     }else{                                     // —— 落位待命 / 英雄专属轨迹
       const fl=0.035*Math.sin(2*Math.PI*t/1.9+c.ph)+0.012*Math.sin(2*Math.PI*t/1.1+c.ph2);
       if(c.hero){
-        // S4 后段移向阵前中央 → S5 飞向镜头 → 定格呼吸 → 溶解
-        if(t<8.2)pos=c.base.clone().lerp(new THREE.Vector3(0,0.25,1.1),ease.inOutCubic(remap(t,7.3,8.2)));
-        else pos=new THREE.Vector3(0,0.25,1.1).lerp(HERO_S5,ease.inOutCubic(remap(t,8.2,8.8)));
-        if(t>=8.8){pos.copy(HERO_S5);
-          const br=1+0.022*Math.sin(2*Math.PI*(t-8.8)/0.8);scale=br;}
+        // S4 后段移向阵前中央 → S5 飞向镜头 → 定格呼吸 → 溶解（v1.4 整体后移 0.7s）
+        if(t<T_FREEZE0)pos=c.base.clone().lerp(new THREE.Vector3(0,0.25,1.1),ease.inOutCubic(remap(t,8.0,8.9)));
+        else pos=new THREE.Vector3(0,0.25,1.1).lerp(HERO_S5,ease.inOutCubic(remap(t,T_FREEZE0,T_FREEZE0+0.6)));
+        if(t>=T_FREEZE0+0.6){pos.copy(HERO_S5);
+          const br=1+0.022*Math.sin(2*Math.PI*(t-(T_FREEZE0+0.6))/0.8);scale=br;}
         // 姿态：+Z 朝向相机（Matrix4.lookAt(eye,target)：非相机物体需 eye=目标点）
         _m1.lookAt(camera.position,pos,_v1.set(0,1,0));quat.setFromRotationMatrix(_m1);
       }else{
         pos=c.base.clone();pos.y+=fl;
         quat.copy(slotQuat(c.angA));
         quat.multiply(_q2.setFromAxisAngle(_v1.set(0,0,1),1.5*DEG*Math.sin(2*Math.PI*t/2.3+c.ph)));
-        // 6.0–6.4 扫光掠过时闪亮（其余时间恒为 1，避免跨帧残留）
-        const sw=sweepAngleNear(c.angA,t);
-        c.mat.color.setScalar(sw!==null?1+1.2*sw:1);
+        // v1.4：游框掠过时描边泛涟漪；花月点亮后其余 25 卡轻微压暗（每帧复位）
+        const rip=selRippleAt(c.angA,t);
+        const dim=1-0.18*ease.outCubic(remap(t,6.95,7.10));
+        c.mat.color.setScalar(dim*(1+1.0*rip));
         restoreVerts(c);
       }
     }
@@ -1470,30 +1541,30 @@ function updateCards(t){
     c.grp.quaternion.copy(quat);
     c.grp.scale.setScalar(scale);
     c.mat.opacity=opacity;
-    // 英雄卡溶解（9.2–9.5）：描边与卡底淡出，网格与三子留原位
+    // 英雄卡溶解（9.2–9.5 原节拍 → 9.9–10.2 新时间）：描边与卡底淡出，网格与三子留原位
     if(c.hero){
-      c.mat.opacity=opacity*(1-remap(t,9.2,9.5));
-      c.grp.visible=t<9.55;
+      c.mat.opacity=opacity*(1-remap(t6,9.2,9.5));
+      c.grp.visible=t6<9.55;
     }
   }
   /* --- 英雄迷你盘：随卡 → 落盘（Rx(−90°)，格距与坐标零变化，§6） --- */
-  if(t<9.2){
+  if(t6<9.2){
     miniBoard.position.copy(heroCard.grp.position);
     miniBoard.quaternion.copy(heroCard.grp.quaternion);
     miniBoard.scale.copy(heroCard.grp.scale);
   }else{
-    const e=ease.inOutCubic(remap(t,9.2,9.5));
+    const e=ease.inOutCubic(remap(t6,9.2,9.5));
     _v1.set(1,0,0);_q2.setFromAxisAngle(_v1,-RAD2);           // 卡面(上=+y) → 盘面(上=−z)
     miniBoard.position.lerpVectors(heroCard.grp.position,new THREE.Vector3(0,0,0),e);
     miniBoard.quaternion.slerpQuaternions(heroCard.grp.quaternion,_q2,e);
     miniBoard.scale.setScalar(1);                              // 禁用整体缩放（§6 铁律）
   }
   miniBoard.visible=t>=heroCard.tFly;
-  miniGrid.material.opacity=0.62+0.18*ease.smooth(remap(t,9.2,9.35));
-  miniTY.material.opacity=Math.min(1,remap(t,9.25,9.45));      // 天元菱标随卡面菱形交接
+  miniGrid.material.opacity=0.62+0.18*ease.smooth(remap(t6,9.2,9.35));
+  miniTY.material.opacity=Math.min(1,remap(t6,9.25,9.45));   // 天元菱标随卡面菱形交接
   // 盘面三子软影：溶解期从卡面阴影接手（先更新世界矩阵，避免一帧滞后）
   miniBoard.updateMatrixWorld(true);
-  const shOp=remap(t,9.2,9.5);
+  const shOp=remap(t6,9.2,9.5);
   boardShadows.forEach((m,i)=>{miniStones[i].getWorldPosition(_v2);
     m.visible=shOp>0;m.material.opacity=0.62*shOp;
     m.position.set(_v2.x,0.0025,_v2.z)});
@@ -1522,38 +1593,32 @@ function stretchVerts(c,pos,quat,amt){
   }
   c.geo.attributes.position.needsUpdate=true;
 }
-// 6.0–6.4 弧扫：返回卡片角度处的闪光强度（无扫光返回 null）
-function sweepAngleNear(cardAng,t){
-  if(t<6.0||t>6.42)return null;
-  const prog=ease.inOutCubic(remap(t,6.0,6.4));
-  const targets=[[210,135],[60,135],[240,315],[30,315]];
-  let best=0;
-  for(const[a0,a1]of targets){
-    const sa=lerp(a0,a1,prog);
-    let d=Math.abs(cardAng-sa);d=Math.min(d,360-d);
-    best=Math.max(best,Math.exp(-(d*d)/(2*10*10)));
-  }
-  return best>0.05?best:null;
-}
 function updateSweeps(t){
-  if(t>=6.0&&t<=6.42){
-    const prog=ease.inOutCubic(remap(t,6.0,6.4));
-    const sp=[[210,135],[60,135],[240,315],[30,315]];
-    arcSweeps.forEach((s,i)=>{
-      const a=lerp(sp[i][0],sp[i][1],prog)*DEG;
-      s.visible=true;s.position.set((ARC_R+0.06)*Math.cos(a),(ARC_R+0.06)*Math.sin(a),0.1);
-      s.material.opacity=0.9*(1-remap(t,6.3,6.42));
-      s.scale.setScalar(0.2+0.08*Math.sin(2*Math.PI*t/0.3+i));
-    });
-  }else arcSweeps.forEach(s=>s.visible=false);
-  // S5 卡框金描边扫光一周（8.85–9.2）
-  if(t>=8.85&&t<=9.22){
-    const u=remap(t,8.85,9.2);
+  /* v1.4 游框选将（6.0–7.1）：滑行一圈 → 锁定收缩 → 双脉冲 → 化光吸收 */
+  const selOn=t>=T_SEL0&&t<7.08;
+  selFrame.visible=selGlow.visible=selOn;
+  if(selOn){
+    const a=selAngleAt(t)*DEG;
+    const lock=ease.outCubic(remap(t,6.60,6.82));
+    const absorb=ease.inCubic(remap(t,6.86,7.06));
+    const pulse=burst(t,6.63,6.74)+burst(t,6.76,6.87);       // 锁定后双脉冲
+    const sc=(0.98-0.10*lock)*(1-0.42*absorb)*(1+0.06*pulse);
+    selFrame.position.set(ARC_R*Math.cos(a),ARC_R*Math.sin(a),0.13);
+    const tg=_v1.set(-Math.sin(a),Math.cos(a),0).normalize();
+    _q2.setFromAxisAngle(tg,12*DEG);selFrame.quaternion.copy(_q2);
+    selFrame.scale.set(sc,sc,1);
+    selFrame.material.opacity=0.95*(1-absorb);
+    selGlow.position.set(selFrame.position.x,selFrame.position.y,0.12);
+    selGlow.material.opacity=0.22*(1-absorb);
+  }
+  // S5 卡框描边扫光一周（v1.4：9.55–9.9）
+  if(t>=9.55&&t<=9.92){
+    const u=remap(t,9.55,9.9);
     const pp=roundedPerim(u*perimLen());
     rimSweepA.visible=rimSweepB.visible=true;
     placeOnRim(rimSweepA,pp,0.004,0.16);
     placeOnRim(rimSweepB,Math.max(0,pp-0.09),0.004,0.10);
-    rimSweepA.material.opacity=rimSweepB.material.opacity=0.95*(1-remap(t,9.15,9.22));
+    rimSweepA.material.opacity=rimSweepB.material.opacity=0.95*(1-remap(t,9.85,9.92));
   }else rimSweepA.visible=rimSweepB.visible=false;
 }
 // 圆角方框周长参数化（卡框 0.72、圆角 0.05）：自上边左端顺时针
