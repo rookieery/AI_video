@@ -46,7 +46,7 @@ function sheet(cols,times,TW,out){
   fs.writeFileSync(out,encodePNG(W,H,canvas));
   console.log('→',out,`${W}x${H}`);
 }
-sheet(5,['0.5','1','1.65','2','2.35'],480,'strip-v2.png');
+sheet(6,['0.35','0.75','1.2','1.7','1.9','2.35'],420,'strip-v3.png');
 
 
 
