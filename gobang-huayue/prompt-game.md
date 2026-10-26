@@ -16,7 +16,7 @@
 
 ## 2. 无缝铁律（拼接零缝）
 
-- **片内时间 = 对弈片 t + T_OPEN(14.0)**：`window.film.frame = gt => frame(gt + T_OPEN)`，对弈 t=0 逐像素 ≡ 开场末帧（星野旋转/取子台呼吸/光锥闪烁/旋柱自转相位全部连续；已做逐像素 diff 验证，仅棋盒高光边缘亚可见混排噪声）。
+- **片内时间 = 对弈片 t + T_OPEN(16.0)**：`window.film.frame = gt => frame(gt + T_OPEN)`，对弈 t=0 逐像素 ≡ 开场末帧（v1.9 开场扩时 16s 后拼缝 diff 0.53%/max191/mean0.0069，同基线噪声级；星野旋转/取子台呼吸/光锥闪烁/旋柱自转相位全部连续）。
 - 相机**静机位持镜**：camAt 的 remap 自带钳制，t≥14.0 恒停在末键 (0,3.60,0.32) 俯视 85°，不加任何新相机键。
 - **轮廓光青系（双片统一）**：对弈片与开场片 `rimL` 统一 `0x1FC8E0`（原风格 a 绯红 `#FF4D74` 在近景白子上读作染红；v1.0.1 对弈片先换，v1.0.2 开场片同步换青重渲为 v1.8，拼缝高光完全一致）。
 - 坐标系同 prompt.md §4：天元 (0,0)，+x 右 +y 上；世界坐标 `x=gx*S, z=-gy*S`（S=0.15 格距）；落子定格高度 `y=0.012`（与花月三子一致，含 rim 光圈与软影）。
@@ -39,12 +39,12 @@ u = t − 手起点（手 k 起点 = T_OPEN + k·PERIOD）：
 
 - **取子源**：`BOWL_MODE='holo'` 柱顶第 6 颗（`SLOT_I=5`，构建式 `a=5*2.35+0.5, rr=0.115+(5%2?0.035:0)=0.15, ty=0.075+5*0.03=0.225`，呼吸 `slotBob(t)` 与 holo 块同式；**旋柱半径/层高改动时引擎 SLOT_* 必须同步；柱全程自转 `col.rotation.y=0.22t` → 取子/辉光世界角=SLOT_A−0.22t（飞子起飞点冻结于取子瞬间 `ta=T_OPEN+k·PERIOD+0.30`，slotGlow 实时跟随；v1.1 修复取子横跳 ~180°）**；柱顶子经近俯视外扩略越锥口属定版观感——v1.0.1 曾收紧半径，用户回退：收紧后旋柱太挤，宁保舒展）。黑盒 `bowlC.items[0]` / 白盒 `items[1]`，按 `MOVES[k].c` 取对应盒。
 - **MOVES 格式**：`{c:'B'|'W', x:int, y:int}`；黑白轮流由数据自证，引擎不做规则校验。
-- 片长 = `MOVES.length × PERIOD`；**game/film.html 的 hash `#t=0,N` 与 `game.html` 内 `PERIOD` 三处必须同步**（本版 2.4）。
+- 片长 = `MOVES.length × PERIOD`；**game/film.html 的 hash `#t=0,N` 与 `game.html` 内 `PERIOD` 三处必须同步**（本版 PERIOD=2.4，当前 2 手片长 4.8）。
 - 高亮晕/软影每手一套（flash 精灵复用）：**最新落子高亮** op 0.40（`MV_HL`）常亮，下一手取子瞬间 0.2s 让位；落子棋子与软影按手数永久累加；v1.1 已删波纹环（mvRipple）。
 
 ## 5. game.html 生成与渲染（工程坑）
 
-- 生成：拷贝 starcodex.html → ①title ②import 改 `./game-config.js`（含 MOVES/PERIOD）③`const T_OPEN=14.0; const DUR=T_OPEN+MOVES.length*PERIOD`（frame 首行钳制用）④`composer.render()` 前插 `updateMoves(t);` ⑤`window.film` 的 duration/frame 改为 `MOVES.length*PERIOD` / `gt=>frame(gt+T_OPEN)`；S7 引擎插在 window.film 注释前。
+- 生成：拷贝 starcodex.html → ①title ②import 改 `./game-config.js`（含 MOVES/PERIOD）③`const T_OPEN=16.0; const DUR=T_OPEN+MOVES.length*PERIOD`（frame 首行钳制用）④`composer.render()` 前插 `updateMoves(t);` ⑤`window.film` 的 duration/frame 改为 `MOVES.length*PERIOD` / `gt=>frame(gt+T_OPEN)`；S7 引擎插在 window.film 注释前。**开场片时间常数一改（如 v1.9 扩时），game.html 内嵌的开场时间轴必须同步重打同批补丁（约 25 处），否则对弈片背景仍在跑旧节拍。**
 - **openfilm 页面必须位于项目文件夹内**（film.html 引 `../game.html` 报 "there is no such file"）→ 渲染对弈片用**临时换入法**：备份 film.html → 写入 `src="game.html#t=0,N"` → `npx openfilm render --out game/xxx.mp4` → 立即还原 film.html（防覆盖开场成片，--out 必带）。
 - QC：`npx openfilm look game.html <t>` 可直接抽帧单页（无需换入）；确定性双绘 + 首帧 vs 开场末帧逐像素 diff。
 

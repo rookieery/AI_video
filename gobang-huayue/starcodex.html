@@ -200,15 +200,15 @@ const BKC=BOOK_STYLES[BOOK_ID]||BOOK_STYLES.seal;
 const S = 0.15;                 // 棋盘格距（世界单位）——卡面迷你盘与大盘共用，全程不变（§6 铁律）
 const CARD = 0.72;              // 卡片边长
 const ARC_R = 3.20;             // v1.4：26 等分环位（13.85° 间距）下 0.72 卡不再压边
-const DUR = 14.0;                    // v1.7：+1s 棋盒入场与待机拍（13.0 前分镜零改动）
-// v1.4 时间轴：6.0–7.1 游框选将；S4/S5 整体后移 0.7s；S6 同比例顺延至 13.0
+const DUR = 16.0;                    // v1.9：+2s 放宽急促拍（S4 +1.3 / 棋盒 +0.7），总长 16.0
+// v1.9 时间轴：6.0–7.1 游框选将；S4 7.1–10.2（张开 0.55 / 淘汰 1.9 / 归一收拢 0.65）；S5 10.2–11.2；S6 同比例顺延 11.2–14.3；棋盒 14.25–16.0
 const T_SEL0=6.0,T_SEL1=7.1;          // 游框选将
-const T_HOLE0=7.1,T_HOLE1=7.4;        // 黑洞张开
-const T_ELIM0=7.4;                    // 淘汰起始（节拍 90→55ms 不变）
-const T_HOLE_C0=8.7,T_HOLE_C1=8.9;    // 黑洞收拢
-const T_FREEZE0=8.9,T_FREEZE1=9.9;    // 花月定格
-const T_GROW0=9.9;                    // S6 网格生长起点
-const S6_F=(13.0-9.9)/(12.0-9.2);     // S6 同比例顺延（2.8s → 3.1s）
+const T_HOLE0=7.1,T_HOLE1=7.65;       // 太极张开（v1.9：0.3→0.55s）
+const T_ELIM0=7.65;                   // 淘汰起始（v1.9 节拍 78→34ms）
+const T_HOLE_C0=9.55,T_HOLE_C1=10.2;  // 归一收拢（v1.9：0.2→0.65s）
+const T_FREEZE0=10.2,T_FREEZE1=11.2;  // 花月定格
+const T_GROW0=11.2;                   // S6 网格生长起点
+const S6_F=(14.3-11.2)/(12.0-9.2);    // S6 同比例顺延（2.8s → 3.1s，比值不变）
 const s6=t=>9.2+(t-T_GROW0)/S6_F;     // 新时间 → 原 S6 节拍时间
 
 /* ================= 工具 ================= */
@@ -790,18 +790,18 @@ const CK=[
   {t:3.4, p:[0.0,0.85,4.4], l:[0,0.55,0]},
   {t:5.2, p:[0.0,1.00,10.70],l:[0,0.10,0]},
   {t:7.1, p:[0.0,1.05,10.90],l:[0,0.05,0]},     // v1.4：S4/S5 后移 0.7s
-  {t:8.1, p:[0.0,1.05,10.50],l:[0,0.10,0.08]},
-  {t:8.9, p:[0.0,1.15,7.0], l:[0,0.30,0.6]},
-  {t:9.5, p:[0.0,1.15,4.5], l:[0,0.78,2.75]},   // 卡到位于屏高52%，相机同步就位持镜
-  {t:9.9, p:[0.0,0.95,4.5], l:[0,0.78,2.75]},
-  {t:10.033,p:[1.15,0.72,2.9], l:[0,0.35,1.3]}, // 溶解期右侧绕行，避开卡面
-  {t:10.232,p:[0.0,0.52,1.58], l:[0,0,0]},       // 低角 20°
-  {t:11.118,p:[0.0,1.38,2.15], l:[0,0,0]},
-  {t:11.893,p:[0.0,2.55,1.35], l:[0,0,0]},
-  {t:12.446,p:[0.0,3.33,0.29], l:[0,0,0]},       // 俯角 85°，全盘入画占屏高82%
-  {t:12.95,p:[0.0,3.30,0.25], l:[0,0,0]},        // 盘定版持镜（原 13.0 终键）
-  {t:13.50,p:[0.0,3.60,0.32], l:[0,0,0]},        // v1.7：轻拉让位棋盒
-  {t:14.0,p:[0.0,3.60,0.32], l:[0,0,0]},
+  {t:8.67, p:[0.0,1.05,10.50],l:[0,0.10,0.08]},
+  {t:10.2, p:[0.0,1.15,7.0], l:[0,0.30,0.6]},
+  {t:10.8, p:[0.0,1.15,4.5], l:[0,0.78,2.75]},   // 卡到位于屏高52%，相机同步就位持镜
+  {t:11.2, p:[0.0,0.95,4.5], l:[0,0.78,2.75]},
+  {t:11.333,p:[1.15,0.72,2.9], l:[0,0.35,1.3]}, // 溶解期右侧绕行，避开卡面
+  {t:11.532,p:[0.0,0.52,1.58], l:[0,0,0]},       // 低角 20°
+  {t:12.418,p:[0.0,1.38,2.15], l:[0,0,0]},
+  {t:13.193,p:[0.0,2.55,1.35], l:[0,0,0]},
+  {t:13.746,p:[0.0,3.33,0.29], l:[0,0,0]},       // 俯角 85°，全盘入画占屏高82%
+  {t:14.25,p:[0.0,3.30,0.25], l:[0,0,0]},        // 盘定版持镜（原 13.0 终键）
+  {t:15.10,p:[0.0,3.60,0.32], l:[0,0,0]},        // v1.7：轻拉让位棋盒
+  {t:16.0,p:[0.0,3.60,0.32], l:[0,0,0]},
 ];
 // 经典 CR 基（端点精确：u=0→k1，u=1→k2）
 const crSeg=(p0,p1,p2,p3,u)=>{const u2=u*u,u3=u2*u;
@@ -1008,7 +1008,7 @@ for(let j=0;j<13;j++)cardDefs.push({set:'indirect',j});
 // 直指 j 递增、斜指 j 递减，交替进行（花月跳过）。
 const ELIM=(()=>{const o=[],dq=[...Array(13).keys()].filter(j=>!isHero('direct',j)),iq=[...Array(13).keys()].reverse();
   let d=0,i=0;while(o.length<25){if(d<dq.length)o.push({set:'direct',j:dq[d++]});if(i<iq.length)o.push({set:'indirect',j:iq[i++]})}
-  let t=T_ELIM0;return o.map((c,m)=>{const r={...c,tE:t};t+=lerp(0.054,0.022,m/24);return r})})();
+  let t=T_ELIM0;return o.map((c,m)=>{const r={...c,tE:t};t+=lerp(0.078,0.034,m/24);return r})})();
 const elimAt=(set,j)=>{const e=ELIM.find(e=>e.set===set&&e.j===j);return e?e.tE:99};
 
 // 单元线段→窄条四边形合并网格（卡面 XY 平面 / 盘面 XZ 平面）
@@ -1248,7 +1248,7 @@ tyGlow.position.set(0,0.03,0);scene.add(tyGlow);
 
 /* ================= S6.5 棋盒（v1.7：BOWL_ID = capsule 悬浮能量舱 / jar 霓虹棋罐 / holo 全息取子台） ================= */
 // 棋盘定版后两侧凝出棋盒（左黑右白，青系霓虹延续全片色彩语言），供后续取子落子；动画全闭式
-const T_B0=12.95,BOWL_X=1.72;
+const T_B0=14.25,BOWL_X=1.72;
 const bowlGroup=new THREE.Group();bowlGroup.visible=false;scene.add(bowlGroup);
 // 垫盘贴图：主环 + 内衬 + 外刻度
 const bowlPadTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');x.translate(256,256);
@@ -1425,11 +1425,11 @@ const debrisSys=ELIM_ID==='ring'?null:particleSys(25*6,i=>{const m=(i/6)|0,k=i%6
   return{p:[Math.cos(a)*0.12,Math.sin(a)*0.12,0.05],
     v:[Math.cos(a)*sp,Math.sin(a)*sp,(rr()-0.5)*0.3],
     t0,life:0.3+rr()*0.2,size:0.4+rr()*0.6,c:famC||(rr()<0.5?COL.debA:COL.debB),curv:0.85}});
-// 黑洞收拢时的星尘径向吹散（v1.4：8.7–8.9）
+// 归一收拢时的星尘径向吹散（v1.9：9.55–10.2）
 const dustSys=particleSys(90,i=>{const r=mulberry32(9000+i*7);
   const a=r()*6.283,u=r()*2-1,sq=Math.sqrt(1-u*u),sp=1.4+r()*1.6;
   return{p:[0,0,0],v:[sp*sq*Math.cos(a),sp*u*0.8,sp*sq*Math.sin(a)],
-    t0:8.72+(i%18)*0.008,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?COL.dustA:COL.dustB,curv:0}});
+    t0:9.57+(i%18)*0.012,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?COL.dustA:COL.dustB,curv:0}});
 // fountain：书体羽化星屑（3.24–3.54 自书页喷涌，上飘成松散涡旋，不成柱）
 const burstSys=TR_ID==='fountain'?particleSys(150,i=>{const r=mulberry32(5200+i*17);
   const a=r()*6.283,rad=0.15+r()*0.45;
@@ -1456,7 +1456,7 @@ function frame(t){
 
   /* --- 星空 --- */
   starMat.uniforms.uTime.value=t;
-  starMat.uniforms.uBoost.value=env(t,[[0,1],[1.6,1],[2.2,1.55],[2.9,1.6],[3.1,2.0],[3.6,1.2],[7.1,1.1],[7.7,1.25],[9.1,1.0],[13,1]]);
+  starMat.uniforms.uBoost.value=env(t,[[0,1],[1.6,1],[2.2,1.55],[2.9,1.6],[3.1,2.0],[3.6,1.2],[7.1,1.1],[8.1,1.25],[10.4,1.0],[14.3,1]]);
   starGroup.rotation.y=0.007*t;
   nebP1.rotation.z=0.02+0.012*t*0.02;nebP2.rotation.z=-0.03-0.008*t*0.02;
 
@@ -1641,12 +1641,12 @@ function frame(t){
   tyGlow.material.opacity=0.75*Math.sin(Math.PI*remap(t6,11.5,11.95));
   tyGlow.scale.setScalar(0.22+0.16*remap(t6,11.5,11.95));
 
-  /* --- S6.5 棋盒入场与待机（v1.7：12.95 垫盘 → 主体 → 棋子/盖，13.6 后待机呼吸） --- */
+  /* --- S6.5 棋盒入场与待机（v1.9：14.25 垫盘 → 主体 → 棋子/盖，15.4 后待机呼吸） --- */
   bowlGroup.visible=BOWL_ID!=='none'&&t>T_B0-0.02;
   if(bowlGroup.visible){
-    const uP=ease.outCubic(remap(t,T_B0,T_B0+0.20));          // 垫盘
-    const uB=ease.outBack(remap(t,T_B0+0.14,T_B0+0.42));      // 主体（舱壁/罐体/光锥）
-    const uS=ease.outCubic(remap(t,T_B0+0.40,T_B0+0.66));     // 完成度（标记等）
+    const uP=ease.outCubic(remap(t,T_B0,T_B0+0.32));          // 垫盘（v1.9：0.20→0.32）
+    const uB=ease.outBack(remap(t,T_B0+0.23,T_B0+0.67));      // 主体（舱壁/罐体/光锥；v1.9：0.28→0.44）
+    const uS=ease.outCubic(remap(t,T_B0+0.68,T_B0+1.20));     // 完成度（标记等）
     const ib=Math.sin(2*Math.PI*(t-T_B0)/1.9);                // 待机呼吸相位
     const drop=(m,te,dy)=>{const dp=ease.outCubic(remap(t,te,te+0.16));
       m.visible=dp>0.001;m.position.y=m.userData.ty+(1-dp)*dy};
@@ -1661,17 +1661,17 @@ function frame(t){
       it.rim.scale.setScalar(Math.max(0.001,uB));it.rim.position.y=it.base+0.24+0.008*ib;
       it.rim.material.opacity=.8*uB;
       it.rg.material.opacity=.24*uB*(0.82+0.18*ib);
-      it.stones.forEach((m,i)=>drop(m,T_B0+0.30+i*0.030,0.18));
+      it.stones.forEach((m,i)=>drop(m,T_B0+0.45+i*0.054,0.18));
     }
     if(bowlB)for(const it of bowlB.items){     // 霓虹棋罐：罐体升起 → 罐口霓虹环 → 悬浮盖落定缓旋
       const ju=Math.max(0.001,uB);
       it.jar.scale.set(ju,ju,ju);
       it.mouth.scale.setScalar(Math.max(0.001,uB));it.mouth.material.opacity=.8*uB;
-      const lu=ease.outCubic(remap(t,T_B0+0.40,T_B0+0.62));
+      const lu=ease.outCubic(remap(t,T_B0+0.68,T_B0+1.06));
       it.lid.visible=lu>0.001;it.lid.material.opacity=.85*lu;
       it.lid.position.y=it.lidY+0.012*Math.sin(2*Math.PI*t/2.2+it.ph);
       it.seam.material.opacity=.38*uB*(0.78+0.22*ib);
-      it.stones.forEach((m,i)=>drop(m,T_B0+0.30+i*0.030,0.10));
+      it.stones.forEach((m,i)=>drop(m,T_B0+0.45+i*0.054,0.10));
     }
     if(bowlC)for(const it of bowlC.items){     // 全息取子台：光锥亮起 → 棋子自下而上凝出悬浮旋柱 → 下一手标记
       const cu=Math.max(0.001,uB);
@@ -1679,7 +1679,7 @@ function frame(t){
       it.cone.material.opacity=(0.75+0.25*Math.sin(2*Math.PI*t/1.7+it.ph))*uB;
       it.col.rotation.y=t*0.22;
       it.col.children.forEach((m,i)=>{if(i>=it.tys.length)return;
-        const te=T_B0+0.26+i*0.05,pp=ease.outBack(remap(t,te,te+0.18));
+        const te=T_B0+0.42+i*0.09,pp=ease.outBack(remap(t,te,te+0.26));
         m.visible=pp>0.001;m.scale.setScalar(Math.max(0.001,pp));
         m.position.y=it.tys[i]+0.006*Math.sin(2*Math.PI*t/1.6+i*1.3);});
       it.mark.material.opacity=(0.55+0.45*Math.sin(2*Math.PI*t/1.1))*uS;
@@ -1693,9 +1693,9 @@ function frame(t){
     hole.scale.setScalar(Math.max(open,0.001));
     if(hole.visible){
       if(ELIM_ID==='taiji'){
-        /* 太极归一：双臂顺时针旋（随淘汰加速）→ 8.5 起收拢并色归一 → 核闪 */
-        const u=remap(t,T_ELIM0,T_HOLE_C0),conv=remap(t,8.5,8.85),late=remap(t,8.62,8.85);
-        const spinA=0.8*(t-T_HOLE0)+1.2308*Math.max(0,t-T_ELIM0)**2+2.0*Math.max(0,t-8.5)**2;
+        /* 太极归一：双臂顺时针旋（随淘汰加速）→ 9.2 起收拢并色归一 → 核闪 */
+        const u=remap(t,T_ELIM0,T_HOLE_C0),conv=remap(t,9.2,9.75),late=remap(t,9.33,9.75);
+        const spinA=0.8*(t-T_HOLE0)+1.2308*Math.max(0,t-T_ELIM0)**2+2.0*Math.max(0,t-9.2)**2;
         const cS=1-0.74*ease.inCubic(conv);
         tjBase.rotation.z=-0.35*spinA;tjArmCy.rotation.z=-spinA;tjArmCr.rotation.z=Math.PI-spinA;
         tjBase.material.opacity=0.9*open*(1-0.45*conv);
@@ -1708,13 +1708,13 @@ function frame(t){
         horizon.scale.setScalar(0.52*(1-0.85*late));
         photonRing.material.opacity=0.4*open;
         lensRing.material.opacity=0.10*open*(1+0.3*Math.sin(2*Math.PI*t/0.9));
-        tjCore.material.opacity=0.9*Math.sin(Math.PI*remap(t,8.55,8.95));
-        tjCore.scale.setScalar(0.35+0.55*remap(t,8.55,8.82));
+        tjCore.material.opacity=0.9*Math.sin(Math.PI*remap(t,9.25,10.05));
+        tjCore.scale.setScalar(0.35+0.55*remap(t,9.25,9.8));
         holeLight.intensity=1.4*open*(1+0.5*conv);
       }else if(ELIM_ID==='ring'){
-        /* 星环收束：主环/副环对旋（随吸收增亮）→ 8.7 环体向心收束 → 核闪；光珠沿环轨公转 */
+        /* 星环收束：主环/副环对旋（随吸收增亮）→ 9.55 环体向心收束 → 核闪；光珠沿环轨公转 */
         const spinA=0.5*(t-T_HOLE0)+0.9*Math.max(0,t-T_ELIM0)**2;
-        const cS=1-0.94*ease.inCubic(remap(t,8.7,8.85));
+        const cS=1-0.94*ease.inCubic(remap(t,9.55,10.05));
         ringDisc.rotation.z=spinA;ringDash.rotation.z=-1.7*spinA;
         const pt=taijiPulse('direct',t)+taijiPulse('indirect',t);
         ringDisc.material.opacity=Math.min(1,0.9*open*(0.8+0.45*pt));
@@ -1722,14 +1722,14 @@ function frame(t){
         ringDisc.scale.setScalar(cS);ringDash.scale.setScalar(cS);
         for(const b of ringBeads){
           const tau=t-b.tE;
-          if(tau<0||t>8.86){b.spr.visible=false;continue}
+          if(tau<0||t>10.06){b.spr.visible=false;continue}
           b.spr.visible=true;
           const a=b.ang+b.om*tau,r=RING_R*cS;
           b.spr.position.set(r*Math.cos(a),r*Math.sin(a),0.012);
-          b.spr.material.opacity=0.95*Math.min(1,tau/0.06)*(1-remap(t,8.78,8.86));
+          b.spr.material.opacity=0.95*Math.min(1,tau/0.06)*(1-remap(t,9.64,10.06));
         }
-        rgCore.material.opacity=0.95*Math.sin(Math.PI*remap(t,8.70,8.94));
-        rgCore.scale.setScalar(0.3+0.6*remap(t,8.70,8.86));
+        rgCore.material.opacity=0.95*Math.sin(Math.PI*remap(t,9.55,10.14));
+        rgCore.scale.setScalar(0.3+0.6*remap(t,9.55,10.04));
         holeLight.intensity=1.7*open;
       }else{
         /* hole / singularity：现行黑洞（全息坍缩仅换吸积盘谱色与照明色） */
@@ -1756,9 +1756,9 @@ function frame(t){
 
   /* --- Bloom 呼吸 + 暗角 + 赛博后处理 --- */
   const bPeak=TR_PILLAR?[2.2,1.171,2.8,1.057,3.0,1.171,3.5,1.143]:[2.2,1.12,2.8,1.03,3.0,1.06,3.5,1.04];
-  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[7.1,1],[7.4,1.2],[8.3,1.029],[10.232,1.029],[10.896,1.171],[11.671,1],[12.446,1.071],[13,1.114],[13.5,1.06],[14,1.03]]);
-  vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,12.446,13))).toFixed(3);
-  postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,7.10,7.20)+burst(t,12.40,12.51));
+  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[7.1,1],[7.65,1.2],[8.97,1.029],[11.532,1.029],[12.196,1.171],[12.971,1],[13.746,1.071],[14.3,1.114],[15.1,1.06],[16.0,1.03]]);
+  vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,13.746,14.3))).toFixed(3);
+  postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,7.10,7.20)+burst(t,13.70,13.81));
 
   composer.render();
 }
@@ -1828,7 +1828,7 @@ function updateCards(t){
       const fl=0.035*Math.sin(2*Math.PI*t/1.9+c.ph)+0.012*Math.sin(2*Math.PI*t/1.1+c.ph2);
       if(c.hero){
         // S4 后段移向阵前中央 → S5 飞向镜头 → 定格呼吸 → 溶解（v1.4 整体后移 0.7s）
-        if(t<T_FREEZE0)pos=c.base.clone().lerp(new THREE.Vector3(0,0.25,1.1),ease.inOutCubic(remap(t,8.0,8.9)));
+        if(t<T_FREEZE0)pos=c.base.clone().lerp(new THREE.Vector3(0,0.25,1.1),ease.inOutCubic(remap(t,8.9,10.2)));
         else pos=new THREE.Vector3(0,0.25,1.1).lerp(HERO_S5,ease.inOutCubic(remap(t,T_FREEZE0,T_FREEZE0+0.6)));
         if(t>=T_FREEZE0+0.6){pos.copy(HERO_S5);
           const br=1+0.022*Math.sin(2*Math.PI*(t-(T_FREEZE0+0.6))/0.8);scale=br;}
@@ -1919,14 +1919,14 @@ function updateSweeps(t){
     selGlow.position.set(selFrame.position.x,selFrame.position.y,0.12);
     selGlow.material.opacity=0.22*(1-absorb);
   }
-  // S5 卡框描边扫光一周（v1.4：9.55–9.9）
-  if(t>=9.55&&t<=9.92){
-    const u=remap(t,9.55,9.9);
+  // S5 卡框描边扫光一周（v1.9：10.85–11.2）
+  if(t>=10.85&&t<=11.22){
+    const u=remap(t,10.85,11.2);
     const pp=roundedPerim(u*perimLen());
     rimSweepA.visible=rimSweepB.visible=true;
     placeOnRim(rimSweepA,pp,0.004,0.16);
     placeOnRim(rimSweepB,Math.max(0,pp-0.09),0.004,0.10);
-    rimSweepA.material.opacity=rimSweepB.material.opacity=0.95*(1-remap(t,9.85,9.92));
+    rimSweepA.material.opacity=rimSweepB.material.opacity=0.95*(1-remap(t,11.15,11.22));
   }else rimSweepA.visible=rimSweepB.visible=false;
 }
 // 圆角方框周长参数化（卡框 0.72、圆角 0.05）：自上边左端顺时针
