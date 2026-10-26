@@ -1,9 +1,9 @@
 /* ================= S7 对弈落子（game.html 专属：MOVES 驱动，取子→飞行→落子→补子，全闭式） =================
    片内时间 t 已含 T_OPEN 偏移（t=16.0 ≡ 开场末帧）；每手窗口 [T_OPEN+k*PERIOD, +PERIOD]。
-   相位（u = t - 手起点）：0.10–0.30 蓄势微升预亮 → 0.30–1.55 单段抛物线飞行（水平 inOutCubic+拱高 MV_ARC，一气呵成）
-   → 1.55 落子定格，最新子高亮常亮（下一手取子瞬间让位还原）→ 1.85–2.15 取子台柱顶补子弹出 → 收静。 */
-const MV_TAKE0=0.30,MV_LAND=1.55;
-const MV_BACK0=1.85,MV_BACK1=2.15;
+   相位（u = t - 手起点）：0.09–0.26 蓄势微升预亮 → 0.26–1.36 单段抛物线飞行（水平 inCubic 先慢后快——悬停似思考、末段加速果断落子+拱高 MV_ARC，一气呵成）
+   → 1.36 落子定格，最新子高亮常亮（下一手取子瞬间让位还原）→ 1.62–1.88 取子台柱顶补子弹出 → 收静。 */
+const MV_TAKE0=0.26,MV_LAND=1.36;
+const MV_BACK0=1.62,MV_BACK1=1.88;
 const STONE_Y=0.012,MV_ARC=0.60;                        // 盘面落子高度 / 抛物线拱高
 const MV_HL=0.40,MV_HL_IN=0.15,MV_HL_OUT=0.20;          // 最新落子高亮：亮度 / 渐入 / 让位渐出
 const SLOT_I=5,SLOT_A=5*2.35+0.5,SLOT_R=0.115+(5%2?0.035:0),SLOT_TY=0.075+5*0.03;  // 柱顶第 6 颗（与 holo 构建式一致）
@@ -41,15 +41,15 @@ function updateMoves(t){
     }
     p.flash.visible=hl>0.001;
     p.flash.material.opacity=hl;
-    // 飞子：单段抛物线（水平 inOutCubic + 4e(1-e) 拱高），全航迹无内部接缝
+    // 飞子：单段抛物线（水平 inCubic 先慢后快 + 4e(1-e) 拱高），全航迹无内部接缝；辉光按航时 55%→95% 渐隐（与进度解耦，inCubic 下不再突兀）
     let show=false;
     if(u>MV_TAKE0&&u<MV_LAND){
       show=true;
       const wb=bowlC.items[p.black?0:1],ta=T_OPEN+p.k*PERIOD+MV_TAKE0;
       const sp=slotW(wb.col.position.x,ta),y0=slotBob(ta)+0.05;   // 起飞点冻结于取子瞬间（含柱自转，交接零跳变）
-      const e=ease.inOutCubic(remap(u,MV_TAKE0,MV_LAND));
+      const fu=remap(u,MV_TAKE0,MV_LAND),e=ease.inCubic(fu);
       p.fly.position.set(lerp(sp.x,p.tx,e),lerp(y0,STONE_Y,e)+MV_ARC*4*e*(1-e),lerp(sp.z,p.tz,e));
-      p.flyGlow.material.opacity=.45*(e>0.7?1-remap(e,0.7,1):1);
+      p.flyGlow.material.opacity=.45*(1-remap(fu,0.55,0.95));
     }else{p.fly.visible=false;p.flyGlow.material.opacity=0}
     p.fly.visible=show;
   }
@@ -63,11 +63,11 @@ function updateMoves(t){
       if(u>0){mu=u;break}
     }
     const sp=slotW(col.position.x,t);                           // 预亮/回闪跟随柱自转，悬在真实石子上方
-    if(mu>0.10&&mu<MV_TAKE0){                    // 蓄势：微升 + 预亮渐起渐隐
+    if(mu>0.09&&mu<MV_TAKE0){                    // 蓄势：微升 + 预亮渐起渐隐
       stone.visible=true;stone.scale.setScalar(1);
-      stone.position.y=slotBob(t)+0.05*ease.outCubic(remap(mu,0.10,MV_TAKE0));
+      stone.position.y=slotBob(t)+0.05*ease.outCubic(remap(mu,0.09,MV_TAKE0));
       slotGlow.visible=true;slotGlow.position.set(sp.x,stone.position.y+0.05,sp.z);
-      slotGlow.material.opacity=.4*ease.outCubic(remap(mu,0.10,MV_TAKE0))*(1-remap(mu,MV_TAKE0,MV_TAKE0+0.35));
+      slotGlow.material.opacity=.4*ease.outCubic(remap(mu,0.09,MV_TAKE0))*(1-remap(mu,MV_TAKE0,MV_TAKE0+0.31));
     }else if(mu>=MV_TAKE0&&mu<MV_BACK0){         // 被取走
       stone.visible=false;slotGlow.visible=false;
     }else if(mu>=MV_BACK0&&mu<MV_BACK1+0.3){     // 补子弹出 + 回闪
