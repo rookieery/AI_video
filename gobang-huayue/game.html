@@ -1973,13 +1973,13 @@ const mvPieces=MOVES.map((mv,k)=>{
   const black=mv.c!=='W',tx=mv.x*S,tz=-mv.y*S;
   const fly=mkStone(black);fly.visible=false;scene.add(fly);
   const flyGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
-  flyGlow.scale.setScalar(0.34);fly.add(flyGlow);
+  flyGlow.scale.setScalar(0.34);flyGlow.renderOrder=1;fly.add(flyGlow);
   const sh=new THREE.Mesh(new THREE.PlaneGeometry(0.13,0.115),
     new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:0,depthWrite:false}));
   sh.rotation.x=-Math.PI/2;sh.position.set(tx,0.0025,tz);sh.renderOrder=2;sh.visible=false;scene.add(sh);
   const st=mkStone(black);st.position.set(tx,STONE_Y,tz);st.visible=false;scene.add(st);
   const flash=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
-  flash.position.set(tx,0.035,tz);flash.scale.setScalar(0.32);flash.visible=false;scene.add(flash);  // 落子后转为最新子高亮晕
+  flash.position.set(tx,0.035,tz);flash.scale.setScalar(0.32);flash.renderOrder=1;flash.visible=false;scene.add(flash);  // 落子后转为最新子高亮晕（RO1：须高于 boardBase RO0，见 prompt-game.md §5 透明排序坑）
   return{k,black,tx,tz,fly,flyGlow,sh,st,flash};
 });
 const slotGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));

@@ -6,6 +6,12 @@ export * from './config.js';
 export const MOVES = [
   { c: 'W', x: -1, y: 2 },   // 白4
   { c: 'B', x: 1, y: 0 },    // 黑5
+  { c: 'W', x: 2, y: 2 },    // 白6
+  { c: 'B', x: 2, y: 0 },    // 黑7
+  { c: 'W', x: 3, y: 0 },    // 白8
+  { c: 'B', x: 0, y: 2 },    // 黑9
+  { c: 'W', x: -1, y: 3 },    // 白10
+  { c: 'B', x: 1, y: 3 },    // 黑11
 ];
 
 export const PERIOD = 2.4;   // 每手时长（秒，v2 加快节奏）；game/film.html 的 iframe hash #t=0,N 需同步为 MOVES.length*PERIOD

@@ -39,18 +39,20 @@ u = t − 手起点（手 k 起点 = T_OPEN + k·PERIOD）：
 
 - **取子源**：`BOWL_MODE='holo'` 柱顶第 6 颗（`SLOT_I=5`，构建式 `a=5*2.35+0.5, rr=0.115+(5%2?0.035:0)=0.15, ty=0.075+5*0.03=0.225`，呼吸 `slotBob(t)` 与 holo 块同式；**旋柱半径/层高改动时引擎 SLOT_* 必须同步；柱全程自转 `col.rotation.y=0.22t` → 取子/辉光世界角=SLOT_A−0.22t（飞子起飞点冻结于取子瞬间 `ta=T_OPEN+k·PERIOD+0.30`，slotGlow 实时跟随；v1.1 修复取子横跳 ~180°）**；柱顶子经近俯视外扩略越锥口属定版观感——v1.0.1 曾收紧半径，用户回退：收紧后旋柱太挤，宁保舒展）。黑盒 `bowlC.items[0]` / 白盒 `items[1]`，按 `MOVES[k].c` 取对应盒。
 - **MOVES 格式**：`{c:'B'|'W', x:int, y:int}`；黑白轮流由数据自证，引擎不做规则校验。
-- 片长 = `MOVES.length × PERIOD`；**game/film.html 的 hash `#t=0,N` 与 `game.html` 内 `PERIOD` 三处必须同步**（本版 PERIOD=2.4，当前 2 手片长 4.8）。
+- 片长 = `MOVES.length × PERIOD`；**game/film.html 的 hash `#t=0,N` 与 `game.html` 内 `PERIOD` 三处必须同步**（本版 PERIOD=2.4，当前 8 手片长 19.2）。
 - 高亮晕/软影每手一套（flash 精灵复用）：**最新落子高亮** op 0.40（`MV_HL`）常亮，下一手取子瞬间 0.2s 让位；落子棋子与软影按手数永久累加；v1.1 已删波纹环（mvRipple）。
 
 ## 5. game.html 生成与渲染（工程坑）
 
 - 生成：拷贝 starcodex.html → ①title ②import 改 `./game-config.js`（含 MOVES/PERIOD）③`const T_OPEN=16.0; const DUR=T_OPEN+MOVES.length*PERIOD`（frame 首行钳制用）④`composer.render()` 前插 `updateMoves(t);` ⑤`window.film` 的 duration/frame 改为 `MOVES.length*PERIOD` / `gt=>frame(gt+T_OPEN)`；S7 引擎插在 window.film 注释前。**开场片时间常数一改（如 v1.9 扩时），game.html 内嵌的开场时间轴必须同步重打同批补丁（约 25 处），否则对弈片背景仍在跑旧节拍。**
 - **openfilm 页面必须位于项目文件夹内**（film.html 引 `../game.html` 报 "there is no such file"）→ 渲染对弈片用**临时换入法**：备份 film.html → 写入 `src="game.html#t=0,N"` → `npx openfilm render --out game/xxx.mp4` → 立即还原 film.html（防覆盖开场成片，--out 必带）。
+- **透明排序坑（2026-10-26 w4b5w6b7 发现）**：`flash`/`flyGlow`（RO0）与 `boardBase`（透明 2.5×2.5 大平面，RO0，原点在 (0,0)）同队列按相机距离排序——落子点距原点超过临界圆（r≈0.46，随相机高变）时 flash 比棋盘远、先画，被棋盘 α≈0.94 正常混合整体盖死（高亮晕消失；石子不透明/软影 RO2/rim RO6 不受影响）。历史 MOVES 全部 r≤0.424 从未触发，白10 (-1,3) 首次越界。**修法：flash/flyGlow `renderOrder=1`**（棋盘 0 之上、软影 2 之下）。新_MOVES 若含 r 更远坐标无需再改；同理任何新增 RO0 透明特效注意与 boardBase 的距离序。
 - QC：`npx openfilm look game.html <t>` 可直接抽帧单页（无需换入）；确定性双绘 + 首帧 vs 开场末帧逐像素 diff。
 
 ## 6. 验收清单
 
-- [ ] 对弈 t=0 与开场 t=14 逐像素一致（diff 仅星点/混排噪声）
+- [ ] 对弈 t=0 与开场末帧（t=16 片的 f479）逐像素一致（diff 仅星点/混排噪声）
+- [ ] 每手最新子高亮可见（含 |坐标| 较大、近棋盘远端的手——透明排序坑回归项）
 - [ ] 每手 2.4s±0，落子棋子位置 = MOVES 坐标 × S 映射，与网格线对位
 - [ ] 取子台柱恒 6 颗：取走窗口 (0.30–1.85) 柱顶不可见，2.15 后补齐
 - [ ] 无波纹环（v1.1 已删）；最新落子高亮常亮可见，下一手取子瞬间 0.2s 让位还原
