@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>beam probe</title>
+<style>html,body{margin:0;width:960px;height:540px;background:#04060E;overflow:hidden}</style>
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+const W=960,H=540;
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(1);renderer.setSize(W,H);
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x04060E);
+const camera=new THREE.PerspectiveCamera(42,W/H,0.05,200);
+camera.position.set(0,3.60,0.32);camera.lookAt(0,0,0);          // 与 game.html 末机位一致
+const S=0.15,WA={x:-0.30,z:0},WIN_L=0.60,DIRU={x:1,z:0},WIN_YAW=Math.atan2(-DIRU.z,DIRU.x);
+// —— 与 game.html 完全相同的贴图与网格构建 ——
+const cnv=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+const tex=c=>{const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t};
+const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
+const FXC={core:'#EAFFFF',main:'#04C7E8',hi:'#9BEEFF'};
+const beamTex=(()=>{const c=cnv(1024,128),x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,1024,0);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.03,rgba(FXC.main,.30));g.addColorStop(.3,rgba(FXC.main,.75));
+  g.addColorStop(.5,rgba(FXC.hi,.97));g.addColorStop(.7,rgba(FXC.main,.75));g.addColorStop(.97,rgba(FXC.main,.30));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,1024,128);
+  const v=x.createLinearGradient(0,0,0,128);
+  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(.28,'rgba(255,255,255,1)');v.addColorStop(.72,'rgba(255,255,255,1)');v.addColorStop(1,'rgba(0,0,0,0)');
+  x.globalCompositeOperation='destination-in';x.fillStyle=v;x.fillRect(0,0,1024,128);
+  return tex(c)})();
+const beamLen=WIN_L+0.34;
+const mkBeam=(w,y,col,dx,dz,op)=>{const g=new THREE.PlaneGeometry(beamLen,w);g.translate(beamLen/2,0,0);
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:beamTex,transparent:true,opacity:op,depthWrite:false,blending:THREE.AdditiveBlending}));
+  if(col)m.material.color.set(col);
+  const yaw=Math.atan2(-dz,dx);
+  m.rotation.order='YXZ';m.rotation.y=yaw;m.rotation.x=-Math.PI/2;m.position.set(dx*beamLen/2,y,dz*beamLen/2);m.renderOrder=1;scene.add(m);return m};
+mkBeam(0.16,0.016,FXC.main,1,0,0.85);
+mkBeam(0.42,0.008,FXC.main,1,0,0.18);
+mkBeam(0.06,0.02,FXC.hi,1,0,1.0);
+// 斜线参照（45°）+ 另一轴验证 yaw
+mkBeam(0.10,0.05,0xFF6644,Math.SQRT1_2,Math.SQRT1_2,0.9);
+// 裸色块对照（无贴图）
+{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.2,0.2),new THREE.MeshBasicMaterial({color:0x00FF00,transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+ m.rotation.order='YXZ';m.rotation.x=-Math.PI/2;m.position.set(0.55,0.03,-0.4);scene.add(m)}
+window.film={width:W,height:H,duration:1,ready:Promise.resolve(),frame:()=>{}};
+renderer.render(scene,camera);
+</script>
+</body>
+</html>

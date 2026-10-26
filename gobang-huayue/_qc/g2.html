@@ -1,0 +1,2349 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>星穹对弈</title>
+<style>
+  html,body{margin:0;width:1920px;height:1080px;background:#04060E;overflow:hidden}
+  canvas{position:absolute;left:0;top:0;display:block}
+  /* 确定性暗角：全程轻覆 + 11.5–12.0 收拢（opacity 由 frame(t) 驱动） */
+  #vig{position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none;
+    background:radial-gradient(ellipse 68% 62% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.62) 100%);
+    opacity:.25}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "../vendor/three.module.js",
+  "three/addons/": "../vendor/"
+} }
+</script>
+</head>
+<body>
+<div id="vig"></div><script>window.__NO_RINGS=true;</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { DIRECT, INDIRECT } from '../openings.js';
+import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE, MOVES, PERIOD, WIN_AT, WIN_FX, EXIT_MODE, END_SEC } from '../game-config.js';
+
+/* ================= 风格调色板 =================
+   ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
+   金色家族 = 直指弧主色，绯红家族 = 斜指弧主色；换风格只换取值，语义不变。 */
+const STYLE_ID=STYLE||'gold';
+const PALETTES={
+  gold:{
+    deepA:'#04060E',deepMid:'#060A16',deepB:'#0A0F1E',exposure:1.12,
+    starWarm:'#F5EFE0',starGold:'#E8C96A',
+    gold:'#C9A227',goldHi:'#E8C96A',sweep:'#FFE9B8',grid:'#C9A227',lineDim:'#C9A227',
+    crimson:'#B03A2E',crimsonHi:'#FF6B52',
+    obsidian:'#0B0D12',rimCool:'#6B7A8F',pearl:'#F5EFE0',lacquer:'#14100D',
+    glow1:'rgba(255,233,192,.85)',glow2:'rgba(232,201,106,.28)',
+    markFill:'rgba(201,162,39,.30)',markStroke:'rgba(232,201,106,.95)',starMark:'diamond',
+    markDot:'#E8C96A',markGlow:'rgba(201,162,39,.45)',
+    coverTop:'#171310',coverMid:'#12100C',coverBot:'#0E0C09',coverSide:0x171310,
+    coverMesh:'rgba(201,162,39,.12)',coverBorder1:'rgba(201,162,39,.34)',coverBorder2:'rgba(232,201,106,.18)',
+    coverCircuit:false,coverGrid:'rgba(201,162,39,.06)',coverEmissive:0xC9A227,coverEmInt:.03,
+    pageBase:'#6B6250',pageLine:'rgba(38,33,26,.52)',pageLight:'rgba(255,241,205,.20)',
+    pageSeam:'#FFF6E2',pageHaloCol:'#FFF3D8',fireRing:'#E8A04A',
+    vortexWide:'rgba(176,58,46,.30)',vortexGlow:'rgba(255,107,82,.7)',
+    vortexA:'#FF6B52',vortexB:'#D64541',vortexC:'#B03A2E',
+    vortexCore:'rgba(255,220,200,.95)',vortexCoreFade:'rgba(255,107,82,0)',
+    acc0:'rgba(255,107,82,1)',acc1:'rgba(255,138,94,.95)',acc2:'rgba(232,160,74,.8)',
+    acc3:'rgba(232,201,106,.5)',acc4:'rgba(201,162,39,.18)',acc5:'rgba(201,162,39,0)',accSpoke:'#FFE9B8',
+    neb1:['rgba(232,201,106,A)','rgba(201,162,39,A)','rgba(245,239,224,A)','rgba(255,107,82,A)'],
+    neb2:['rgba(107,122,143,A)','rgba(58,80,120,A)','rgba(176,58,46,A)','rgba(90,70,110,A)'],
+    nebOp1:.19,nebOp2:.17,
+    beamA:'#F5EFE0',beamB:'#E8C96A',coreCol:'#FFF6DC',coreGlow:'#FFE9B8',
+    photon:'#FFE9B8',lens:'#E8C96A',holeLight:'#FF6B52',
+    boardIn:'vec3(0.0100,0.0080,0.0062)',boardOut:'vec3(0.0220,0.0175,0.0135)',frameCol:'#C9A227',
+    blackColor:'#05070A',whiteColor:'#FDF8EC',stoneRim:'#6B7A8F',
+    blackEm:[0.018,0.024,0.034],whiteEm:0x3A3428,whiteEmInt:.18,blackEmInt:.15,
+    white2d1:'#FFFFFF',white2d2:'#F5EFE0',white2d3:'#D9D2C0',white2d4:'#B9B2A2',
+    black2d1:'#2A3038',black2d2:'#141820',black2d3:'#0B0D12',
+    black2dRim:'rgba(107,122,143,.85)',black2dHi:'rgba(150,170,195,.5)',
+    cardGlass:'rgba(11,13,18,.94)',cardLine1:'rgba(107,122,143,.30)',cardLine2:'rgba(107,122,143,.12)',
+    cardTicks:false,
+    trail:[1,0.85,0.5],debA:[1,0.85,0.5],debB:[1,0.5,0.35],dustA:[1,0.92,0.72],dustB:[0.85,0.7,0.45],
+    bloomStrength:.7,bloomThreshold:.85,bloomRadius:.6,
+    ambient:0x1E2634,ambInt:.78,keyCol:0xFFF2DA,keyInt:1.12,rimCol:0x8FA3BD,rimInt:.68,
+    vigBase:.25,vigEnd:.35,scan:0,chroma:0,glitch:0,neonFrame:false,
+  },
+  a:{ // 霓虹棋谱：截图配色直译（青主 + 洋红辅 + 深海军蓝底）
+    deepA:'#050A14',deepMid:'#081324',deepB:'#0C1B31',exposure:1.0,
+    starWarm:'#A9E8FF',starGold:'#7CF3E0',
+    gold:'#04C7E8',goldHi:'#9BEEFF',sweep:'#CFF8FF',grid:'#0E90A8',lineDim:'#0E90A8',
+    crimson:'#F43F5E',crimsonHi:'#FF8FA3',
+    obsidian:'#050B16',rimCool:'#1FC8E0',pearl:'#E8FBF7',lacquer:'#071019',
+    glow1:'rgba(207,248,255,.85)',glow2:'rgba(4,199,232,.28)',
+    markFill:'rgba(4,199,232,.30)',markStroke:'rgba(155,238,255,.95)',starMark:'dot',
+    markDot:'#9BEEFF',markGlow:'rgba(4,199,232,.45)',
+    coverTop:'#0A1524',coverMid:'#081120',coverBot:'#050C16',coverSide:0x050C16,
+    coverMesh:'rgba(4,199,232,.38)',coverBorder1:'rgba(4,199,232,.42)',coverBorder2:'rgba(155,238,255,.22)',
+    coverCircuit:true,coverGrid:'rgba(4,199,232,.10)',coverEmissive:0x04C7E8,coverEmInt:.035,
+    pageBase:'#22344F',pageLine:'rgba(6,20,34,.55)',pageLight:'rgba(180,240,255,.20)',
+    pageSeam:'#CFF8FF',pageHaloCol:'#B6F2FF',fireRing:'#04C7E8',
+    vortexWide:'rgba(244,63,94,.30)',vortexGlow:'rgba(255,122,156,.7)',
+    vortexA:'#FF7A96',vortexB:'#F43F5E',vortexC:'#B01E44',
+    vortexCore:'rgba(255,240,245,.95)',vortexCoreFade:'rgba(244,63,94,0)',
+    acc0:'rgba(255,59,101,1)',acc1:'rgba(255,110,140,.95)',acc2:'rgba(170,80,210,.78)',
+    acc3:'rgba(4,199,232,.55)',acc4:'rgba(4,199,232,.20)',acc5:'rgba(4,199,232,0)',accSpoke:'#B6FFF4',
+    neb1:['rgba(4,199,232,A)','rgba(45,212,191,A)','rgba(244,63,94,A)','rgba(86,120,255,A)'],
+    neb2:['rgba(31,120,180,A)','rgba(80,60,160,A)','rgba(4,199,232,A)','rgba(45,212,191,A)'],
+    nebOp1:.09,nebOp2:.07,
+    beamA:'#CFF8FF',beamB:'#04C7E8',coreCol:'#EAFFFF',coreGlow:'#9BEEFF',
+    photon:'#D8FEFF',lens:'#04C7E8',holeLight:'#F43F5E',
+    boardIn:'vec3(0.0045,0.0105,0.0200)',boardOut:'vec3(0.0100,0.0240,0.0450)',frameCol:'#04C7E8',
+    blackColor:'#04070D',whiteColor:'#E8FBF7',stoneRim:'#1FC8E0',
+    blackEm:[0.004,0.016,0.024],whiteEm:0x1E4A52,whiteEmInt:.22,blackEmInt:.18,
+    white2d1:'#FFFFFF',white2d2:'#E8FBF7',white2d3:'#BFE9E4',white2d4:'#9FD3D0',
+    black2d1:'#16303F',black2d2:'#0A1622',black2d3:'#04070D',
+    black2dRim:'rgba(31,200,224,.85)',black2dHi:'rgba(155,238,255,.5)',
+    cardGlass:'rgba(8,18,32,1)',cardLine1:'rgba(31,200,224,.28)',cardLine2:'rgba(31,200,224,.10)',
+    cardTicks:false,
+    trail:[0.45,0.95,1],debA:[0.55,0.95,1],debB:[1,0.35,0.5],dustA:[0.65,1,0.98],dustB:[1,0.45,0.6],
+    bloomStrength:.82,bloomThreshold:.52,bloomRadius:.62,
+    ambient:0x0A1A26,ambInt:.85,keyCol:0xBFF3FF,keyInt:1.0,rimCol:0xFF4D74,rimInt:.55,
+    vigBase:.28,vigEnd:.42,scan:0,chroma:.8,glitch:1,neonFrame:true,
+  },
+  b:{ // 夜城全息：紫黑底 + 洋红主光 + 电光青辅光，扫描线/色差
+    deepA:'#06040E',deepMid:'#0C0718',deepB:'#160C28',exposure:1.0,
+    starWarm:'#D8E8FF',starGold:'#FF7FA8',
+    gold:'#22D3EE',goldHi:'#A5F3FC',sweep:'#E6FFFF',grid:'#1AA0B8',lineDim:'#127F94',
+    crimson:'#FF2D6F',crimsonHi:'#FF7A9C',
+    obsidian:'#0A0612',rimCool:'#FF3D7F',pearl:'#F2F6FF',lacquer:'#0A0710',
+    glow1:'rgba(255,217,240,.85)',glow2:'rgba(255,45,111,.30)',
+    markFill:'rgba(255,45,111,.26)',markStroke:'rgba(255,217,240,.9)',starMark:'dot',
+    markDot:'#FFD9F0',markGlow:'rgba(255,45,111,.45)',
+    coverTop:'#120A1E',coverMid:'#0C0618',coverBot:'#08040F',coverSide:0x080410,
+    coverMesh:'rgba(255,45,111,.38)',coverBorder1:'rgba(255,45,111,.40)',coverBorder2:'rgba(255,217,240,.20)',
+    coverCircuit:true,coverGrid:'rgba(255,45,111,.10)',coverEmissive:0xFF2D6F,coverEmInt:.02,
+    pageBase:'#2A2140',pageLine:'rgba(12,6,20,.55)',pageLight:'rgba(255,210,240,.20)',
+    pageSeam:'#FFE6F2',pageHaloCol:'#FFC0D8',fireRing:'#22D3EE',
+    vortexWide:'rgba(34,211,238,.28)',vortexGlow:'rgba(165,243,252,.7)',
+    vortexA:'#FF4D8D',vortexB:'#D92662',vortexC:'#8A1240',
+    vortexCore:'rgba(255,235,245,.95)',vortexCoreFade:'rgba(255,45,111,0)',
+    acc0:'rgba(255,45,111,1)',acc1:'rgba(255,90,140,.95)',acc2:'rgba(139,92,246,.8)',
+    acc3:'rgba(34,211,238,.5)',acc4:'rgba(34,211,238,.18)',acc5:'rgba(34,211,238,0)',accSpoke:'#FFE6F2',
+    neb1:['rgba(255,45,111,A)','rgba(139,92,246,A)','rgba(34,211,238,A)','rgba(255,127,168,A)'],
+    neb2:['rgba(80,30,120,A)','rgba(34,211,238,A)','rgba(255,45,111,A)','rgba(60,40,140,A)'],
+    nebOp1:.20,nebOp2:.18,
+    beamA:'#FFE6F2',beamB:'#FF2D6F',coreCol:'#FFFFFF',coreGlow:'#FFB3CC',
+    photon:'#FFE6F2',lens:'#FF2D6F',holeLight:'#FF2D6F',
+    boardIn:'vec3(0.0070,0.0040,0.0140)',boardOut:'vec3(0.0180,0.0100,0.0340)',frameCol:'#FF2D6F',
+    blackColor:'#07030E',whiteColor:'#EFF6FF',stoneRim:'#FF3D7F',
+    blackEm:[0.016,0.003,0.010],whiteEm:0x2A1A3A,whiteEmInt:.20,blackEmInt:.20,
+    white2d1:'#FFFFFF',white2d2:'#EFF6FF',white2d3:'#C7D8F0',white2d4:'#9FB4D8',
+    black2d1:'#2A1030',black2d2:'#12061C',black2d3:'#07030E',
+    black2dRim:'rgba(255,61,127,.85)',black2dHi:'rgba(255,217,240,.5)',
+    cardGlass:'rgba(14,8,26,1)',cardLine1:'rgba(34,211,238,.26)',cardLine2:'rgba(255,45,111,.14)',
+    cardTicks:true,
+    trail:[1,0.5,0.7],debA:[0.55,0.95,1],debB:[1,0.3,0.55],dustA:[1,0.6,0.8],dustB:[0.45,0.95,1],
+    bloomStrength:.70,bloomThreshold:.58,bloomRadius:.55,
+    ambient:0x120A22,ambInt:.8,keyCol:0xFFD9F0,keyInt:.95,rimCol:0x22D3EE,rimInt:.7,
+    vigBase:.30,vigEnd:.44,scan:.35,chroma:1.6,glitch:0,neonFrame:true,
+  },
+  c:{ // 全息终端：高亮薄荷青 + 洋红故障 + HUD 扫描线
+    deepA:'#020508',deepMid:'#030B12',deepB:'#041018',exposure:.95,
+    starWarm:'#5FFFE0',starGold:'#FF3B6B',
+    gold:'#19F0D8',goldHi:'#B6FFF4',sweep:'#EAFFFB',grid:'#12B4A6',lineDim:'#0C8C80',
+    crimson:'#FF3B6B',crimsonHi:'#FF9BAF',
+    obsidian:'#02070A',rimCool:'#19F0D8',pearl:'#DFFFF6',lacquer:'#02100E',
+    glow1:'rgba(234,255,251,.9)',glow2:'rgba(25,240,216,.32)',
+    markFill:'rgba(25,240,216,.30)',markStroke:'rgba(182,255,244,.95)',starMark:'dot',
+    markDot:'#B6FFF4',markGlow:'rgba(25,240,216,.5)',
+    coverTop:'#041214',coverMid:'#031012',coverBot:'#020A0A',coverSide:0x020A0A,
+    coverMesh:'rgba(25,240,216,.42)',coverBorder1:'rgba(25,240,216,.5)',coverBorder2:'rgba(182,255,244,.25)',
+    coverCircuit:true,coverGrid:'rgba(25,240,216,.10)',coverEmissive:0x19F0D8,coverEmInt:.025,
+    pageBase:'#1A3A38',pageLine:'rgba(2,18,16,.55)',pageLight:'rgba(160,255,240,.20)',
+    pageSeam:'#EAFFFB',pageHaloCol:'#B6FFF4',fireRing:'#19F0D8',
+    vortexWide:'rgba(255,59,107,.32)',vortexGlow:'rgba(255,155,175,.7)',
+    vortexA:'#FF6B8A',vortexB:'#FF3B6B',vortexC:'#A8123A',
+    vortexCore:'rgba(255,240,245,.95)',vortexCoreFade:'rgba(255,59,107,0)',
+    acc0:'rgba(255,59,107,1)',acc1:'rgba(255,120,140,.95)',acc2:'rgba(160,80,190,.75)',
+    acc3:'rgba(25,240,216,.55)',acc4:'rgba(25,240,216,.2)',acc5:'rgba(25,240,216,0)',accSpoke:'#EAFFFB',
+    neb1:['rgba(25,240,216,A)','rgba(20,184,166,A)','rgba(255,59,107,A)','rgba(30,90,140,A)'],
+    neb2:['rgba(20,120,120,A)','rgba(25,240,216,A)','rgba(255,59,107,A)','rgba(10,60,80,A)'],
+    nebOp1:.07,nebOp2:.05,
+    beamA:'#B6FFF4',beamB:'#19F0D8',coreCol:'#FFFFFF',coreGlow:'#B6FFF4',
+    photon:'#CFFFF8',lens:'#FF3B6B',holeLight:'#FF3B6B',
+    boardIn:'vec3(0.0030,0.0120,0.0110)',boardOut:'vec3(0.0080,0.0280,0.0260)',frameCol:'#19F0D8',
+    blackColor:'#02070A',whiteColor:'#DFFFF6',stoneRim:'#19F0D8',
+    blackEm:[0.002,0.020,0.016],whiteEm:0x0E3A32,whiteEmInt:.26,blackEmInt:.24,
+    white2d1:'#FFFFFF',white2d2:'#DFFFF6',white2d3:'#B6E8E0',white2d4:'#8FCFC8',
+    black2d1:'#0C2E2C',black2d2:'#041A18',black2d3:'#02070A',
+    black2dRim:'rgba(25,240,216,.9)',black2dHi:'rgba(182,255,244,.55)',
+    cardGlass:'rgba(4,20,22,1)',cardLine1:'rgba(25,240,216,.30)',cardLine2:'rgba(255,59,107,.12)',
+    cardTicks:true,
+    trail:[0.6,1,0.95],debA:[0.6,1,0.95],debB:[1,0.35,0.5],dustA:[0.7,1,0.98],dustB:[1,0.4,0.55],
+    bloomStrength:.58,bloomThreshold:.62,bloomRadius:.50,
+    ambient:0x04161A,ambInt:.9,keyCol:0xB6FFF4,keyInt:1.0,rimCol:0xFF3B6B,rimInt:.6,
+    vigBase:.32,vigEnd:.48,scan:.55,chroma:2.6,glitch:1,neonFrame:true,
+  },
+};
+const COL=PALETTES[STYLE_ID]||PALETTES.gold;
+// 书封重制方案（待确认）：只影响 S1–S2 的书，其余分镜零改动
+const BOOK_ID=BOOK_STYLE||'seal';
+const TR_ID=TRANSITION||'pillar';            // 转场机制：pillar | fountain | helix | ripple
+const TR_PILLAR=TR_ID==='pillar';            // 现行光柱基线（书缝辉光/光污染强度按此分档）
+const ELIM_ID=ELIM_MODE||'hole';             // S4 淘汰机制：hole | taiji | singularity | ring
+const BOWL_ID=BOWL_MODE||'none';             // S6.5 棋盒：capsule | jar | holo | none
+const BOOK_STYLES={
+  seal:{glass:.27,pageOp:.55,backOp:.32,flame:'plasma',stones:'solid',lattice:'dots',innerPlate:false,scan:0,sealOp:.95,stoneR:.066,flameSize:.40},
+  holo:{glass:.26,pageOp:.34,backOp:.18,flame:'vector',stones:'wire',lattice:'dots',innerPlate:false,scan:.14,sealOp:1.0,stoneR:.060,flameSize:.40},
+  circuit:{glass:.44,pageOp:.62,backOp:.42,flame:'spark',stones:'solid',lattice:'pads',innerPlate:true,scan:0,sealOp:.85,stoneR:.068,flameSize:.38},
+};
+const BKC=BOOK_STYLES[BOOK_ID]||BOOK_STYLES.seal;
+const S = 0.15;                 // 棋盘格距（世界单位）——卡面迷你盘与大盘共用，全程不变（§6 铁律）
+const CARD = 0.72;              // 卡片边长
+const ARC_R = 3.20;             // v1.4：26 等分环位（13.85° 间距）下 0.72 卡不再压边
+const T_OPEN=16.0;                          // 开场片长：片内时间 = 对弈片 t + T_OPEN（t=0 ≡ 开场末帧，呼吸/旋柱相位连续）
+const DUR = T_OPEN + MOVES.length*PERIOD;   // 内部绝对时长（frame 钳制用）；对弈片自身时长 = MOVES.length*PERIOD
+// v1.9 时间轴：6.0–7.1 游框选将；S4 7.1–10.2（张开 0.55/淘汰 1.9/归一收拢 0.65）；S5 10.2–11.2；S6 同比例顺延 11.2–14.3；棋盒 14.25–16.0
+const T_SEL0=6.0,T_SEL1=7.1;          // 游框选将
+const T_HOLE0=7.1,T_HOLE1=7.65;       // 太极张开（v1.9：0.3→0.55s）
+const T_ELIM0=7.65;                   // 淘汰起始（v1.9 节拍 78→34ms）
+const T_HOLE_C0=9.55,T_HOLE_C1=10.2;  // 归一收拢（v1.9：0.2→0.65s）
+const T_FREEZE0=10.2,T_FREEZE1=11.2;  // 花月定格
+const T_GROW0=11.2;                   // S6 网格生长起点
+const S6_F=(14.3-11.2)/(12.0-9.2);    // S6 同比例顺延（2.8s → 3.1s，比值不变）
+const s6=t=>9.2+(t-T_GROW0)/S6_F;     // 新时间 → 原 S6 节拍时间
+
+/* ================= 工具 ================= */
+function mulberry32(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const clamp01=x=>Math.min(1,Math.max(0,x));
+const lerp=(a,b,u)=>a+(b-a)*u;
+const remap=(t,a,b)=>clamp01((t-a)/(b-a));
+const ease={
+  linear:u=>u,
+  smooth:u=>u*u*(3-2*u),
+  inCubic:u=>u*u*u,
+  outCubic:u=>1-Math.pow(1-u,3),
+  inOutCubic:u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2,
+  outQuart:u=>1-Math.pow(1-u,4),
+  inQuad:u=>u*u,
+  outBack:(u,s=1.25)=>{const c=s+1,p=u-1;return 1+c*p*p*p+s*p*p},
+};
+// 分段线性包络：[[t,v],...]
+function env(t,stops){if(t<=stops[0][0])return stops[0][1];for(let i=0;i<stops.length-1;i++){const[t0,v0]=stops[i],[t1,v1]=stops[i+1];if(t<=t1)return v0+(v1-v0)*(t-t0)/(t1-t0)}return stops[stops.length-1][1]}
+const DEG=Math.PI/180;
+// '#RRGGBB' → 'rgba(r,g,b,a)'（贴图绘制用）
+const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
+// 两色混合（v1.4 哑光卡面用：珠光白向卡底深色收，压到 bloom 阈值下）
+const mixHex=(a,b,u)=>{const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16);
+  const r=Math.round((n>>16&255)*(1-u)+(m>>16&255)*u),
+        g=Math.round((n>>8&255)*(1-u)+(m>>8&255)*u),
+        bl=Math.round((n&255)*(1-u)+(m&255)*u);
+  return `#${((r<<16)|(g<<8)|bl).toString(16).padStart(6,'0')}`};
+// 故障脉冲包络（确定性）：t 落在 [a,b] 内给出 0→1→0
+const burst=(t,a,b)=>t<a||t>b?0:Math.sin(Math.PI*(t-a)/(b-a));
+// 封面呼吸相位：周期 1.6s，1.6–2.2 加速到 1.0s（闭式积分，无状态）
+function breathPhase(t){
+  if(t<1.6) return 2*Math.PI*t/1.6;
+  const e=2.2; const ph=2*Math.PI+2*Math.PI*Math.log(1.6/(3.2-Math.min(t,e-1e-6)));
+  return t<e?ph:2*Math.PI+2*Math.PI*Math.log(1.6/1.0);
+}
+// 绯红漩涡转速 0.2→1.2 rad/s（积分）
+function vortexAngle(t){ return t<2.2 ? 0.2*t+t*t/4.4 : (0.2*2.2+2.2*2.2/4.4)+1.2*(t-2.2); }
+
+/* ================= 渲染器 / 场景 / 后期 ================= */
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(1); renderer.setSize(1920,1080);
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=COL.exposure;
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+// 深空底径向渐变（配色随风格）
+{
+  const c=document.createElement('canvas');c.width=c.height=1024;const x=c.getContext('2d');
+  const g=x.createRadialGradient(512,512,80,512,512,720);
+  g.addColorStop(0,COL.deepA);g.addColorStop(.6,COL.deepMid);g.addColorStop(1,COL.deepB);
+  x.fillStyle=g;x.fillRect(0,0,1024,1024);
+  const bg=new THREE.CanvasTexture(c);bg.colorSpace=THREE.SRGBColorSpace;scene.background=bg;
+}
+const camera=new THREE.PerspectiveCamera(42,1920/1080,0.05,200);
+
+scene.add(new THREE.AmbientLight(COL.ambient,COL.ambInt));
+const keyL=new THREE.DirectionalLight(COL.keyCol,COL.keyInt); keyL.position.set(2.5,4,3.5); scene.add(keyL);
+const rimL=new THREE.DirectionalLight(0x1FC8E0,COL.rimInt); // 对弈片：轮廓光青系（白子近景不染红；开场片 v1.8 同步换青）
+rimL.position.set(-3,1.5,-2.5); scene.add(rimL);
+const colLight=new THREE.PointLight(COL.beamA,0,6,2); colLight.position.set(0,2.2,0.3); scene.add(colLight);
+const holeLight=new THREE.PointLight(COL.holeLight,0,5,2); holeLight.position.set(0,0,0.4); scene.add(holeLight);
+
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(1920,1080),COL.bloomStrength,COL.bloomRadius,COL.bloomThreshold);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+// 赛博后处理：扫描线 / 色差 / 故障错位（强度为 0 时与原版逐像素一致）
+const postPass=new ShaderPass({
+  uniforms:{tDiffuse:{value:null},uRes:{value:new THREE.Vector2(1920,1080)},
+    uScan:{value:COL.scan},uChroma:{value:COL.chroma},uGlitch:{value:0}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform sampler2D tDiffuse;uniform vec2 uRes;uniform float uScan,uChroma,uGlitch;
+    varying vec2 vUv;
+    void main(){
+      vec2 uv=vUv;
+      // 行块水平错位（uGlitch 为 0 时完全不生效）
+      float row=floor(uv.y*54.0);
+      float h=fract(sin(row*91.7+uGlitch*13.0)*43758.5453);
+      uv.x+=(step(0.91,h)-0.5)*2.0*0.0024*uGlitch;
+      vec2 d=uv-0.5;
+      vec3 col;
+      col.r=texture2D(tDiffuse,uv+d*uChroma*0.001).r;
+      col.g=texture2D(tDiffuse,uv).g;
+      col.b=texture2D(tDiffuse,uv-d*uChroma*0.001).b;
+      float sl=0.5+0.5*sin(uv.y*uRes.y*2.0943951);
+      col*=1.0-uScan*0.22*sl;
+      gl_FragColor=vec4(col,1.0);
+    }`
+});
+composer.addPass(postPass);
+
+/* ================= 程序化纹理 ================= */
+function cnv(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function tex(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t}
+
+// 柔光点（辉光精灵通用）
+const glowTex=(()=>{const c=cnv(128,128),x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,2,64,64,62);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.22,COL.glow1);
+  g.addColorStop(.55,COL.glow2);g.addColorStop(1,COL.glow2.replace(/[\d.]+\)$/,'0)'));
+  x.fillStyle=g;x.fillRect(0,0,128,128);return tex(c)})();
+
+// 星位标：菱形（暗金版）/ 霓虹光点（赛博版，对应参考图）
+const diamondTex=(()=>{const c=cnv(64,64),x=c.getContext('2d');
+  x.translate(32,32);x.beginPath();x.moveTo(0,-22);x.lineTo(15,0);x.lineTo(0,22);x.lineTo(-15,0);x.closePath();
+  x.fillStyle=COL.markFill;x.fill();
+  x.strokeStyle=COL.markStroke;x.lineWidth=3.5;x.stroke();return tex(c)})();
+const dotTex=(()=>{const c=cnv(64,64),x=c.getContext('2d');
+  const g=x.createRadialGradient(32,32,0,32,32,22);
+  g.addColorStop(0,COL.markDot);g.addColorStop(.30,COL.markDot);
+  g.addColorStop(.55,COL.markGlow);g.addColorStop(1,COL.markGlow.replace(/[\d.]+\)$/,'0)'));
+  x.fillStyle=g;x.fillRect(0,0,64,64);
+  x.fillStyle='#FFFFFF';x.beginPath();x.arc(32,32,3.2,0,7);x.fill();
+  return tex(c)})();
+const markTex=COL.starMark==='dot'?dotTex:diamondTex;
+
+// 棋子软影（盘面落影）
+const shadowTex=(()=>{const c=cnv(128,128),x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,4,64,64,60);
+  g.addColorStop(0,'rgba(0,0,0,.55)');g.addColorStop(.6,'rgba(0,0,0,.30)');g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.beginPath();x.ellipse(64,64,58,50,0,0,7);x.fill();return tex(c)})();
+
+// 吸积盘：内缘亮绯红 → 外缘暗金
+const accretionTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
+  const g=x.createRadialGradient(128,128,80,128,128,128);
+  g.addColorStop(0,COL.acc0);g.addColorStop(.18,COL.acc1);
+  g.addColorStop(.38,COL.acc2);g.addColorStop(.62,COL.acc3);
+  g.addColorStop(.85,COL.acc4);g.addColorStop(1,COL.acc5);
+  x.fillStyle=g;x.fillRect(0,0,256,256);
+  // 径向亮辐条（随盘旋转）
+  x.globalAlpha=.10;x.strokeStyle=COL.accSpoke;
+  for(let i=0;i<28;i++){const a=i/28*2*Math.PI;x.beginPath();
+    x.moveTo(128+86*Math.cos(a),128+86*Math.sin(a));x.lineTo(128+124*Math.cos(a),128+124*Math.sin(a));
+    x.lineWidth=2+((i*7)%5);x.stroke()}
+  return tex(c)})();
+
+// v1.5 全息坍缩：吸积盘改青蓝全息谱（亮青心→电青→深蓝→透明），辐条冷青——中等亮度防 bloom 冲白
+const singAccTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
+  const g=x.createRadialGradient(128,128,80,128,128,128);
+  g.addColorStop(0,'rgba(90,200,240,.55)');g.addColorStop(.16,'rgba(30,150,200,.42)');
+  g.addColorStop(.38,'rgba(8,100,150,.30)');g.addColorStop(.62,'rgba(5,55,95,.18)');
+  g.addColorStop(.85,'rgba(3,28,60,.07)');g.addColorStop(1,'rgba(6,24,60,0)');
+  x.fillStyle=g;x.fillRect(0,0,256,256);
+  x.globalAlpha=.10;x.strokeStyle='#9FDCEE';
+  for(let i=0;i<28;i++){const a=i/28*2*Math.PI;x.beginPath();
+    x.moveTo(128+86*Math.cos(a),128+86*Math.sin(a));x.lineTo(128+124*Math.cos(a),128+124*Math.sin(a));
+    x.lineWidth=2+((i*7)%5);x.stroke()}
+  return tex(c)})();
+
+// v1.5 太极归一：单臂逗号形（头在上），含彼色鱼眼；另一臂由同贴图 mesh 旋转 180° 叠放
+// cy=直指青 / cr=斜指绯；底=暗青气场（taijiBaseTex）
+const TAIJI_R=196;
+function taijiArmTex(fam){
+  const c=cnv(512,512),x=c.getContext('2d'),R=TAIJI_R;
+  x.translate(256,256);
+  const main=fam==='cy'?'#04C7E8':'#F43F5E', hi=fam==='cy'?'#9BEEFF':'#FF8FA3',
+        eye=fam==='cy'?'#F43F5E':'#04C7E8';
+  // 逗号形：大弧(顶→底 经东) + 下小圆右半(底→心) + 上小圆左半(心→顶)——头在顶部
+  const path=()=>{x.beginPath();
+    x.arc(0,0,R,-Math.PI/2,Math.PI/2,false);
+    x.arc(0,R/2,R/2,Math.PI/2,-Math.PI/2,true);
+    x.arc(0,-R/2,R/2,Math.PI/2,-Math.PI/2,false);
+    x.closePath()};
+  // 填充：头部亮→尾部透的能量渐变（径向自头部圆心）——压亮度防 bloom 冲白
+  path();
+  const g=x.createRadialGradient(0,-R/2,10,0,-R/2,R*1.35);
+  g.addColorStop(0,rgba(hi,.42));g.addColorStop(.42,rgba(main,.24));g.addColorStop(1,rgba(main,.05));
+  x.fillStyle=g;x.fill();
+  // S 缘亮线（辉光）
+  path();x.strokeStyle=rgba(hi,.75);x.lineWidth=3.5;x.shadowColor=main;x.shadowBlur=16;x.stroke();
+  x.shadowBlur=0;
+  // 鱼眼（彼色）
+  x.fillStyle=rgba(eye,.72);x.shadowColor=eye;x.shadowBlur=10;
+  x.beginPath();x.arc(0,-R/2,R/5.6,0,7);x.fill();x.shadowBlur=0;
+  return tex(c);
+}
+const taijiArmCy=taijiArmTex('cy'),taijiArmCr=taijiArmTex('cr');
+const taijiBaseTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');
+  x.translate(256,256);
+  const g=x.createRadialGradient(0,0,20,0,0,TAIJI_R*1.12);
+  g.addColorStop(0,'rgba(10,34,58,.46)');g.addColorStop(.72,'rgba(8,24,44,.22)');g.addColorStop(1,'rgba(8,24,44,0)');
+  x.fillStyle=g;x.beginPath();x.arc(0,0,TAIJI_R*1.12,0,7);x.fill();
+  // 外缘细环（气场边界）
+  x.strokeStyle='rgba(155,238,255,.20)';x.lineWidth=2;
+  x.beginPath();x.arc(0,0,TAIJI_R+4,0,7);x.stroke();
+  return tex(c)})();
+
+// v1.5 星环收束：主环（亮细环）+ 副环（虚线细环，反向旋转）
+const ringTexMain=(()=>{const c=cnv(512,512),x=c.getContext('2d');
+  x.translate(256,256);
+  x.strokeStyle='rgba(4,199,232,.55)';x.lineWidth=10;x.shadowColor='#04C7E8';x.shadowBlur=30;
+  x.beginPath();x.arc(0,0,228,0,7);x.stroke();
+  x.shadowColor='#9BEEFF';x.shadowBlur=14;x.strokeStyle='rgba(207,248,255,.95)';x.lineWidth=3.5;
+  x.beginPath();x.arc(0,0,228,0,7);x.stroke();
+  return tex(c)})();
+const ringTexDash=(()=>{const c=cnv(512,512),x=c.getContext('2d');
+  x.translate(256,256);
+  x.strokeStyle='rgba(155,238,255,.85)';x.lineWidth=2.5;x.shadowColor='#04C7E8';x.shadowBlur=10;
+  for(let i=0;i<24;i++){const a0=i/24*2*Math.PI;
+    x.beginPath();x.arc(0,0,206,a0,a0+Math.PI/9);x.stroke()}
+  return tex(c)})();
+
+// 封面绯红漩涡
+const vortexTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');
+  x.translate(256,256);
+  for(let arm=0;arm<3;arm++){
+    const a0=arm*2*Math.PI/3;
+    for(let pass=0;pass<2;pass++){
+      x.beginPath();
+      for(let i=0;i<=120;i++){const th=i/120*13.5,r=16+9.6*th;
+        const px=r*Math.cos(a0+th),py=r*Math.sin(a0+th);i?x.lineTo(px,py):x.moveTo(px,py)}
+      if(pass===0){x.strokeStyle=COL.vortexWide;x.lineWidth=16;x.shadowColor=COL.vortexGlow;x.shadowBlur=22}
+      else{const g=x.createLinearGradient(-140,-140,140,140);
+        g.addColorStop(0,COL.vortexA);g.addColorStop(.55,COL.vortexB);g.addColorStop(1,COL.vortexC);
+        x.strokeStyle=g;x.lineWidth=5;x.shadowBlur=0}
+      x.stroke();
+    }
+  }
+  // 中心亮核
+  const g=x.createRadialGradient(0,0,0,0,0,26);
+  g.addColorStop(0,COL.vortexCore);g.addColorStop(1,COL.vortexCoreFade);
+  x.fillStyle=g;x.beginPath();x.arc(0,0,26,0,7);x.fill();
+  return tex(c)})();
+
+// 星云层
+function nebulaTex(seed,pal){const c=cnv(512,512),x=c.getContext('2d'),r=mulberry32(seed);
+  for(let i=0;i<46;i++){
+    const cx=256+(r()+r()+r()-1.5)*180,cy=256+(r()+r()+r()-1.5)*150,rad=30+r()*140;
+    const col=pal[(r()*pal.length)|0];
+    const g=x.createRadialGradient(cx,cy,0,cx,cy,rad);
+    g.addColorStop(0,col.replace('A',(0.05+r()*0.09).toFixed(3)));g.addColorStop(1,col.replace('A','0'));
+    x.fillStyle=g;x.fillRect(0,0,512,512);
+  }
+  // 边缘淡出
+  const m=x.createRadialGradient(256,256,140,256,256,260);
+  m.addColorStop(0,'rgba(0,0,0,1)');m.addColorStop(1,'rgba(0,0,0,0)');
+  x.globalCompositeOperation='destination-in';x.fillStyle=m;x.fillRect(0,0,512,512);
+  return tex(c)}
+const neb1=nebulaTex(20260101,COL.neb1);
+const neb2=nebulaTex(990311,COL.neb2);
+
+// 书页断面：纸叠横纹（翻开后仍读得出"书"）
+const pageTex=(()=>{const c=cnv(256,512),x=c.getContext('2d');
+  x.fillStyle=COL.pageBase;x.fillRect(0,0,256,512);
+  x.strokeStyle=COL.pageLine;x.lineWidth=1.2;
+  for(let y=6;y<512;y+=4){x.beginPath();x.moveTo(0,y);x.lineTo(256,y);x.stroke()}
+  const g=x.createLinearGradient(0,0,256,0);
+  g.addColorStop(0,COL.pageLight);g.addColorStop(.45,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.22)');
+  x.fillStyle=g;x.fillRect(0,0,256,512);return tex(c)})();
+
+// 书皮：漆器底 + 电路/点阵 + 边框；withBase=false 时输出透明底（玻璃封面用）
+function makeCoverTex(withBase){const c=cnv(512,704),x=c.getContext('2d');
+  if(withBase){
+    const g=x.createLinearGradient(0,0,0,704);
+    g.addColorStop(0,COL.coverTop);g.addColorStop(.5,COL.coverMid);g.addColorStop(1,COL.coverBot);
+    x.fillStyle=g;x.fillRect(0,0,512,704);
+  }
+  if(COL.coverCircuit){
+    // PCB 地纹网格（整幅细线，任何镜头距离都读得出"电路板"）
+    x.strokeStyle=COL.coverGrid;x.lineWidth=1;
+    for(let gx=22;gx<492;gx+=48){x.beginPath();x.moveTo(gx,22);x.lineTo(gx,682);x.stroke()}
+    for(let gy=22;gy<690;gy+=48){x.beginPath();x.moveTo(22,gy);x.lineTo(490,gy);x.stroke()}
+    // 电路走线（正交折线 + 焊点），避开中央漩涡区，带霓虹辉光
+    const r=mulberry32(77);
+    x.strokeStyle=COL.coverMesh;x.fillStyle=COL.coverMesh;
+    x.save();x.lineWidth=3.2;x.shadowColor=COL.coverBorder1;x.shadowBlur=10;
+    for(let n=0;n<52;n++){
+      let px=34+r()*444,py=34+r()*636;
+      const pts=[[px,py]];let ok=Math.hypot(px-256,py-352)>150;
+      for(let s=0;s<4;s++){
+        const horiz=s%2===0,len=24+r()*66,dir=r()<.5?-1:1;
+        px+=horiz?dir*len:0;py+=horiz?0:dir*len;
+        pts.push([px,py]);
+        if(Math.hypot(px-256,py-352)<150)ok=false;
+      }
+      if(!ok||px<26||px>486||py<26||py>678)continue;
+      x.beginPath();x.moveTo(pts[0][0],pts[0][1]);
+      for(let q=1;q<pts.length;q++)x.lineTo(pts[q][0],pts[q][1]);
+      x.stroke();
+      const e=pts[pts.length-1];x.fillRect(e[0]-3.5,e[1]-3.5,7,7);
+    }
+    x.restore();
+    // 芯片块（小 IC 轮廓，散布在漩涡外）
+    const rc=mulberry32(131);
+    x.strokeStyle=COL.coverBorder1;x.lineWidth=1.6;x.fillStyle=COL.coverMesh;
+    for(let n=0;n<7;n++){
+      const px=44+rc()*424,py=44+rc()*612;
+      if(Math.hypot(px-256,py-352)<190)continue;
+      const w=16+rc()*22,h=10+rc()*12;
+      x.strokeRect(px-w/2,py-h/2,w,h);
+      for(let p=-1;p<=1;p++)x.fillRect(px+p*5-1,py-h/2-4,2,3);
+    }
+    // 漩涡外环：虚线仪表盘
+    x.strokeStyle=COL.coverBorder2;x.lineWidth=1.6;
+    x.setLineDash([7,9]);
+    x.beginPath();x.arc(256,352,168,0,7);x.stroke();
+    x.setLineDash([]);
+  }else{
+    // 菱形点阵（避开中央漩涡区）
+    x.strokeStyle=COL.coverMesh;x.lineWidth=1.6;
+    const step=42;
+    for(let iy=2;iy<704/step-1;iy++)for(let ix=2;ix<512/step-1;ix++){
+      const px=ix*step,py=iy*step,d=Math.hypot(px-256,py-352);
+      if(d<150||d>330)continue;
+      const s=7+2*Math.sin(ix*1.7+iy*2.3);
+      x.beginPath();x.moveTo(px,py-s);x.lineTo(px+s,py);x.lineTo(px,py+s);x.lineTo(px-s,py);x.closePath();x.stroke();
+    }
+  }
+  // 双线边框（外框带霓虹辉光）
+  x.save();x.shadowColor=COL.coverBorder1;x.shadowBlur=12;
+  x.strokeStyle=COL.coverBorder1;x.lineWidth=3;x.strokeRect(22,22,468,660);
+  x.restore();
+  x.strokeStyle=COL.coverBorder2;x.lineWidth=1.5;x.strokeRect(34,34,444,636);
+  return tex(c)}
+const coverTex=makeCoverTex(true);
+const coverArtTex=makeCoverTex(false);
+
+/* ================= v1.2 书封：四子封印 / 半透明玻璃 ================= */
+// 四子方位：菱形圆阵（45°/135°/225°/315°），半径 0.30
+const BOOK_STONE_POS=[[0.212,0.212],[-0.212,0.212],[-0.212,-0.212],[0.212,-0.212]];
+// 每颗棋子的能量焰（程序化，透明底；blending=Additive）
+function makeFlameTex(i){
+  const S=256,c=cnv(S,S),x=c.getContext('2d'),R=mulberry32(900+i*37),cx=128,cy=128;
+  const kind=BKC.flame;
+  x.globalCompositeOperation='lighter';x.lineCap='round';
+  const arc=(rad,a0,span,dir,lw,col,blur,wob)=>{
+    x.strokeStyle=col;x.lineWidth=lw;x.shadowColor=col;x.shadowBlur=blur;
+    x.beginPath();
+    for(let q=0;q<=24;q++){
+      const u=q/24,ang=a0+dir*span*u;
+      const rr=rad+(wob?wob*(0.55+0.45*Math.sin(u*9))*Math.sin(u*Math.PI):0);
+      const px=cx+Math.cos(ang)*rr,py=cy+Math.sin(ang)*rr;
+      q?x.lineTo(px,py):x.moveTo(px,py);
+    }
+    x.stroke();
+  };
+  if(kind==='plasma'){
+    const TAU=Math.PI*2;
+    // 柔光底：石缘一圈红色能量雾
+    const rg=x.createRadialGradient(cx,cy,44,cx,cy,122);
+    rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(.34,rgba(COL.crimson,.20));
+    rg.addColorStop(.62,rgba(COL.crimson,.09));rg.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=rg;x.beginPath();x.arc(cx,cy,122,0,TAU);x.fill();
+    // 宽焰 / 主焰 / 亮焰 / 青高光：长弧旋绕，留出缺口，避免糊成一圈
+    for(let n=0;n<8;n++)arc(58+R()*10,R()*TAU,1.2+R()*1.4,R()<.5?1:-1,10+R()*8,rgba(COL.crimson,.12),24,16);
+    for(let n=0;n<14;n++)arc(54+R()*14,R()*TAU,0.9+R()*1.2,R()<.5?1:-1,3.5+R()*4,rgba(COL.crimson,.30),11,9);
+    for(let n=0;n<9;n++)arc(58+R()*10,R()*TAU,0.5+R()*.9,R()<.5?1:-1,1.5+R()*1.4,rgba(COL.crimsonHi,.38),6,5);
+    for(let n=0;n<5;n++)arc(62+R()*10,R()*TAU,0.4+R()*.5,R()<.5?1:-1,1.1+R()*.8,rgba(COL.goldHi,.36),5,4);
+    // 向外火舌（切向甩出，二次曲线）
+    for(let n=0;n<12;n++){
+      const a=R()*TAU,r0=64+R()*10,r1=r0+8+R()*22,bend=(R()-.5)*1.1;
+      x.strokeStyle=rgba(n%3?COL.crimsonHi:COL.gold,.18);
+      x.lineWidth=1.2+R()*1.3;x.shadowColor=COL.crimsonHi;x.shadowBlur=7;
+      const p0=[cx+Math.cos(a)*r0,cy+Math.sin(a)*r0];
+      const p1=[cx+Math.cos(a+bend)*((r0+r1)/2),cy+Math.sin(a+bend)*((r0+r1)/2)];
+      const p2=[cx+Math.cos(a+bend*1.6)*r1,cy+Math.sin(a+bend*1.6)*r1];
+      x.beginPath();x.moveTo(p0[0],p0[1]);x.quadraticCurveTo(p1[0],p1[1],p2[0],p2[1]);x.stroke();
+    }
+  }else if(kind==='vector'){
+    for(let n=0;n<6;n++)arc(52+R()*6,n*Math.PI/3+R()*.4,1.0+R()*.5,1,1.6,rgba(COL.gold,.75),8,3);
+    for(let n=0;n<4;n++)arc(62+R()*10,R()*Math.PI*2,0.6+R()*.6,-1,1.2,rgba(COL.crimsonHi,.8),7,2);
+    for(let n=0;n<12;n++){
+      const a=R()*Math.PI*2,rr=74+R()*20;
+      x.fillStyle=rgba(COL.goldHi,.8);x.shadowColor=COL.gold;x.shadowBlur=6;
+      x.beginPath();x.arc(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,1.6+R()*1.4,0,7);x.fill();
+    }
+  }else{ // spark：玻璃刻印的细碎迸发
+    for(let n=0;n<30;n++){
+      const a=R()*Math.PI*2,r0=48+R()*6,r1=r0+3+R()*15;
+      x.strokeStyle=n%4?rgba(COL.crimsonHi,.48):rgba(COL.gold,.6);
+      x.lineWidth=n%4?1.1:1.5;x.shadowColor=COL.crimsonHi;x.shadowBlur=2;
+      x.beginPath();x.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);x.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);x.stroke();
+    }
+    x.setLineDash([5,7]);
+    for(let n=0;n<2;n++){
+      x.strokeStyle=rgba(COL.crimsonHi,.35);x.lineWidth=1.4;
+      x.beginPath();x.arc(cx,cy,70+n*7,0,7);x.stroke();
+    }
+    x.setLineDash([]);
+  }
+  return tex(c);
+}
+// 封印外环：主环 + 刻度环 + 四段连接弧 + 柔光带（1024 贴图，石位半径 384px = 0.30 世界）
+const sealRingTex=(()=>{const S=1024,c=cnv(S,S),x=c.getContext('2d'),cx=512,cy=512;
+  x.globalCompositeOperation='lighter';
+  const g=x.createRadialGradient(cx,cy,320,cx,cy,440);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.62,rgba(COL.crimson,.16));
+  g.addColorStop(.72,rgba(COL.crimsonHi,.10));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.beginPath();x.arc(cx,cy,440,0,7);x.fill();
+  x.strokeStyle=rgba(COL.crimson,.55);x.lineWidth=10;x.shadowColor=COL.crimsonHi;x.shadowBlur=24;
+  x.beginPath();x.arc(cx,cy,384,0,7);x.stroke();
+  x.strokeStyle=rgba(COL.gold,.45);x.lineWidth=2;x.shadowColor=COL.gold;x.shadowBlur=10;
+  x.beginPath();x.arc(cx,cy,348,0,7);x.stroke();
+  x.setLineDash([10,14]);x.strokeStyle=rgba(COL.goldHi,.5);x.lineWidth=2;
+  x.beginPath();x.arc(cx,cy,420,0,7);x.stroke();x.setLineDash([]);
+  for(let k=0;k<4;k++){
+    const a0=Math.PI/4+k*Math.PI/2+0.28,span=Math.PI/2-0.56;
+    x.strokeStyle=rgba(COL.crimsonHi,.35);x.lineWidth=6;x.shadowColor=COL.crimsonHi;x.shadowBlur=18;
+    x.beginPath();x.arc(cx,cy,384,a0,a0+span);x.stroke();
+  }
+  return tex(c)})();
+// 中央点阵：7×7 圆域点阵（circuit 方案用焊盘方块）
+const latticeTex=(()=>{const S=512,c=cnv(S,S),x=c.getContext('2d'),cx=256,cy=256;
+  x.globalCompositeOperation='lighter';const clipR=232,step=60;
+  for(let iy=-3;iy<=3;iy++)for(let ix=-3;ix<=3;ix++){
+    const px=cx+ix*step,py=cy+iy*step;
+    if(Math.hypot(ix*step,iy*step)>clipR)continue;
+    if(BKC.lattice==='pads'){
+      x.fillStyle=rgba(COL.gold,.55);x.shadowColor=COL.gold;x.shadowBlur=8;x.fillRect(px-3,py-3,6,6);
+    }else{
+      x.fillStyle=rgba(COL.goldHi,.75);x.shadowColor=COL.gold;x.shadowBlur=9;
+      x.beginPath();x.arc(px,py,3.4,0,7);x.fill();
+    }
+  }
+  x.strokeStyle=rgba(COL.gold,.35);x.lineWidth=1.5;x.shadowColor=COL.gold;x.shadowBlur=8;
+  x.beginPath();x.arc(cx,cy,clipR+8,0,7);x.stroke();
+  return tex(c)})();
+// 内衬：透过玻璃看到的暗色内层（中心实、边缘透）+ 三道内光
+const innerPlateTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  const g=x.createRadialGradient(256,352,60,256,352,430);
+  g.addColorStop(0,'rgba(3,14,26,.70)');g.addColorStop(.55,'rgba(3,12,22,.62)');
+  g.addColorStop(.8,'rgba(3,12,22,.30)');g.addColorStop(1,'rgba(3,12,22,0)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.globalCompositeOperation='lighter';
+  for(const yy of [0.32,0.5,0.68]){
+    const lg=x.createLinearGradient(70,0,W-70,0);
+    lg.addColorStop(0,'rgba(0,0,0,0)');lg.addColorStop(.35,rgba(COL.gold,.22));
+    lg.addColorStop(.65,rgba(COL.gold,.22));lg.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=lg;x.fillRect(70,H*yy-1.2,W-140,2.4);
+  }
+  return tex(c)})();
+// 封面霓虹框（圆角，盖在最上层）
+const coverFrameTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  x.strokeStyle=COL.frameCol;x.lineWidth=7;x.shadowColor=COL.frameCol;x.shadowBlur=24;
+  x.beginPath();x.roundRect(20,20,472,664,26);x.stroke();
+  x.strokeStyle=rgba(COL.goldHi,.55);x.lineWidth=1.5;x.shadowColor=COL.frameCol;x.shadowBlur=8;
+  x.beginPath();x.roundRect(28,28,456,648,20);x.stroke();
+  return tex(c)})();
+// 全息扫描线（holo 方案）
+const holoScanTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  x.globalCompositeOperation='lighter';x.fillStyle=rgba(COL.gold,.5);
+  for(let y=0;y<H;y+=5)x.fillRect(0,y,W,1);
+  const g=x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.5,rgba(COL.gold,.10));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  return tex(c)})();
+// 玻璃内部的书页层线（加色；透过封面看到的一叠"光页"）
+const innerPagesTex=(()=>{const W=256,H=512,c=cnv(W,H),x=c.getContext('2d');
+  x.globalCompositeOperation='lighter';
+  for(let y=6;y<H;y+=7){x.fillStyle=rgba(COL.gold,.075);x.fillRect(0,y,W,1.2);}
+  const g=x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.5,rgba(COL.gold,.10));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  return tex(c)})();
+// 玻璃高光条（竖向导光，读作玻璃反射）
+const glassGlareTex=(()=>{const W=512,H=704,c=cnv(W,H),x=c.getContext('2d');
+  x.globalCompositeOperation='lighter';
+  for(const [ox,wd,a] of [[64,36,.11],[150,12,.05],[326,48,.08],[426,10,.045]]){
+    const g=x.createLinearGradient(ox,0,ox+wd,0);
+    g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.5,rgba(COL.goldHi,a));g.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=g;x.fillRect(ox,0,wd,H);
+  }
+  return tex(c)})();
+
+// 卡面底图（无名称版，§5）：黑曜玻璃 + 描边 + 软影；kind: gold/crimson；hero=true 时不画网格棋子（用 3D）
+function cardBaseTex(kind,hero,stones){
+  const c=cnv(512,512),x=c.getContext('2d');
+  const bd=kind==='gold'?COL.gold:COL.crimson, bh=kind==='gold'?COL.goldHi:COL.crimsonHi;
+  const P=(gx,gy)=>[256+gx*106.667,256-gy*106.667];
+  // 玻璃底 + 冷边菲涅尔
+  const rr=(x0,y0,w,h,r)=>{x.beginPath();x.roundRect(x0,y0,w,h,r)};
+  rr(14,14,484,484,34);x.fillStyle=COL.cardGlass;x.fill();
+  rr(20,20,472,472,28);x.strokeStyle=COL.cardLine1;x.lineWidth=3;x.stroke();
+  rr(26,26,460,460,24);x.strokeStyle=COL.cardLine2;x.lineWidth=6;x.stroke();
+  // 描边（主）+ 外辉
+  rr(14,14,484,484,34);x.strokeStyle=bd;x.lineWidth=9;x.stroke();
+  rr(14,14,484,484,34);x.strokeStyle=rgba(bh,.33);
+  x.lineWidth=20;x.stroke();
+  if(COL.cardTicks){
+    // HUD 四角括号（赛博版）
+    x.strokeStyle=rgba(bd,.85);x.lineWidth=7;const a=44,b=44,L=56;
+    x.beginPath();
+    x.moveTo(a,b+L);x.lineTo(a,b);x.lineTo(a+L,b);
+    x.moveTo(512-a-L,b);x.lineTo(512-a,b);x.lineTo(512-a,b+L);
+    x.moveTo(a,512-b-L);x.lineTo(a,512-b);x.lineTo(a+L,512-b);
+    x.moveTo(512-a-L,512-b);x.lineTo(512-a,512-b);x.lineTo(512-a,512-b-L);
+    x.stroke();
+  }
+  if(!hero){
+    // 迷你 5×5 网格：α0.55，外框略亮
+    x.strokeStyle=rgba(COL.grid,.55);x.lineWidth=3;
+    for(let i=-2;i<=2;i++){
+      const a=P(i,-2),b=P(i,2);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();
+      const d=P(-2,i),e=P(2,i);x.beginPath();x.moveTo(d[0],d[1]);x.lineTo(e[0],e[1]);x.stroke();
+    }
+    x.strokeStyle=rgba(COL.goldHi,.85);x.lineWidth=4.5;
+    const f1=P(-2,-2),f2=P(2,-2),f3=P(2,2),f4=P(-2,2);
+    x.beginPath();x.moveTo(f1[0],f1[1]);x.lineTo(f2[0],f2[1]);x.lineTo(f3[0],f3[1]);x.lineTo(f4[0],f4[1]);x.closePath();x.stroke();
+    // 天元小菱形（层序在棋子之下）
+    x.save();x.translate(256,256);x.strokeStyle=rgba(COL.goldHi,.8);x.lineWidth=3;
+    x.beginPath();x.moveTo(0,-8);x.lineTo(5.5,0);x.lineTo(0,8);x.lineTo(-5.5,0);x.closePath();x.stroke();x.restore();
+  }
+  // 三子软影（α0.3）
+  for(const st of stones){const p=P(st[0],st[1]);
+    const g=x.createRadialGradient(p[0]+4,p[1]+6,3,p[0]+4,p[1]+6,46);
+    g.addColorStop(0,'rgba(0,0,0,.34)');g.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=g;x.beginPath();x.arc(p[0]+4,p[1]+6,46,0,7);x.fill()}
+  if(!hero){
+    // 棋子（黑1 白2 黑3；直径≈0.78 格距）
+    for(const st of stones)drawStone2D(x,P(st[0],st[1])[0],P(st[0],st[1])[1],41,st[2]==='w');
+  }
+  return tex(c)}
+function drawStone2D(x,px,py,r,white){
+  if(white){
+    // v1.4：卡面白子改哑光（与卡底深色混 42%），不触发 bloom；点亮交给运行时
+    const mw=k=>mixHex(COL['white2d'+k],COL.lacquer,.42);
+    const g=x.createRadialGradient(px-r*.3,py-r*.35,r*.1,px,py,r);
+    g.addColorStop(0,mw(1));g.addColorStop(.35,mw(2));g.addColorStop(.8,mw(3));g.addColorStop(1,mw(4));
+    x.fillStyle=g;x.beginPath();x.arc(px,py,r,0,7);x.fill();
+    x.fillStyle=mixHex('#FFFFFF',COL.lacquer,.5);x.globalAlpha=.55;
+    x.beginPath();x.arc(px-r*.32,py-r*.38,r*.14,0,7);x.fill();x.globalAlpha=1;
+    x.strokeStyle=COL.black2dRim;x.globalAlpha=.62;x.lineWidth=3;      // v1.6：白子同款光圈
+    x.beginPath();x.arc(px,py,r-1.5,0,7);x.stroke();x.globalAlpha=1;
+  }else{
+    const g=x.createRadialGradient(px-r*.3,py-r*.35,r*.1,px,py,r);
+    g.addColorStop(0,COL.black2d1);g.addColorStop(.55,COL.black2d2);g.addColorStop(1,COL.black2d3);
+    x.fillStyle=g;x.beginPath();x.arc(px,py,r,0,7);x.fill();
+    x.strokeStyle=COL.black2dRim;x.lineWidth=3;x.beginPath();x.arc(px,py,r-1.5,0,7);x.stroke();
+    x.fillStyle=COL.black2dHi;x.beginPath();x.arc(px-r*.32,py-r*.38,r*.13,0,7);x.fill();
+  }}
+
+/* ================= 星空 ================= */
+const starGroup=new THREE.Group();scene.add(starGroup);
+{
+  const N=3200,r=mulberry32(42);
+  const pos=new Float32Array(N*3),col=new Float32Array(N*3),siz=new Float32Array(N),ph=new Float32Array(N);
+  const cw=new THREE.Color(COL.starWarm),cg=new THREE.Color(COL.starGold);
+  for(let i=0;i<N;i++){
+    const u=r()*2-1,th=r()*2*Math.PI,rad=60+r()*80,sq=Math.sqrt(1-u*u);
+    pos[i*3]=rad*sq*Math.cos(th);pos[i*3+1]=rad*u;pos[i*3+2]=rad*sq*Math.sin(th);
+    const cc=r()<0.03?cg:cw,v=.6+r()*.4;
+    col[i*3]=cc.r*v;col[i*3+1]=cc.g*v;col[i*3+2]=cc.b*v;
+    siz[i]=r()<0.02?2.2+r()*.9:.3+r()*.9; ph[i]=r();
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+  g.setAttribute('aSize',new THREE.BufferAttribute(siz,1));
+  g.setAttribute('aPhase',new THREE.BufferAttribute(ph,1));
+  var starMat=new THREE.ShaderMaterial({
+    uniforms:{uTime:{value:0},uBoost:{value:1},uScale:{value:880}},
+    vertexShader:`attribute float aSize;attribute float aPhase;attribute vec3 aColor;
+      uniform float uTime,uBoost,uScale;varying vec3 vC;varying float vA;
+      void main(){vC=aColor;
+        float tw=0.62+0.38*sin(uTime*(0.5+aPhase*1.3)+aPhase*6.2831);
+        vA=tw*uBoost;
+        vec4 mv=modelViewMatrix*vec4(position,1.0);
+        gl_PointSize=aSize*uScale/max(1.0,-mv.z);
+        gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`varying vec3 vC;varying float vA;
+      void main(){float d=length(gl_PointCoord-0.5);
+        float a=smoothstep(0.5,0.08,d)*vA;
+        if(a<0.012)discard;
+        gl_FragColor=vec4(vC*(0.6+0.8*vA),a);}`,
+    transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  starGroup.add(new THREE.Points(g,starMat));
+}
+const nebP1=new THREE.Mesh(new THREE.PlaneGeometry(64,40),new THREE.MeshBasicMaterial({map:neb1,transparent:true,opacity:COL.nebOp1,depthWrite:false,blending:THREE.AdditiveBlending}));
+nebP1.position.set(-6,3,-32);scene.add(nebP1);
+const nebP2=new THREE.Mesh(new THREE.PlaneGeometry(52,34),new THREE.MeshBasicMaterial({map:neb2,transparent:true,opacity:COL.nebOp2,depthWrite:false,blending:THREE.AdditiveBlending}));
+nebP2.position.set(12,-4,-34);scene.add(nebP2);
+
+/* ================= 相机关键帧（分段 Catmull-Rom + 分段缓动） ================= */
+const CK=[
+  {t:0.0, p:[4.8,1.05,5.6], l:[0,0.05,0]},
+  {t:2.2, p:[1.5,0.75,3.9], l:[0,0.05,0]},
+  {t:3.4, p:[0.0,0.85,4.4], l:[0,0.55,0]},
+  {t:5.2, p:[0.0,1.00,10.70],l:[0,0.10,0]},
+  {t:7.1, p:[0.0,1.05,10.90],l:[0,0.05,0]},     // v1.4：S4/S5 后移 0.7s
+  {t:8.67, p:[0.0,1.05,10.50],l:[0,0.10,0.08]},
+  {t:10.2, p:[0.0,1.15,7.0], l:[0,0.30,0.6]},
+  {t:10.8, p:[0.0,1.15,4.5], l:[0,0.78,2.75]},   // 卡到位于屏高52%，相机同步就位持镜
+  {t:11.2, p:[0.0,0.95,4.5], l:[0,0.78,2.75]},
+  {t:11.333,p:[1.15,0.72,2.9], l:[0,0.35,1.3]}, // 溶解期右侧绕行，避开卡面
+  {t:11.532,p:[0.0,0.52,1.58], l:[0,0,0]},       // 低角 20°
+  {t:12.418,p:[0.0,1.38,2.15], l:[0,0,0]},
+  {t:13.193,p:[0.0,2.55,1.35], l:[0,0,0]},
+  {t:13.746,p:[0.0,3.33,0.29], l:[0,0,0]},       // 俯角 85°，全盘入画占屏高82%
+  {t:14.25,p:[0.0,3.30,0.25], l:[0,0,0]},        // 盘定版持镜（原 13.0 终键）
+  {t:15.10,p:[0.0,3.60,0.32], l:[0,0,0]},        // v1.7：轻拉让位棋盒
+  {t:16.0,p:[0.0,3.60,0.32], l:[0,0,0]},
+];
+// 经典 CR 基（端点精确：u=0→k1，u=1→k2）
+const crSeg=(p0,p1,p2,p3,u)=>{const u2=u*u,u3=u2*u;
+  return 0.5*(2*p1+(-p0+p2)*u+(2*p0-5*p1+4*p2-p3)*u2+(-p0+3*p1-3*p2+p3)*u3)};
+const _cp=new THREE.Vector3(),_cl=new THREE.Vector3();
+function camAt(t){
+  let i=0;while(i<CK.length-2&&t>CK[i+1].t)i++;
+  const k0=CK[Math.max(0,i-1)],k1=CK[i],k2=CK[i+1],k3=CK[Math.min(CK.length-1,i+2)];
+  const u=ease.smooth(remap(t,k1.t,k2.t));
+  for(let a=0;a<3;a++){
+    _cp.setComponent(a,crSeg(k0.p[a],k1.p[a],k2.p[a],k3.p[a],u));
+    _cl.setComponent(a,crSeg(k0.l[a],k1.l[a],k2.l[a],k3.l[a],u));
+  }
+  camera.position.copy(_cp);camera.lookAt(_cl);
+}
+
+/* ================= S1–S2 星空浮书 ================= */
+const book=new THREE.Group();scene.add(book);
+const coverPivot=new THREE.Group();          // 绕书脊（局部 -x 端）翻转
+{
+  const W=0.95,H=1.30,SP=-W/2;               // 书脊在局部 x=-0.475
+  coverPivot.position.set(SP,0,0);
+  // 半透明玻璃封面（v1.2）：深蓝玻璃基板 + 透明底电路图 + 内衬 + 霓虹框
+  const glassM=new THREE.MeshStandardMaterial({color:0x081624,roughness:.08,metalness:.35,
+    transparent:true,opacity:BKC.glass,depthWrite:false});
+  const darkM=new THREE.MeshStandardMaterial({color:COL.coverSide,roughness:.45,metalness:.25});
+  const edgeM=new THREE.MeshStandardMaterial({color:0x06202E,roughness:.25,metalness:.4,
+    emissive:COL.gold,emissiveIntensity:.55});
+  const cover=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.035),[edgeM,darkM,darkM,darkM,glassM,darkM]);
+  cover.position.x=W/2;cover.renderOrder=1;coverPivot.add(cover);
+  book.add(coverPivot);
+  // 内衬（透过玻璃看到的暗色内层；holo 方案不设，直接透见书页）
+  var innerPlate=new THREE.Mesh(new THREE.PlaneGeometry(W*0.94,H*0.96),
+    new THREE.MeshBasicMaterial({map:innerPlateTex,transparent:true,depthWrite:false}));
+  innerPlate.position.set(W/2,0,-0.004);innerPlate.renderOrder=0;
+  innerPlate.visible=BKC.innerPlate;coverPivot.add(innerPlate);
+  // 玻璃内透光（半透明的关键读感：封面板下有微光）
+  var innerCore=new THREE.Mesh(new THREE.PlaneGeometry(W*0.86,H*0.88),
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.gold,transparent:true,opacity:.30,
+      depthWrite:false,blending:THREE.AdditiveBlending}));
+  innerCore.position.set(W/2,0,-0.012);innerCore.renderOrder=0;coverPivot.add(innerCore);
+  // 透过玻璃可见的书页层线（加色，仅亮线参与）
+  var innerPages=new THREE.Mesh(new THREE.PlaneGeometry(0.90,1.24),
+    new THREE.MeshBasicMaterial({map:innerPagesTex,transparent:true,opacity:.9,
+      depthWrite:false,blending:THREE.AdditiveBlending}));
+  innerPages.position.set(W/2,0,-0.016);innerPages.renderOrder=0;coverPivot.add(innerPages);
+  // 玻璃上的电路图（透明底，加色）
+  var coverArt=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
+    new THREE.MeshBasicMaterial({map:coverArtTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.5}));
+  coverArt.position.set(W/2,0,0.0185);coverArt.renderOrder=2;coverPivot.add(coverArt);
+  // 玻璃高光条
+  var glassGlare=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
+    new THREE.MeshBasicMaterial({map:glassGlareTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.9}));
+  glassGlare.position.set(W/2,0,0.0192);glassGlare.renderOrder=2;coverPivot.add(glassGlare);
+  // 书页 + 封底（书体，不随封面翻）；半透明，星空可隐约透过
+  const pageMat=new THREE.MeshStandardMaterial({map:pageTex,roughness:.85,
+    transparent:true,opacity:BKC.pageOp});
+  const pages=new THREE.Mesh(new THREE.BoxGeometry(0.90,1.24,0.075),pageMat);
+  pages.position.set(0.01,0,-0.06);book.add(pages);
+  const backMat=new THREE.MeshStandardMaterial({color:COL.coverSide,roughness:.4,metalness:.3,
+    transparent:true,opacity:BKC.backOp,depthWrite:false});
+  const back=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.03),backMat);back.position.set(0,0,-0.098);book.add(back);
+  // 书脊光线（激活时亮起蔓延）
+  var spineA=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:COL.goldHi,transparent:true,opacity:0}));
+  spineA.position.set(SP,0,0);book.add(spineA);
+  var spineB=new THREE.Mesh(new THREE.BoxGeometry(0.016,1.28,0.016),new THREE.MeshBasicMaterial({color:COL.goldHi,transparent:true,opacity:0}));
+  spineB.position.set(SP-0.028,0,0);book.add(spineB);
+  // 封面封印组（随封面翻）
+  var coverDeco=new THREE.Group();coverDeco.position.set(W/2,0,0.020);coverPivot.add(coverDeco);
+  // 封印外环
+  var sealRing=new THREE.Mesh(new THREE.PlaneGeometry(0.88,0.88),
+    new THREE.MeshBasicMaterial({map:sealRingTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:BKC.sealOp}));
+  sealRing.renderOrder=3;coverDeco.add(sealRing);
+  // 每颗棋子一圈能量焰（可独立旋转）
+  var bookFlames=[];
+  BOOK_STONE_POS.forEach((p,i)=>{
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(BKC.flameSize,BKC.flameSize),
+      new THREE.MeshBasicMaterial({map:makeFlameTex(i),transparent:true,depthWrite:false,
+        blending:THREE.AdditiveBlending,opacity:.95}));
+    fl.position.set(p[0],p[1],0);fl.renderOrder=5;coverDeco.add(fl);
+    bookFlames.push(fl);
+  });
+  // 中央点阵（取代原漩涡）
+  var bookLattice=new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.62),
+    new THREE.MeshBasicMaterial({map:latticeTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.95}));
+  bookLattice.position.z=0.001;bookLattice.renderOrder=4;coverDeco.add(bookLattice);
+  // 四颗棋子（菱形圆阵）+ 霓虹环；呼吸相位依次差 0.4s
+  var ringStones=[];
+  const rseed=mulberry32(7);
+  BOOK_STONE_POS.forEach((p,i)=>{
+    const stMat=new THREE.MeshStandardMaterial({color:COL.obsidian,roughness:.16,metalness:.62,
+      emissive:BKC.stones==='wire'?COL.coverEmissive:0x000000,
+      emissiveIntensity:BKC.stones==='wire'?.10:0,
+      transparent:BKC.stones==='wire',opacity:BKC.stones==='wire'?.82:1});
+    const st=new THREE.Mesh(new THREE.SphereGeometry(BKC.stoneR,24,16),stMat);
+    st.scale.z=.62;st.position.set(p[0],p[1],0.004);st.renderOrder=6;coverDeco.add(st);
+    const rimMat=new THREE.MeshBasicMaterial({color:COL.gold,transparent:true,
+      opacity:BKC.stones==='wire'?.28:.14,blending:THREE.AdditiveBlending,side:THREE.BackSide});
+    const rim=new THREE.Mesh(new THREE.SphereGeometry(BKC.stoneR*1.08,20,14),rimMat);
+    rim.scale.z=.62;rim.position.copy(st.position);rim.renderOrder=6;coverDeco.add(rim);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(BKC.stoneR*1.26,BKC.stoneR*.11,10,40),
+      new THREE.MeshStandardMaterial({color:COL.crimson,emissive:COL.crimsonHi,emissiveIntensity:.28,roughness:.35,metalness:.25}));
+    ring.position.set(p[0],p[1],0.006);ring.renderOrder=7;coverDeco.add(ring);
+    ringStones.push({ring,rim,i,ph:i*0.4,base:rseed()});
+  });
+  // 封面霓虹框（最上层）
+  var coverFrame=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
+    new THREE.MeshBasicMaterial({map:coverFrameTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:.9}));
+  coverFrame.position.set(W/2,0,0.0235);coverFrame.renderOrder=8;coverPivot.add(coverFrame);
+  // 全息扫描线（holo）
+  var holoScan=new THREE.Mesh(new THREE.PlaneGeometry(W*0.98,H*0.99),
+    new THREE.MeshBasicMaterial({map:holoScanTex,transparent:true,depthWrite:false,
+      blending:THREE.AdditiveBlending,opacity:BKC.scan}));
+  holoScan.position.set(W/2,0,0.0215);holoScan.renderOrder=7;
+  holoScan.visible=BKC.scan>0;coverPivot.add(holoScan);
+  // 激活脉冲辉光覆盖层
+  var pulseGlow=new THREE.Mesh(new THREE.PlaneGeometry(W*1.04,H*1.04),
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  pulseGlow.position.set(W/2,0,0.05);coverPivot.add(pulseGlow);
+  // 翻开过半：书页缝辉光
+  var pageGlow=new THREE.Mesh(new THREE.PlaneGeometry(0.10,1.26),
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.pageSeam,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  pageGlow.position.set(-0.40,0,0.035);book.add(pageGlow);
+  var pageHalo=new THREE.Mesh(new THREE.PlaneGeometry(0.62,1.34),
+    new THREE.MeshBasicMaterial({map:glowTex,color:COL.pageHaloCol,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  pageHalo.position.set(-0.30,0,0.02);book.add(pageHalo);
+  if(!TR_PILLAR){ // 转场 v1.3：书缝辉光改青色能量线（低亮度，去白光污染）
+    pageGlow.material.color.set(COL.beamB);
+    pageHalo.material.color.set(COL.beamB);
+  }
+}
+
+/* ================= S3 光柱 + 亮核 ================= */
+const colGroup=new THREE.Group();scene.add(colGroup);
+const colA=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.09,1,14,1,true),
+  new THREE.MeshBasicMaterial({color:COL.beamA,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+const colB=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.17,1,14,1,true),
+  new THREE.MeshBasicMaterial({color:COL.beamB,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+colGroup.add(colA,colB);
+const core=new THREE.Mesh(new THREE.SphereGeometry(0.10,20,14),new THREE.MeshBasicMaterial({color:COL.coreCol,transparent:true,opacity:0}));
+const coreGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.coreGlow,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+coreGlow.scale.setScalar(0.9);colGroup.add(core,coreGlow);
+
+/* ================= S3 转场 v1.3（fountain 星屑喷泉 | helix 双螺旋星门 | ripple 涟漪点将） ================= */
+const transGroup=new THREE.Group();scene.add(transGroup);
+// 小亮核（fountain/helix 出卡原点，与卡片起飞点 (0,2.55,0) 重合；体积只有现行 core 的 1/3）
+const kSphere=new THREE.Mesh(new THREE.SphereGeometry(0.055,18,12),
+  new THREE.MeshBasicMaterial({color:COL.coreCol,transparent:true,opacity:0,depthWrite:false}));
+const kGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.coreGlow,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+kSphere.position.set(0,2.55,0);kGlow.position.set(0,2.55,0);kGlow.scale.setScalar(0.5);
+transGroup.add(kSphere,kGlow);
+// helix：两条反向旋转的霓虹细螺旋（青=直指族 / 绯=斜指族，织门→解旋消散）
+const HELIX_N=220,HELIX_IDX=HELIX_N*36;   // TubeGeometry 索引数 = 段数×radial6×6
+function mkHelix(phase,color){
+  const H=2.30,R=0.28,TURNS=2.6,pts=[];
+  for(let i=0;i<=HELIX_N;i++){const u=i/HELIX_N,a=phase+u*TURNS*2*Math.PI;
+    pts.push(new THREE.Vector3(R*Math.cos(a),0.10+u*H,R*Math.sin(a)))}
+  const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),HELIX_N,0.013,6,false);
+  const m=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,
+    blending:THREE.AdditiveBlending,depthWrite:false});
+  const l=new THREE.Mesh(g,m);
+  l.geometry.setDrawRange(0,0);return l;   // 可见性由 helixGroup 统一控制
+}
+const helixGroup=new THREE.Group();scene.add(helixGroup);
+const helixA=mkHelix(0,COL.goldHi),helixB=mkHelix(Math.PI,COL.vortexA||COL.crimsonHi);
+helixGroup.add(helixA,helixB);
+// ripple：书心爆开的屏面方形涟漪（双嵌套细线，预演 9.5s 大盘方波）+ 书心余晖 + 两道弧上点将扫光
+function mkSquareLine(color,op){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(12),3));
+  const l=new THREE.LineLoop(g,new THREE.LineBasicMaterial({color,transparent:true,opacity:0,
+    blending:THREE.AdditiveBlending,depthWrite:false}));
+  l.frustumCulled=false;return l;          // 可见性由 ripGroup 统一控制（r<0.06 时不写入顶点）
+}
+const ripGroup=new THREE.Group();ripGroup.position.set(0,0.25,0);scene.add(ripGroup);
+const ripA=[mkSquareLine(COL.sweep),mkSquareLine(COL.sweep),mkSquareLine(COL.sweep)]; // 三线束加粗读感
+const ripB=[mkSquareLine(COL.goldHi),mkSquareLine(COL.goldHi)];
+ripGroup.add(...ripA,...ripB);
+function setSquareXY(attr,r){const v=[[-r,-r],[r,-r],[r,r],[-r,r]];
+  for(let i=0;i<4;i++){attr[i*3]=v[i][0];attr[i*3+1]=v[i][1];attr[i*3+2]=0}}
+const genGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+genGlow.position.set(0,0.25,0);genGlow.scale.setScalar(1.1);scene.add(genGlow);
+function mkSweepLike(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.setScalar(scale);s.visible=false;scene.add(s);return s}
+const glintDeal=[mkSweepLike(0.20),mkSweepLike(0.20)];
+
+/* ================= 26 卡 + 等分闭环 ================= */
+// v1.4 环位角度（度）：26 等分（360/26≈13.85°），前 13 位直指青、后 13 位斜指绯；
+// 直指自 210° 顺时针铺 13 位，斜指接续铺满一圈，两处接缝仅换色不开口。
+const RING_STEP=360/26;
+const slotAngle=(set,j)=>210-RING_STEP*(set==='direct'?j:13+j);
+const HERO={set:SELECTED.set,j:SELECTED.index};
+const isHero=(set,j)=>set===HERO.set&&j===HERO.j;
+const heroOpening=(SELECTED.set==='direct'?DIRECT:INDIRECT)[SELECTED.index];
+// 出卡序：直指13 → 斜指13（§3）
+const cardDefs=[];
+for(let j=0;j<13;j++)cardDefs.push({set:'direct',j});
+for(let j=0;j<13;j++)cardDefs.push({set:'indirect',j});
+// 淘汰序：自下方接缝（直指 #1 / 斜指 #13 相邻处）向两侧序贯，最后在右侧接缝收口；
+// 直指 j 递增、斜指 j 递减，交替进行（花月跳过）。
+const ELIM=(()=>{const o=[],dq=[...Array(13).keys()].filter(j=>!isHero('direct',j)),iq=[...Array(13).keys()].reverse();
+  let d=0,i=0;while(o.length<25){if(d<dq.length)o.push({set:'direct',j:dq[d++]});if(i<iq.length)o.push({set:'indirect',j:iq[i++]})}
+  let t=T_ELIM0;return o.map((c,m)=>{const r={...c,tE:t};t+=lerp(0.078,0.034,m/24);return r})})();
+const elimAt=(set,j)=>{const e=ELIM.find(e=>e.set===set&&e.j===j);return e?e.tE:99};
+
+// 单元线段→窄条四边形合并网格（卡面 XY 平面 / 盘面 XZ 平面）
+function buildStrips(segs,plane){
+  const hw=0.0048,pos=[],idx=[];let n=0;
+  for(const s of segs){
+    let x1,y1,x2,y2;
+    if(plane==='xy'){x1=s.x1;y1=s.y1;x2=s.x2;y2=s.y2}
+    else{x1=s.x1;y1=-s.y1;x2=s.x2;y2=-s.y2}   // 盘面：gy → world -z
+    const cx=(x1+x2)/2,cy=(y1+y2)/2;
+    const dx=Math.abs(x2-x1),dy=Math.abs(y2-y1);
+    const hx=dx>1e-9?dx/2+hw:hw, hy=dy>1e-9?dy/2+hw:hw;
+    const zz=plane==='xy'?0.002:0.0012;
+    if(plane==='xy'){
+      pos.push(cx-hx,cy-hy,zz, cx+hx,cy-hy,zz, cx+hx,cy+hy,zz, cx-hx,cy+hy,zz);
+    }else{
+      // 绕序保证法线 +Y（顶视可见）
+      pos.push(cx-hx,zz,cy-hy, cx-hx,zz,cy+hy, cx+hx,zz,cy+hy, cx+hx,zz,cy-hy);
+    }
+    idx.push(n,n+1,n+2,n,n+2,n+3);n+=4;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setIndex(idx);g.computeVertexNormals();return g;
+}
+// 5×5 全部 40 条单元线段（环 ≤2，初始即存在）
+const segs5x5=[];
+for(let i=-2;i<=2;i++)for(let j=-2;j<2;j++)segs5x5.push({x1:i*S,y1:j*S,x2:i*S,y2:(j+1)*S});   // 竖
+for(let j=-2;j<=2;j++)for(let i=-2;i<2;i++)segs5x5.push({x1:i*S,y1:j*S,x2:(i+1)*S,y2:j*S});   // 横
+
+// 3D 棋子（黑曜 / 珍珠）
+const stoneGeo=new THREE.SphereGeometry(0.78*S/2,28,18);
+const blackMat=new THREE.MeshStandardMaterial({color:COL.blackColor,roughness:.34,metalness:.18,
+  emissive:new THREE.Color(COL.blackEm[0],COL.blackEm[1],COL.blackEm[2]),emissiveIntensity:COL.blackEmInt});
+const whiteMat=new THREE.MeshStandardMaterial({color:COL.whiteColor,roughness:.42,metalness:0,
+  emissive:COL.whiteEm,emissiveIntensity:COL.whiteEmInt});
+const stoneRimMat=new THREE.MeshBasicMaterial({color:COL.stoneRim,transparent:true,opacity:COL.neonFrame?.55:.42,
+  side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false});
+// 光圈（rim）：黑白子都有；renderOrder=6 置于盘面网格/软影/霓虹之后，避免低视角被覆盖压暗（v1.6 修复）
+function mkStone(black){
+  const m=new THREE.Mesh(stoneGeo,black?blackMat:whiteMat);
+  const rim=new THREE.Mesh(stoneGeo,stoneRimMat);rim.scale.setScalar(1.14);rim.renderOrder=6;m.add(rim);
+  return m
+}
+
+// 卡片构建：25 张贴图卡 + 1 张英雄卡（3D 网格与棋子，供 S6 无缝）
+const cards=[];
+const rndCard=mulberry32(1234);
+{
+  const geometryShared=new THREE.PlaneGeometry(CARD,CARD,6,6);
+  for(const def of cardDefs){
+    const hero=isHero(def.set,def.j);
+    const op=(def.set==='direct'?DIRECT:INDIRECT)[def.j];
+    const stones=[[0,0,'b'],[def.set==='direct'?0:1,1,'w'],[op.dx,op.dy,'b']];
+    const grp=new THREE.Group();
+    let geo=null,mat=null,mesh=null;
+    if(hero){
+      mat=new THREE.MeshBasicMaterial({map:cardBaseTex(def.set==='direct'?'gold':'crimson',true,stones),transparent:true,side:THREE.DoubleSide,depthWrite:false});
+      mesh=new THREE.Mesh(geometryShared,mat);grp.add(mesh);
+    }else{
+      geo=geometryShared.clone();
+      mat=new THREE.MeshBasicMaterial({map:cardBaseTex(def.set==='direct'?'gold':'crimson',false,stones),transparent:true,side:THREE.DoubleSide,depthWrite:false});
+      mesh=new THREE.Mesh(geo,mat);grp.add(mesh);
+    }
+    scene.add(grp);
+    const A=slotAngle(def.set,def.j)*DEG;
+    cards.push({def,hero,grp,mesh,geo,mat,
+      base:new THREE.Vector3(ARC_R*Math.cos(A),ARC_R*Math.sin(A),0),
+      angA:slotAngle(def.set,def.j),
+      tFly:3.7+cards.length*0.07,
+      ph:rndCard()*6.283, ph2:rndCard()*6.283,
+      baseVerts:geo?geo.attributes.position.array.slice():null,
+      stretched:false,
+    });
+  }
+}
+// 英雄卡（花月）专属：3D 网格线 + 三子 + 天元菱标 —— 悬挂为顶级组（S6 落盘无缝）
+const heroCard=cards.find(c=>c.hero);
+const miniBoard=new THREE.Group();scene.add(miniBoard);
+const miniGrid=new THREE.Mesh(buildStrips(segs5x5,'xy'),
+  new THREE.MeshBasicMaterial({color:COL.lineDim,transparent:true,opacity:.62,depthWrite:false}));
+miniGrid.renderOrder=3;miniBoard.add(miniGrid);
+const miniTY=new THREE.Mesh(new THREE.PlaneGeometry(0.05,0.05),
+  new THREE.MeshBasicMaterial({map:markTex,transparent:true,opacity:0,depthWrite:false}));
+miniTY.position.z=0.004;miniTY.renderOrder=3;miniBoard.add(miniTY);
+const heroStonesPos=[[0,0,1],[HERO.set==='direct'?0:1,1,0],[heroOpening.dx,heroOpening.dy,1]]; // (gx,gy,black)
+const miniShadows=heroStonesPos.map(s=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.118,0.118),
+  new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:.42,depthWrite:false}));
+  m.position.set(s[0]*S,s[1]*S,0.0045);m.renderOrder=4;miniBoard.add(m);return m});
+const miniStones=heroStonesPos.map(s=>{const m=mkStone(!!s[2]);m.position.set(s[0]*S,s[1]*S,0.012);miniBoard.add(m);return m});
+// v1.4 花月运行时点亮：白子辉光 + 黑子冷边光（6.95 落定后亮起，S6 溶解时回落）
+const heroWhiteGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+heroWhiteGlow.position.set(heroStonesPos[1][0]*S,heroStonesPos[1][1]*S,0.030);
+heroWhiteGlow.scale.setScalar(0.24);miniBoard.add(heroWhiteGlow);
+const heroBlackGlows=heroStonesPos.filter(s=>s[2]).map(s=>{
+  const g=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.stoneRim,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  g.position.set(s[0]*S,s[1]*S,0.026);g.scale.setScalar(0.15);miniBoard.add(g);return g});
+const _rimC=new THREE.Color(COL.stoneRim);
+const _whiteBaseC=new THREE.Color(COL.whiteColor);
+const heroHi=t=>ease.outCubic(remap(t,6.95,7.10))*(1-remap(t,T_GROW0,T_GROW0+0.3));
+// 盘面三子软影（溶解期随卡面阴影交接着陆）
+const boardShadows=heroStonesPos.map(s=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.13,0.115),
+  new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:0,depthWrite:false}));
+  m.rotation.x=-Math.PI/2;m.position.set(s[0]*S,0.0025,-s[1]*S);m.visible=false;m.renderOrder=2;scene.add(m);return m});
+
+/* ================= S4 中心机制（v1.5：hole 粉盘黑洞基线 / taiji 太极归一 / singularity 全息坍缩 / ring 星环收束） ================= */
+const hole=new THREE.Group();hole.position.set(0,0,-0.02);scene.add(hole);
+const horizon=new THREE.Mesh(new THREE.CircleGeometry(0.36,48),new THREE.MeshBasicMaterial({color:0x000000}));
+const photonRing=new THREE.Mesh(new THREE.RingGeometry(0.365,0.405,64),
+  new THREE.MeshBasicMaterial({color:COL.photon,transparent:true,opacity:.55,blending:THREE.AdditiveBlending,depthWrite:false}));
+const accretion=new THREE.Mesh(new THREE.RingGeometry(0.45,1.18,80,1),
+  new THREE.MeshBasicMaterial({map:ELIM_ID==='singularity'?singAccTex:accretionTex,transparent:true,opacity:.88,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+accretion.rotation.x=-0.46;
+const lensRing=new THREE.Mesh(new THREE.RingGeometry(1.22,1.62,64),
+  new THREE.MeshBasicMaterial({map:glowTex,color:COL.lens,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+hole.add(horizon,photonRing,accretion,lensRing);
+hole.scale.setScalar(0);
+// 中心光按机制换色：粉盘黑洞保留绯红照明，其余走青色家族
+holeLight.color.set(ELIM_ID==='hole'?COL.holeLight:(ELIM_ID==='taiji'?0x9BEEFF:0x04C7E8));
+if(ELIM_ID==='singularity')accretion.material.opacity=.62;   // 全息谱已提亮，压叠盘透明度防 bloom 冲白
+// —— taiji 太极归一：暗气场底盘 + 青/绯双臂（同贴图 180° 叠放，各自脉冲）+ 归一核闪
+const tjBase=new THREE.Mesh(new THREE.PlaneGeometry(2.7,2.7),
+  new THREE.MeshBasicMaterial({map:taijiBaseTex,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending}));
+const tjArmCy=new THREE.Mesh(new THREE.PlaneGeometry(2.7,2.7),
+  new THREE.MeshBasicMaterial({map:taijiArmCy,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));
+const tjArmCr=new THREE.Mesh(new THREE.PlaneGeometry(2.7,2.7),
+  new THREE.MeshBasicMaterial({map:taijiArmCr,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));
+tjArmCr.rotation.z=Math.PI;
+const tjCore=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:'#EAFFFB',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+tjCore.position.z=0.02;
+if(ELIM_ID==='taiji'){accretion.visible=false;horizon.scale.setScalar(0.52);photonRing.material.opacity=.4;
+  hole.add(tjBase,tjArmCr,tjArmCy,tjCore)}
+// —— ring 星环收束：主环 + 反旋虚线副环 + 25 颗族色光珠（逐卡入环轨）+ 收束核闪
+const ringDisc=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),
+  new THREE.MeshBasicMaterial({map:ringTexMain,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending}));
+const ringDash=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),
+  new THREE.MeshBasicMaterial({map:ringTexDash,transparent:true,opacity:.65,depthWrite:false,blending:THREE.AdditiveBlending}));
+const rgCore=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:'#EAFFFB',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+rgCore.position.z=0.02;
+const RING_R=1.14;                                     // 星环半径（世界单位）
+const ringBeads=ELIM.map(e=>{                          // 每张被淘汰卡一颗：入环后沿环轨加速公转
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,
+    color:e.set==='direct'?'#9BEEFF':'#FF8FA3',transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  s.scale.setScalar(0.145);s.visible=false;hole.add(s);
+  return{spr:s,tE:e.tE+0.32,ang:slotAngle(e.set,e.j)*DEG,om:1.5+2.3*(e.tE-T_ELIM0)/(T_HOLE_C0-T_ELIM0),fam:e.set}});
+if(ELIM_ID==='ring'){accretion.visible=false;horizon.visible=false;photonRing.visible=false;lensRing.visible=false;
+  hole.add(ringDisc,ringDash,rgCore)}
+// v1.5：族吸收脉冲（闭式）——该族每张卡被吸入后，对应臂/环短暂增亮
+const ELIM_T={direct:ELIM.filter(e=>e.set==='direct').map(e=>e.tE+0.38),
+              indirect:ELIM.filter(e=>e.set==='indirect').map(e=>e.tE+0.38)};
+function taijiPulse(fam,t){let s=0;for(const t0 of ELIM_T[fam]){const d=t-t0;if(d>0)s+=Math.exp(-6*d)}return Math.min(1,s)}
+
+/* ================= S6 大盘生长 ================= */
+// 波前半径 r(t)：9.5–11.5 五圈，圈时长 .28/.32/.38/.46/.56 → 半径 3S..7S
+const WAVE_T0=9.5,WAVE_D=[0.28,0.32,0.38,0.46,0.56];
+const waveEnd=k=>WAVE_T0+WAVE_D.slice(0,k+1).reduce((a,b)=>a+b,0);
+function waveR(t){
+  if(t<WAVE_T0)return 0;
+  for(let k=0;k<5;k++){const t0=k?waveEnd(k-1):WAVE_T0,t1=waveEnd(k);
+    if(t<=t1)return S*lerp(k+2,k+3,(t-t0)/WAVE_D[k])}
+  return 7*S;
+}
+// 盘底（漆器深底嵌金线）：随波前方形揭示（揭示非缩放，§6 铁律不破）；v1.6 面 2.3→2.5 使柔和边缘停在盘面内、不再在霓虹框外露出硬切边
+const boardBase=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),new THREE.ShaderMaterial({
+  uniforms:{uR:{value:0},uOp:{value:0}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform float uR,uOp;varying vec2 vUv;
+    void main(){vec2 c=vUv-0.5;float cheb=max(abs(c.x),abs(c.y))*2.5;
+      float a=(1.0-smoothstep(uR-0.02,uR+0.06,cheb))*uOp;
+      if(a<0.012)discard;
+      vec3 col=mix(${COL.boardIn},${COL.boardOut},pow(max(0.0,1.0-2.0*cheb),2.0));
+      gl_FragColor=vec4(col,a*0.97);}`,
+  transparent:true,depthWrite:false}));
+boardBase.rotation.x=-Math.PI/2;boardBase.position.y=-0.004;boardBase.renderOrder=0;scene.add(boardBase);
+// 环 k（3..7）线段按 N/E/S/W 四侧成组（凝出时依次差 0.0125s）
+const ringMeshes=[];
+{
+  const gold=new THREE.Color(COL.lineDim),bright=new THREE.Color(COL.sweep);
+  for(let k=3;k<=7;k++){
+    for(const side of ['N','E','S','W']){
+      const segs=[];
+      for(let i=-k;i<=k;i++){ // 竖线段 (i,j)-(i,j+1)：x 覆盖闭区间 [-k,k]
+        for(let j=-k;j<k;j++){
+          const ring=Math.max(Math.abs(i),Math.abs(j),Math.abs(j+1));
+          if(ring!==k)continue;
+          const mx=i,my=j+0.5,sd=Math.abs(my)>=Math.abs(mx)?(my>0?'N':'S'):(mx>0?'E':'W');
+          if(sd===side)segs.push({x1:i*S,y1:j*S,x2:i*S,y2:(j+1)*S});
+        }
+      }
+      for(let j=-k;j<=k;j++){ // 横线段：y 覆盖闭区间 [-k,k]
+        for(let i=-k;i<k;i++){
+          const ring=Math.max(Math.abs(j),Math.abs(i),Math.abs(i+1));
+          if(ring!==k)continue;
+          const my=j,mx=i+0.5,sd=Math.abs(my)>=Math.abs(mx)?(my>0?'N':'S'):(mx>0?'E':'W');
+          if(sd===side)segs.push({x1:i*S,y1:j*S,x2:(i+1)*S,y2:j*S});
+        }
+      }
+      if(!segs.length)continue;
+      const m=new THREE.Mesh(buildStrips(segs,'xz'),
+        new THREE.MeshBasicMaterial({color:gold.clone(),transparent:true,opacity:0,depthWrite:false}));
+      m.renderOrder=3;scene.add(m);ringMeshes.push({k,side,mesh:m,mat:m.material,gold,bright});
+    }
+  }
+}
+// 波前方形亮环（+外晕）
+const wavePts=new Float32Array(12);
+const waveGeo=new THREE.BufferGeometry();waveGeo.setAttribute('position',new THREE.BufferAttribute(wavePts,3));
+const waveRing=new THREE.LineLoop(waveGeo,new THREE.LineBasicMaterial({color:COL.sweep,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+waveRing.renderOrder=5;scene.add(waveRing);
+const waveGlow=new THREE.LineLoop(waveGeo.clone(),waveRing.material.clone());waveGlow.material.opacity=0;waveGlow.renderOrder=5;scene.add(waveGlow);
+// 四角星位金标（±4,±4）+ 边框金线 + 天元终式微光
+const starMarks=[];
+for(const sx of[-4,4])for(const sy of[-4,4]){
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.075,0.075),
+    new THREE.MeshBasicMaterial({map:markTex,transparent:true,opacity:0,depthWrite:false}));
+  m.rotation.x=-Math.PI/2;m.position.set(sx*S,0.0018,-sy*S);m.renderOrder=4;scene.add(m);starMarks.push(m);
+}
+const boardFrame=(()=>{const g=new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(-1.15,0.002,-1.15),new THREE.Vector3(1.15,0.002,-1.15),
+  new THREE.Vector3(1.15,0.002,1.15),new THREE.Vector3(-1.15,0.002,1.15)]);
+  const l=new THREE.LineLoop(g,new THREE.LineBasicMaterial({color:COL.frameCol,transparent:true,opacity:0,depthWrite:false}));
+  l.renderOrder=3;scene.add(l);return l})();
+// 霓虹圆角边框（对齐参考图的发光板框；仅赛博风格启用，11.3 后凝出）
+const boardNeon=(()=>{
+  // v1.6：面 2.34→2.50——外框中线从 1.065 外移到 ≈1.138，完整包住 15×15 网格（半宽 1.05）并留出呼吸边距
+  const c=cnv(1024,1024),x=c.getContext('2d'),inset=46,r=72;
+  x.strokeStyle=COL.frameCol;x.lineWidth=8;x.shadowColor=COL.frameCol;x.shadowBlur=36;
+  x.beginPath();x.roundRect(inset,inset,1024-inset*2,1024-inset*2,r);x.stroke();
+  x.shadowBlur=14;x.globalAlpha=.5;x.lineWidth=2.5;
+  x.beginPath();x.roundRect(inset+16,inset+16,1024-(inset+16)*2,1024-(inset+16)*2,r*.8);x.stroke();
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),
+    new THREE.MeshBasicMaterial({map:tex(c),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  m.rotation.x=-Math.PI/2;m.position.y=0.0025;m.renderOrder=5;m.visible=false;scene.add(m);return m;
+})();
+const tyGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+tyGlow.position.set(0,0.03,0);scene.add(tyGlow);
+
+/* ================= S6.5 棋盒（v1.7：BOWL_ID = capsule 悬浮能量舱 / jar 霓虹棋罐 / holo 全息取子台） ================= */
+// 棋盘定版后两侧凝出棋盒（左黑右白，青系霓虹延续全片色彩语言），供后续取子落子；动画全闭式
+const T_B0=14.25,BOWL_X=1.72;
+const bowlGroup=new THREE.Group();bowlGroup.visible=false;scene.add(bowlGroup);
+// 垫盘贴图：主环 + 内衬 + 外刻度
+const bowlPadTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');x.translate(256,256);
+  x.strokeStyle='#FFFFFF';x.lineWidth=10;x.shadowColor='#FFFFFF';x.shadowBlur=16;
+  x.beginPath();x.arc(0,0,212,0,7);x.stroke();
+  x.globalAlpha=.45;x.lineWidth=3;x.shadowBlur=6;
+  x.beginPath();x.arc(0,0,180,0,7);x.stroke();
+  x.globalAlpha=.85;x.lineWidth=4;x.shadowBlur=0;
+  for(let i=0;i<24;i++){const a=i/24*2*Math.PI,l=i%2?238:248;
+    x.beginPath();x.moveTo(Math.cos(a)*228,Math.sin(a)*228);x.lineTo(Math.cos(a)*l,Math.sin(a)*l);x.stroke()}
+  return tex(c)})();
+// holo 光锥渐变（底亮上淡）
+const bowlConeTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
+  const g=x.createLinearGradient(0,256,0,0);
+  g.addColorStop(0,'rgba(120,230,255,.34)');g.addColorStop(.55,'rgba(90,200,240,.12)');g.addColorStop(1,'rgba(80,190,235,0)');
+  x.fillStyle=g;x.fillRect(0,0,256,256);return tex(c)})();
+// 盒内棋子确定性摆位（1+6 环 + 顶 2；y 以石半径折算层高）
+const bowlLayout=seed=>{const r=mulberry32(seed),out=[];
+  const put=(x,z,l)=>out.push({x,z,y:(l+0.92)*0.062+0.02,ph:r()*6.283});
+  put(0,0,0);for(let i=0;i<6;i++){const a=i/6*6.283+.42;put(Math.cos(a)*.114,Math.sin(a)*.114,0)}
+  put(.045,.02,1);put(-.085,-.05,1);return out};
+const bowlRim=black=>black?'#04C7E8':'#7FE3F7';            // 黑盒深青 / 白盒亮青白
+const mkPad=(rimC,size=0.55)=>{const g=new THREE.Group();
+  const disc=new THREE.Mesh(new THREE.CircleGeometry(size*0.545,48),
+    new THREE.MeshBasicMaterial({color:0x081420,transparent:true,opacity:.85,depthWrite:false}));
+  disc.rotation.x=-Math.PI/2;disc.position.y=0.004;g.add(disc);
+  const ring=new THREE.Mesh(new THREE.PlaneGeometry(size,size),
+    new THREE.MeshBasicMaterial({map:bowlPadTex,color:rimC,transparent:true,opacity:.75,depthWrite:false,blending:THREE.AdditiveBlending}));
+  ring.rotation.x=-Math.PI/2;ring.position.y=0.006;g.add(ring);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  glow.scale.setScalar(size*0.9);glow.position.y=0.03;g.add(glow);
+  return{g,disc,ring,glow}};
+const bowlStone=(black,px,py,pz)=>{const m=mkStone(black);m.position.set(px,py,pz);m.userData.ty=py;bowlGroup.add(m);return m};
+let bowlA=null,bowlB=null,bowlC=null;
+if(BOWL_ID==='capsule'){          // —— A 悬浮能量舱：垫盘上悬浮开口玻璃舱，舱口霓虹环，棋子落入
+  bowlA={items:[]};
+  for(const side of[-1,1]){
+    const black=side<0,rimC=bowlRim(black),cx=side*BOWL_X;
+    const pad=mkPad(rimC,BOWL_ID==='holo'?0.7:0.55);pad.g.position.set(cx,0,0);bowlGroup.add(pad.g);
+    const base=0.05;
+    const wall=new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.205,0.24,40,1,true),
+      new THREE.MeshStandardMaterial({color:0x0A1A2A,roughness:.12,metalness:.3,transparent:true,opacity:.26,side:THREE.DoubleSide,depthWrite:false}));
+    wall.position.set(cx,base+0.12,0);bowlGroup.add(wall);
+    const bottom=new THREE.Mesh(new THREE.CircleGeometry(0.205,40),
+      new THREE.MeshBasicMaterial({color:0x061019,transparent:true,opacity:.9,depthWrite:false}));
+    bottom.rotation.x=-Math.PI/2;bottom.position.set(cx,base+0.004,0);bowlGroup.add(bottom);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(0.205,0.011,10,60),
+      new THREE.MeshBasicMaterial({color:rimC,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+    rim.rotation.x=Math.PI/2;rim.position.set(cx,base+0.24,0);bowlGroup.add(rim);
+    const rg=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    rg.scale.setScalar(0.5);rg.position.set(cx,base+0.24,0);bowlGroup.add(rg);
+    const stones=bowlLayout(black?7712:7713).map(s=>bowlStone(black,cx+s.x,base+s.y,s.z));
+    bowlA.items.push({pad,wall,bottom,rim,rg,stones,base,ph:side*1.7});
+  }
+}
+if(BOWL_ID==='jar'){              // —— B 霓虹棋罐：半透明罐体自垫盘升起，罐口霓虹环，悬浮盖缓旋（取子口常开）
+  bowlB={items:[]};
+  const jarPts=[[0.115,0],[0.15,0.015],[0.235,0.075],[0.265,0.16],[0.25,0.245],[0.205,0.30],[0.185,0.325],[0.205,0.345],[0.218,0.352]].map(p=>new THREE.Vector2(p[0],p[1]));
+  const lidPts=[[0,0.006],[0.13,0.006],[0.18,0.028],[0.198,0.052],[0.155,0.066],[0.07,0.074],[0,0.076]].map(p=>new THREE.Vector2(p[0],p[1]));
+  for(const side of[-1,1]){
+    const black=side<0,rimC=bowlRim(black),cx=side*BOWL_X;
+    const pad=mkPad(rimC,BOWL_ID==='holo'?0.7:0.55);pad.g.position.set(cx,0,0);bowlGroup.add(pad.g);
+    const jar=new THREE.Mesh(new THREE.LatheGeometry(jarPts,44),
+      new THREE.MeshStandardMaterial({color:0x0A1622,roughness:.2,metalness:.32,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}));
+    jar.position.set(cx,0.01,0);bowlGroup.add(jar);
+    const mouth=new THREE.Mesh(new THREE.TorusGeometry(0.212,0.010,10,60),
+      new THREE.MeshBasicMaterial({color:rimC,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+    mouth.rotation.x=Math.PI/2;mouth.position.set(cx,0.366,0);bowlGroup.add(mouth);
+    const lid=new THREE.Mesh(new THREE.LatheGeometry(lidPts,44),
+      new THREE.MeshStandardMaterial({color:0x0C1826,roughness:.22,metalness:.35,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));
+    lid.position.set(cx,0.40,0);bowlGroup.add(lid);
+    const lr=new THREE.Mesh(new THREE.TorusGeometry(0.196,0.008,10,60),
+      new THREE.MeshBasicMaterial({color:rimC,transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+    lr.rotation.x=Math.PI/2;lr.position.y=0.006;lid.add(lr);
+    const seam=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    seam.scale.setScalar(0.55);seam.position.set(cx,0.38,0);bowlGroup.add(seam);
+    const stones=bowlLayout(black?7712:7713).map(s=>bowlStone(black,cx+s.x,0.03+s.y,s.z));
+    bowlB.items.push({pad,jar,mouth,lid,seam,stones,lidY:0.40,ph:side*1.7});
+  }
+}
+if(BOWL_ID==='holo'){             // —— C 全息取子台：垫盘投光锥，棋子悬浮螺旋柱缓旋，底部标记「下一手」
+  bowlC={items:[]};
+  for(const side of[-1,1]){
+    const black=side<0,rimC=bowlRim(black),cx=side*BOWL_X;
+    const pad=mkPad(rimC,BOWL_ID==='holo'?0.7:0.55);pad.g.position.set(cx,0,0);bowlGroup.add(pad.g);
+    const cone=new THREE.Mesh(new THREE.CylinderGeometry(0.30,0.15,0.44,36,1,true),
+      new THREE.MeshBasicMaterial({map:bowlConeTex,color:rimC,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+    cone.position.set(cx,0.23,0);bowlGroup.add(cone);
+    const col=new THREE.Group();col.position.set(cx,0,0);bowlGroup.add(col);
+    const tys=[];
+    for(let i=0;i<6;i++){const a=i*2.35+.5,rr=0.115+(i%2?0.035:0),ty=0.075+i*0.03;
+      const m=mkStone(black);m.position.set(Math.cos(a)*rr,ty,Math.sin(a)*rr);col.add(m);tys.push(ty)}
+    const mark=new THREE.Mesh(new THREE.PlaneGeometry(0.17,0.17),
+      new THREE.MeshBasicMaterial({map:bowlPadTex,color:rimC,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    mark.rotation.x=-Math.PI/2;mark.position.y=0.035;col.add(mark);
+    bowlC.items.push({pad,cone,col,tys,mark,ph:side*1.7});
+  }
+}
+
+/* ================= 扫光精灵（S3 弧扫 / S5 卡框扫） ================= */
+function mkSweep(scale){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));s.scale.setScalar(scale);s.visible=false;scene.add(s);return s}
+const arcSweeps=[mkSweep(0.24),mkSweep(0.24),mkSweep(0.22),mkSweep(0.22)];
+const rimSweepA=mkSweep(0.16),rimSweepB=mkSweep(0.11);
+
+/* ================= v1.4 游框选将（6.0–7.1） ================= */
+// 青色圆角霓虹选框：自花月邻位沿环滑行一圈 → 锁定花月 → 收缩贴合+双脉冲 → 化光吸收
+const selFrameTex=(()=>{const c=cnv(256,256),x=c.getContext('2d');
+  x.strokeStyle='#FFFFFF';x.lineWidth=9;x.shadowColor='#FFFFFF';x.shadowBlur=16;
+  x.beginPath();x.roundRect(16,16,224,224,34);x.stroke();
+  x.globalAlpha=.5;x.lineWidth=3;x.shadowBlur=6;
+  x.beginPath();x.roundRect(29,29,198,198,26);x.stroke();
+  return tex(c)})();
+const selFrame=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+  new THREE.MeshBasicMaterial({map:selFrameTex,color:COL.goldHi,transparent:true,opacity:0,
+    depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+selFrame.renderOrder=7;selFrame.visible=false;scene.add(selFrame);
+const selGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.goldHi,
+  transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+selGlow.scale.setScalar(0.65);selGlow.visible=false;scene.add(selGlow);
+const ringIndex=(set,j)=>set==='direct'?j:13+j;
+const heroRingIdx=ringIndex(HERO.set,HERO.j);
+// 游框角度：起点=花月环位 +1，顺时针走 25 步回到花月（整整一圈少一格）
+function selAngleAt(t){
+  const e=ease.inOutCubic(remap(t,T_SEL0,T_SEL0+0.60));
+  return 210-RING_STEP*(heroRingIdx+1+25*e);
+}
+// 选框掠过卡片时的描边涟漪强度（0–1）
+function selRippleAt(cardAng,t){
+  if(t<T_SEL0||t>T_SEL0+0.62)return 0;
+  const a=selAngleAt(t);
+  let d=Math.abs(cardAng-a)%360;if(d>180)d=360-d;
+  return Math.exp(-(d*d)/(2*7.5*7.5));
+}
+
+/* ================= GPU 粒子（翻页金屑 / 吸积碎屑 / 星尘吹散） ================= */
+function particleSys(N,gen){
+  const p0=new Float32Array(N*3),v=new Float32Array(N*3),t0=new Float32Array(N),
+        life=new Float32Array(N),siz=new Float32Array(N),col=new Float32Array(N*3),curv=new Float32Array(N);
+  for(let i=0;i<N;i++){const d=gen(i);p0.set(d.p,i*3);v.set(d.v,i*3);t0[i]=d.t0;life[i]=d.life;siz[i]=d.size;col.set(d.c,i*3);curv[i]=d.curv}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(p0,3));
+  g.setAttribute('aVel',new THREE.BufferAttribute(v,3));
+  g.setAttribute('aT0',new THREE.BufferAttribute(t0,1));
+  g.setAttribute('aLife',new THREE.BufferAttribute(life,1));
+  g.setAttribute('aSize',new THREE.BufferAttribute(siz,1));
+  g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+  g.setAttribute('aCurv',new THREE.BufferAttribute(curv,1));
+  const m=new THREE.ShaderMaterial({
+    uniforms:{uTime:{value:-1}},
+    vertexShader:`attribute vec3 aVel,aColor;attribute float aT0,aLife,aSize,aCurv;
+      uniform float uTime;varying vec3 vC;varying float vA;
+      void main(){float tau=uTime-aT0;float ok=step(0.0,tau)*step(tau,aLife);
+        float k=clamp(tau/aLife,0.0,1.0);vC=aColor;vA=ok*(1.0-k);
+        vec3 p=position+aVel*tau*(1.0-aCurv*k);
+        vec4 mv=modelViewMatrix*vec4(p,1.0);
+        gl_PointSize=aSize*(85.0/max(0.5,-mv.z))*(0.45+0.55*(1.0-k));
+        gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`varying vec3 vC;varying float vA;
+      void main(){float d=length(gl_PointCoord-0.5);
+        float a=smoothstep(0.5,0.1,d)*vA;if(a<0.012)discard;
+        gl_FragColor=vec4(vC*1.6,a);}`,
+    transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  const pts=new THREE.Points(g,m);scene.add(pts);return m;
+}
+// 翻页金色拖尾（2.6–3.3 自书脊/翻页缘逸出）
+const trailSys=particleSys(26,i=>{const r=mulberry32(500+i)();
+  return{p:[-0.45+(mulberry32(600+i)()*0.55),(r-0.5)*1.05,0.06],
+    v:[(mulberry32(700+i)()-0.5)*0.45,0.12+mulberry32(800+i)()*0.30,0.22+mulberry32(900+i)()*0.40],
+    t0:2.65+i*0.022,life:0.30+r*0.20,size:0.22+r*0.30,c:COL.trail,curv:0.15}});
+// 吸积碎屑：每张被吞卡 6 粒（吞噬时刻附近诞生，外抛后被吸回）；v1.5 星环机制无中心吞噬点，跳过；太极机制用族色
+const debrisSys=ELIM_ID==='ring'?null:particleSys(25*6,i=>{const m=(i/6)|0,k=i%6,rr=mulberry32(4000+i*13);
+  const a=rr()*6.283,sp=0.5+rr()*0.9,t0=ELIM[m].tE+0.40+k*0.015;
+  const famC=ELIM_ID==='taiji'?(ELIM[m].set==='direct'?COL.debA:COL.debB):null;
+  return{p:[Math.cos(a)*0.12,Math.sin(a)*0.12,0.05],
+    v:[Math.cos(a)*sp,Math.sin(a)*sp,(rr()-0.5)*0.3],
+    t0,life:0.3+rr()*0.2,size:0.4+rr()*0.6,c:famC||(rr()<0.5?COL.debA:COL.debB),curv:0.85}});
+// 归一收拢时的星尘径向吹散（v1.9：9.55–10.2）
+const dustSys=particleSys(90,i=>{const r=mulberry32(9000+i*7);
+  const a=r()*6.283,u=r()*2-1,sq=Math.sqrt(1-u*u),sp=1.4+r()*1.6;
+  return{p:[0,0,0],v:[sp*sq*Math.cos(a),sp*u*0.8,sp*sq*Math.sin(a)],
+    t0:9.57+(i%18)*0.012,life:0.4+r*0.25,size:0.5+r*0.9,c:r()<0.6?COL.dustA:COL.dustB,curv:0}});
+// fountain：书体羽化星屑（3.24–3.54 自书页喷涌，上飘成松散涡旋，不成柱）
+const burstSys=TR_ID==='fountain'?particleSys(150,i=>{const r=mulberry32(5200+i*17);
+  const a=r()*6.283,rad=0.15+r()*0.45;
+  return{p:[Math.cos(a)*rad,(r()-0.5)*1.05,0.05+(r()-0.5)*0.25],
+    v:[Math.cos(a)*(0.45+r()*0.65),1.25+r()*1.25,Math.sin(a)*(0.30+r()*0.40)],
+    t0:3.24+r()*0.30,life:0.75+r()*0.55,size:0.5+r()*0.85,
+    c:r()<0.62?COL.trail:(r()<0.5?COL.debA:COL.dustA),curv:0.62}}):null;
+// fountain/helix：每张出卡拉出的一道短光丝（自亮核拽向弧位方向，随即消散）
+const launchSys=(TR_ID==='fountain'||TR_ID==='helix')?particleSys(26*3,i=>{
+  const m=(i/3)|0,k=i%3,def=cardDefs[m],r=mulberry32(7000+i*11);
+  const a=slotAngle(def.set,def.j)*DEG,sp=1.15+r()*0.7;
+  return{p:[0,2.55,0],v:[Math.cos(a)*sp,Math.sin(a)*sp,0.06*(k-1)],
+    t0:(3.7+m*0.07)+0.03*k,life:0.30+r()*0.18,size:0.45+r()*0.5,
+    c:def.set==='direct'?COL.debA:COL.debB,curv:0.35}}):null;
+
+/* ================= frame(t)：一切可见状态由 t 派生 ================= */
+const _q1=new THREE.Quaternion(),_q2=new THREE.Quaternion(),_v1=new THREE.Vector3(),_v2=new THREE.Vector3(),_m1=new THREE.Matrix4();
+const RAD2=Math.PI/2;
+const HERO_S5=new THREE.Vector3(0,0.78,2.75);
+
+function frame(t){
+  t=Math.min(DUR,Math.max(0,t));
+  camAt(t);
+
+  /* --- 星空 --- */
+  starMat.uniforms.uTime.value=t;
+  starMat.uniforms.uBoost.value=env(t,[[0,1],[1.6,1],[2.2,1.55],[2.9,1.6],[3.1,2.0],[3.6,1.2],[7.1,1.1],[8.1,1.25],[10.4,1.0],[14.3,1]]);
+  starGroup.rotation.y=0.007*t;
+  nebP1.rotation.z=0.02+0.012*t*0.02;nebP2.rotation.z=-0.03-0.008*t*0.02;
+
+  /* --- S1/S2 浮书 --- */
+  const bookGone=t>3.45;
+  book.visible=!bookGone;
+  if(book.visible){
+    let sink=ease.inOutCubic(remap(t,3.2,3.4))*0.55;
+    if(TR_ID==='fountain'){          // 羽化：提前深沉 + 微缩，星屑自书页喷出
+      sink=ease.inOutCubic(remap(t,3.15,3.42))*0.75;
+      book.scale.setScalar(1-0.10*ease.inCubic(remap(t,3.15,3.45)));
+    }else if(TR_ID==='ripple'){      // 收拢：回扉、压扁成薄片（封印组先行隐去，避免糊成色块）
+      const cp=ease.inCubic(remap(t,3.15,3.42));
+      sink=ease.inOutCubic(remap(t,3.15,3.42))*0.15;
+      book.scale.set(1+0.12*cp,Math.max(0.035,1-0.965*cp),1+0.12*cp);
+      coverDeco.visible=remap(t,3.10,3.18)<1;
+    }
+    book.position.set(0,0.05*Math.sin(2*Math.PI*t/3)-sink,0);
+    book.rotation.y=4*DEG*Math.sin(2*Math.PI*t/6);
+    coverPivot.rotation.y=178*DEG*ease.inOutCubic(remap(t,2.6,3.4));
+    if(TR_ID==='ripple')coverPivot.rotation.y*=1-ease.inOutCubic(remap(t,3.15,3.5));
+    // 封印：外环慢转，四团能量焰各自反向自转/呼吸；1.6 后整体亮度爬升
+    const heat=env(t,[[0,.72],[1.6,.72],[2.2,1.25],[2.7,1.05],[3.4,.9]]);
+    sealRing.rotation.z=0.16*t;
+    bookLattice.rotation.z=-0.05*t;
+    bookLattice.material.opacity=.82+.14*Math.sin(2*Math.PI*t/2.4);
+    for(let i=0;i<bookFlames.length;i++){
+      const f=bookFlames[i];
+      f.rotation.z=(i%2?1:-1)*0.28*t+i*1.57;
+      f.scale.setScalar(1+0.10*Math.sin(2*Math.PI*t/1.9+i*1.4));
+      f.material.opacity=(0.72+0.20*Math.sin(2*Math.PI*t/1.7+i*1.2))*heat;
+    }
+    if(BKC.scan>0){ // 全息：轻微高频闪烁
+      const fl=.93+.05*Math.sin(41*t)+.02*Math.sin(97*t);
+      for(const f of bookFlames)f.material.opacity*=fl;
+      holoScan.material.opacity=BKC.scan*(.7+.3*Math.sin(2*Math.PI*t/0.7));
+    }
+    const bph=breathPhase(t);
+    for(const rs of ringStones){
+      const p=0.5+0.5*Math.sin(bph-2*Math.PI*rs.ph/1.6);
+      rs.ring.scale.setScalar(1+0.16*p);
+      rs.ring.material.emissiveIntensity=(0.18+0.55*p)*heat;
+      rs.rim.material.opacity=(BKC.stones==='wire'?.28:.14)*(0.6+0.8*p);
+    }
+    // 封面脉冲两次（2.2–2.6）
+    pulseGlow.material.opacity=(t>=2.2&&t<2.4?Math.sin(Math.PI*(t-2.2)/0.2)*0.58:0)+(t>=2.4&&t<2.6?Math.sin(Math.PI*(t-2.4)/0.2)*0.46:0);
+    // 书脊金线蔓延
+    spineA.material.opacity=0.9*ease.outCubic(remap(t,2.2,2.35));
+    spineB.material.opacity=0.9*ease.outCubic(remap(t,2.3,2.5));
+    // 书页缝辉光（3.0 主峰）：非 pillar 方案压窄压暗为青色能量线，杜绝爆白
+    const pg=Math.pow(Math.sin(Math.PI*remap(t,2.8,3.35)),2);
+    pageGlow.material.opacity=pg*(TR_PILLAR?0.72:0.26);
+    pageGlow.scale.set(1+pg*(TR_PILLAR?0.15:0.06),1+pg*(TR_PILLAR?0.10:0.05),1);
+    pageHalo.material.opacity=pg*(TR_PILLAR?0.16:0.045);
+    pageHalo.scale.setScalar(1+pg*(TR_PILLAR?0.35:0.10));
+  }
+
+  /* --- S3 书→卡转场（TRANSITION 分派）--- */
+  {
+    if(TR_PILLAR){ /* 现行：白金光柱 + 亮核（对照基线） */
+      const h=2.6*ease.outCubic(remap(t,3.25,3.7));
+      const fade=1-remap(t,5.9,6.35);
+      colGroup.visible=h>0.01&&fade>0.01;
+      if(colGroup.visible){
+        colA.scale.set(1,Math.max(h,0.001),1);colA.position.y=h/2;colA.material.opacity=0.5*fade;
+        colB.scale.set(1,Math.max(h,0.001),1);colB.position.y=h/2;colB.material.opacity=0.14*fade;
+        const pulse=1+0.18*Math.sin(2*Math.PI*t/0.5);
+        core.scale.setScalar(pulse);
+        core.position.y=h*0.99;coreGlow.position.y=h*0.99;
+        core.material.opacity=fade;coreGlow.material.opacity=0.85*fade;
+        colLight.intensity=3.5*fade;
+      }else colLight.intensity=0;
+    }else colGroup.visible=false;
+
+    if(TR_ID==='fountain'){        // 星屑喷泉：小亮核悬于书心上空，星屑自书页喷涌（无柱）
+      const kf=env(t,[[3.30,0],[3.62,1],[5.0,1],[5.55,0]]);
+      transGroup.visible=kf>0.01;
+      if(transGroup.visible){
+        const rise=ease.outBack(remap(t,3.30,3.62)),pulse=1+0.10*Math.sin(2*Math.PI*t/0.45);
+        kSphere.scale.setScalar(Math.max(0.05,rise)*pulse);
+        kGlow.scale.setScalar(0.5*(0.4+0.6*rise)*pulse);
+        kSphere.material.opacity=0.9*kf;kGlow.material.opacity=0.6*kf;
+        colLight.intensity=1.15*kf;
+      }else colLight.intensity=0;
+    }else if(TR_ID==='helix'){     // 双螺旋星门：青/绯双螺旋织门→解旋，小亮核出卡
+      const hr=remap(t,3.20,3.85),hu=remap(t,3.95,4.60);
+      helixGroup.visible=t>3.18&&hu<1;
+      if(helixGroup.visible){
+        helixGroup.rotation.y=2.4*(t-3.2);
+        helixB.rotation.y=-5.0*(t-3.2);
+        const start=Math.round(HELIX_IDX*ease.inCubic(hu));
+        const cnt=Math.max(0,Math.round(HELIX_IDX*ease.outCubic(hr))-start);
+        helixA.geometry.setDrawRange(start,cnt);helixB.geometry.setDrawRange(start,cnt);
+        const lop=0.95*(0.35+0.65*ease.outCubic(hr))*(1-ease.inOutCubic(hu));
+        helixA.material.opacity=lop;helixB.material.opacity=lop*0.92;
+      }
+      const kf=env(t,[[3.42,0],[3.75,1],[5.0,1],[5.60,0]]);
+      transGroup.visible=kf>0.01;
+      if(transGroup.visible){
+        const rise=ease.outBack(remap(t,3.42,3.75)),pulse=1+0.10*Math.sin(2*Math.PI*t/0.45);
+        kSphere.scale.setScalar(Math.max(0.05,rise)*pulse);
+        kGlow.scale.setScalar(0.55*(0.4+0.6*rise)*pulse);
+        kSphere.material.opacity=0.9*kf;kGlow.material.opacity=0.7*kf;
+        colLight.intensity=1.0*kf;
+      }else colLight.intensity=0;
+    }else if(TR_ID==='ripple'){    // 涟漪点将：书心余晖 + 屏面方形涟漪扩散 + 弧上点将扫光
+      const gf=env(t,[[3.50,0],[3.72,1],[4.35,0]]);
+      genGlow.visible=gf>0.01;
+      if(genGlow.visible){
+        genGlow.material.opacity=0.5*gf;
+        genGlow.scale.setScalar(1.1+0.5*remap(t,3.50,4.3));
+      }
+      const prog=remap(t,3.50,4.45),ro=(1-remap(t,3.95,4.60))*(t>3.50?1:0);
+      ripGroup.visible=ro>0.01;
+      if(ripGroup.visible){
+        const r=0.2+4.6*ease.outCubic(prog);
+        ripA.forEach((l,i)=>{setSquareXY(l.geometry.attributes.position.array,r+(i-1)*0.010);
+          l.geometry.attributes.position.needsUpdate=true;l.material.opacity=0.34*ro});
+        ripB.forEach((l,i)=>{setSquareXY(l.geometry.attributes.position.array,Math.max(0.06,r-0.22)+(i-0.5)*0.014);
+          l.geometry.attributes.position.needsUpdate=true;l.material.opacity=0.28*ro});
+      }
+      const lightF=env(t,[[3.50,0],[3.68,1],[4.30,0]]);
+      colLight.intensity=0.7*lightF;
+      // 点将扫光：与出卡序同步沿弧移动（直指 3.70–4.54 / 斜指 4.61–5.45）
+      const dWin=[[3.70,4.54,210,60],[4.61,5.45,240,390]];
+      for(let gi=0;gi<2;gi++){
+        const [t0,t1,a0,a1]=dWin[gi],g=glintDeal[gi],d=remap(t,t0,t1);
+        g.visible=d>0&&d<1;
+        if(g.visible){
+          const a=lerp(a0,a1,d)*DEG;
+          g.position.set((ARC_R+0.10)*Math.cos(a),(ARC_R+0.10)*Math.sin(a),0.06);
+          g.material.opacity=0.85*Math.pow(Math.sin(Math.PI*d),0.5);
+        }
+      }
+    }
+  }
+
+  /* --- S6 波前与大盘（v1.4：同比例顺延，t6 为原节拍时间） --- */
+  const t6=s6(t);
+  const wr=waveR(t6);
+  const waveActive=t6>=WAVE_T0&&t6<11.55;
+  waveRing.visible=waveGlow.visible=waveActive;
+  if(waveActive){
+    const r=wr+0.012,o=0.9*(1-remap(t6,11.35,11.55));
+    setSquare(wavePts,r);waveGeo.attributes.position.needsUpdate=true;
+    waveRing.material.opacity=o;waveGlow.material.opacity=o*0.3;
+    setSquare(waveGlow.geometry.attributes.position.array,r+0.05);
+    waveGlow.geometry.attributes.position.needsUpdate=true;
+  }
+  boardBase.material.uniforms.uOp.value=ease.outCubic(remap(t6,9.5,9.8));
+  boardBase.material.uniforms.uR.value=wr+0.07;
+  for(const rm of ringMeshes){
+    const tCross=kCross(rm.k);                    // 波前到达环 k 的时刻
+    const d={N:0,E:0.0125,S:0.025,W:0.0375}[rm.side];
+    const a=remap(t6,tCross+0.05+d,tCross+0.10+d);// 波后 0.05s 内凝出（0.05s 淡入）
+    rm.mat.opacity=a*(COL.neonFrame?0.62:0.8);
+    rm.mat.color.copy(rm.bright).lerp(rm.gold,a); // 亮起 → 沉为暗金
+  }
+  // 四角星位（±4,±4）：波前扫过时凝出
+  {const tc=kCross(4)+0.05,a=remap(t6,tc,tc+0.10);
+   starMarks.forEach(m=>{m.material.opacity=a*(0.85+0.15*Math.sin(2*Math.PI*t/2.2))})}
+  boardFrame.material.opacity=COL.neonFrame?0:0.8*ease.outCubic(remap(t6,11.5,11.85));
+  // 霓虹圆角边框（仅赛博风格）：11.3 后凝出
+  if(COL.neonFrame){
+    boardNeon.visible=t6>11.28;
+    boardNeon.material.opacity=0.9*ease.outCubic(remap(t6,11.3,11.75));
+  }else boardNeon.visible=false;
+  // 波前扫过棋子：弹亮 0.1s（三子最大环半径 ≈1.5）+ 花月运行时点亮（v1.4）
+  const hh=heroHi(t);
+  const stoneFlash=Math.max(0,1-Math.abs(t6-(WAVE_T0+0.10))/0.1)*Math.sign(wr>1.4*S);
+  heroWhiteGlow.material.opacity=0.9*hh;
+  heroBlackGlows.forEach(g=>g.material.opacity=0.38*hh);
+  stoneRimMat.opacity=(COL.neonFrame?.55:.42)+0.55*hh;
+  // 点亮前压成哑光；点亮后恢复到珠光白（S6 落盘后保持全白）
+  whiteMat.color.copy(_whiteBaseC).multiplyScalar(0.66+0.34*ease.outCubic(remap(t,6.95,7.10)));
+  whiteMat.emissiveIntensity=COL.whiteEmInt+0.9*Math.max(0,stoneFlash)+1.5*hh;
+  // 黑子只加冷边光（体色保持黑曜，只走 emissive 微亮 + 外圈 rim）
+  blackMat.emissive.setRGB(COL.blackEm[0]+_rimC.r*0.16*hh,COL.blackEm[1]+_rimC.g*0.16*hh,COL.blackEm[2]+_rimC.b*0.16*hh);
+  blackMat.emissiveIntensity=COL.blackEmInt*(1+1.6*Math.max(0,stoneFlash))+0.22*hh;
+  if(stoneFlash>0){blackMat.emissive.setRGB(COL.blackEm[0]+0.35*stoneFlash+_rimC.r*0.16*hh,COL.blackEm[1]+0.30*stoneFlash+_rimC.g*0.16*hh,COL.blackEm[2]+0.26*stoneFlash+_rimC.b*0.16*hh)}
+  // 天元终式微光呼吸一次（11.5–12.0 原节拍）
+  tyGlow.material.opacity=0.75*Math.sin(Math.PI*remap(t6,11.5,11.95));
+  tyGlow.scale.setScalar(0.22+0.16*remap(t6,11.5,11.95));
+
+  /* --- S6.5 棋盒入场与待机（v1.9：14.25 垫盘 → 主体 → 棋子/盖，15.4 后待机呼吸） --- */
+  bowlGroup.visible=BOWL_ID!=='none'&&t>T_B0-0.02;
+  if(bowlGroup.visible){
+    const uP=ease.outCubic(remap(t,T_B0,T_B0+0.32));          // 垫盘（v1.9：0.20→0.32）
+    const uB=ease.outBack(remap(t,T_B0+0.23,T_B0+0.67));      // 主体（舱壁/罐体/光锥；v1.9：0.28→0.44）
+    const uS=ease.outCubic(remap(t,T_B0+0.68,T_B0+1.20));     // 完成度（标记等）
+    const ib=Math.sin(2*Math.PI*(t-T_B0)/1.9);                // 待机呼吸相位
+    const drop=(m,te,dy)=>{const dp=ease.outCubic(remap(t,te,te+0.16));
+      m.visible=dp>0.001;m.position.y=m.userData.ty+(1-dp)*dy};
+    for(const it of (bowlA?bowlA.items:bowlB?bowlB.items:bowlC?bowlC.items:[])){
+      it.pad.g.scale.setScalar(Math.max(0.001,uP));
+      it.pad.ring.material.opacity=.75*uP;it.pad.glow.material.opacity=.35*uP*(0.85+0.15*ib);
+    }
+    if(bowlA)for(const it of bowlA.items){     // 悬浮能量舱：舱壁升起 → 舱口霓虹环 → 棋子落入
+      const wu=Math.max(0.001,uB);
+      it.wall.scale.set(wu,wu,wu);it.wall.position.y=it.base+0.12*wu+0.008*ib;
+      it.bottom.material.opacity=.9*uP;
+      it.rim.scale.setScalar(Math.max(0.001,uB));it.rim.position.y=it.base+0.24+0.008*ib;
+      it.rim.material.opacity=.8*uB;
+      it.rg.material.opacity=.24*uB*(0.82+0.18*ib);
+      it.stones.forEach((m,i)=>drop(m,T_B0+0.45+i*0.054,0.18));
+    }
+    if(bowlB)for(const it of bowlB.items){     // 霓虹棋罐：罐体升起 → 罐口霓虹环 → 悬浮盖落定缓旋
+      const ju=Math.max(0.001,uB);
+      it.jar.scale.set(ju,ju,ju);
+      it.mouth.scale.setScalar(Math.max(0.001,uB));it.mouth.material.opacity=.8*uB;
+      const lu=ease.outCubic(remap(t,T_B0+0.68,T_B0+1.06));
+      it.lid.visible=lu>0.001;it.lid.material.opacity=.85*lu;
+      it.lid.position.y=it.lidY+0.012*Math.sin(2*Math.PI*t/2.2+it.ph);
+      it.seam.material.opacity=.38*uB*(0.78+0.22*ib);
+      it.stones.forEach((m,i)=>drop(m,T_B0+0.45+i*0.054,0.10));
+    }
+    if(bowlC)for(const it of bowlC.items){     // 全息取子台：光锥亮起 → 棋子自下而上凝出悬浮旋柱 → 下一手标记
+      const cu=Math.max(0.001,uB);
+      it.cone.scale.set(cu,cu,cu);
+      it.cone.material.opacity=(0.75+0.25*Math.sin(2*Math.PI*t/1.7+it.ph))*uB;
+      it.col.rotation.y=t*0.22;
+      it.col.children.forEach((m,i)=>{if(i>=it.tys.length)return;
+        const te=T_B0+0.42+i*0.09,pp=ease.outBack(remap(t,te,te+0.26));
+        m.visible=pp>0.001;m.scale.setScalar(Math.max(0.001,pp));
+        m.position.y=it.tys[i]+0.006*Math.sin(2*Math.PI*t/1.6+i*1.3);});
+      it.mark.material.opacity=(0.55+0.45*Math.sin(2*Math.PI*t/1.1))*uS;
+    }
+  }
+
+  /* --- S4 中心机制（v1.5 分支） --- */
+  {
+    const open=ease.outQuart(remap(t,T_HOLE0,T_HOLE1))*(1-ease.inCubic(remap(t,T_HOLE_C0,T_HOLE_C1)));
+    hole.visible=open>0.001;
+    hole.scale.setScalar(Math.max(open,0.001));
+    if(hole.visible){
+      if(ELIM_ID==='taiji'){
+        /* 太极归一：双臂顺时针旋（随淘汰加速）→ 9.2 起收拢并色归一 → 核闪 */
+        const u=remap(t,T_ELIM0,T_HOLE_C0),conv=remap(t,9.2,9.75),late=remap(t,9.33,9.75);
+        const spinA=0.8*(t-T_HOLE0)+1.2308*Math.max(0,t-T_ELIM0)**2+2.0*Math.max(0,t-9.2)**2;
+        const cS=1-0.74*ease.inCubic(conv);
+        tjBase.rotation.z=-0.35*spinA;tjArmCy.rotation.z=-spinA;tjArmCr.rotation.z=Math.PI-spinA;
+        tjBase.material.opacity=0.9*open*(1-0.45*conv);
+        const pd=taijiPulse('direct',t),pi=taijiPulse('indirect',t);
+        const bD=1+0.40*pd+0.55*conv,bI=1+0.40*pi+0.55*conv;
+        tjArmCy.material.opacity=Math.min(1,0.85*open*(0.80+0.4*pd))*(1-late);
+        tjArmCr.material.opacity=Math.min(1,0.85*open*(0.80+0.4*pi))*(1-late);
+        tjArmCy.material.color.setRGB(bD,bD,Math.min(1.5,bD+0.08));
+        tjArmCr.material.color.setRGB(bI,bI,Math.min(1.5,bI+0.08));
+        horizon.scale.setScalar(0.52*(1-0.85*late));
+        photonRing.material.opacity=0.4*open;
+        lensRing.material.opacity=0.10*open*(1+0.3*Math.sin(2*Math.PI*t/0.9));
+        tjCore.material.opacity=0.9*Math.sin(Math.PI*remap(t,9.25,10.05));
+        tjCore.scale.setScalar(0.35+0.55*remap(t,9.25,9.8));
+        holeLight.intensity=1.4*open*(1+0.5*conv);
+      }else if(ELIM_ID==='ring'){
+        /* 星环收束：主环/副环对旋（随吸收增亮）→ 9.55 环体向心收束 → 核闪；光珠沿环轨公转 */
+        const spinA=0.5*(t-T_HOLE0)+0.9*Math.max(0,t-T_ELIM0)**2;
+        const cS=1-0.94*ease.inCubic(remap(t,9.55,10.05));
+        ringDisc.rotation.z=spinA;ringDash.rotation.z=-1.7*spinA;
+        const pt=taijiPulse('direct',t)+taijiPulse('indirect',t);
+        ringDisc.material.opacity=Math.min(1,0.9*open*(0.8+0.45*pt));
+        ringDash.material.opacity=0.65*open;
+        ringDisc.scale.setScalar(cS);ringDash.scale.setScalar(cS);
+        for(const b of ringBeads){
+          const tau=t-b.tE;
+          if(tau<0||t>10.06){b.spr.visible=false;continue}
+          b.spr.visible=true;
+          const a=b.ang+b.om*tau,r=RING_R*cS;
+          b.spr.position.set(r*Math.cos(a),r*Math.sin(a),0.012);
+          b.spr.material.opacity=0.95*Math.min(1,tau/0.06)*(1-remap(t,9.64,10.06));
+        }
+        rgCore.material.opacity=0.95*Math.sin(Math.PI*remap(t,9.55,10.14));
+        rgCore.scale.setScalar(0.3+0.6*remap(t,9.55,10.04));
+        holeLight.intensity=1.7*open;
+      }else{
+        /* hole / singularity：现行黑洞（全息坍缩仅换吸积盘谱色与照明色） */
+        accretion.rotation.z=-2.4*t;
+        photonRing.material.opacity=0.55*open;
+        lensRing.material.opacity=0.12*open*(1+0.3*Math.sin(2*Math.PI*t/0.9));
+        holeLight.intensity=2.4*open;
+      }
+    }else holeLight.intensity=0;
+  }
+
+  /* --- 26 卡状态机 --- */
+  updateCards(t);
+
+  /* --- 扫光 --- */
+  updateSweeps(t);
+
+  /* --- 粒子 --- */
+  trailSys.uniforms.uTime.value=t;
+  if(debrisSys)debrisSys.uniforms.uTime.value=t;
+  dustSys.uniforms.uTime.value=t;
+  if(burstSys)burstSys.uniforms.uTime.value=t;
+  if(launchSys)launchSys.uniforms.uTime.value=t;
+
+  /* --- Bloom 呼吸 + 暗角 + 赛博后处理 --- */
+  const bPeak=TR_PILLAR?[2.2,1.171,2.8,1.057,3.0,1.171,3.5,1.143]:[2.2,1.12,2.8,1.03,3.0,1.06,3.5,1.04];
+  bloom.strength=COL.bloomStrength*env(t,[[0,1],[1.6,1],[bPeak[0],bPeak[1]],[bPeak[2],bPeak[3]],[bPeak[4],bPeak[5]],[bPeak[6],bPeak[7]],[4.2,1],[7.1,1],[7.65,1.2],[8.97,1.029],[11.532,1.029],[12.196,1.171],[12.971,1],[13.746,1.071],[14.3,1.114],[15.1,1.06],[16.0,1.03]]);
+  vigEl.style.opacity=(COL.vigBase+(COL.vigEnd-COL.vigBase)*ease.inOutCubic(remap(t,13.746,14.3))).toFixed(3);
+  postPass.uniforms.uGlitch.value=COL.glitch*(burst(t,7.10,7.20)+burst(t,13.70,13.81));
+
+  updateMoves(t);
+  const tg=t-T_OPEN;   // S8/S9 时间基 = 对弈片秒（T0/T_X0 等常量均为片内秒；absorbAt 内部自行加回 T_OPEN）
+  updateWinFx(tg);     // S8 五连特效（v2.0，t<T0 空操作）
+  updateExit(tg);      // S9 退场（v2.0，t<T_X0 空操作；须在 updateMoves/updateCards 之后覆写棋子位）
+  composer.render();
+}
+const vigEl=document.getElementById('vig');
+// 波前到达环 k 的时刻（k=3..7）：r(t) 越过 kS 即 waveEnd(k-3)
+function kCross(k){return waveEnd(k-3)}
+function setSquare(arr,r){
+  const v=[[-r,-r],[r,-r],[r,r],[-r,r]];
+  for(let i=0;i<4;i++){arr[i*3]=v[i][0];arr[i*3+1]=0.001;arr[i*3+2]=v[i][1]}
+}
+
+/* --- 卡片：飞行 / 待命 / 淘汰 / 英雄轨迹 --- */
+// 还原拉丝顶点（跨时刻无残留）
+function restoreVerts(c){if(c.stretched){c.geo.attributes.position.array.set(c.baseVerts);c.geo.attributes.position.needsUpdate=true;c.stretched=false}}
+function updateCards(t){
+  const t6=s6(t);                                 // S6 同比例顺延后的节拍时间
+  for(const c of cards){
+    const p=t-c.tFly;
+    if(p<0){c.grp.visible=false;continue}
+    c.grp.visible=true;
+    const tE=elimAt(c.def.set,c.def.j);
+    const elimP=t-tE;
+    let pos=c.base.clone(),quat=_q1.identity(),scale=1,opacity=1;
+
+    if(elimP>0&&!c.hero){                      // —— 淘汰：翻面→变暗→拉丝→吸入（v1.5 按机制分路径）
+      if(elimP>0.5){c.grp.visible=false;continue}
+      const flip=Math.PI*ease.outCubic(remap(elimP,0,0.15));
+      quat.setFromAxisAngle(_v1.set(0,1,0),flip);
+      const dark=1-0.72*Math.min(1,elimP/0.25);
+      c.mat.color.setScalar(dark);
+      if(ELIM_ID==='ring'){                    // 星环收束：直飞环上最近点，熔为光珠
+        const q=ease.inQuad(remap(elimP,0,0.35));
+        const r=ARC_R+(RING_R-ARC_R)*q,a=c.angA*DEG;
+        pos.set(r*Math.cos(a),r*Math.sin(a),0);
+        scale=1-0.78*q;opacity=1-q;
+        stretchVerts(c,pos,quat,ease.inQuad(remap(elimP,0.08,0.22)));
+      }else{                                   // hole/taiji/singularity：螺旋吸入
+        const q=ease.inQuad(remap(elimP,0.15,0.5));
+        const dir=ELIM_ID==='taiji'?-2.5:2.2;  // 太极：顺肘流入左旋臂
+        const r=ARC_R*(1-q),a=c.angA*DEG+dir*q;
+        pos.set(r*Math.cos(a),r*Math.sin(a),0);
+        scale=1-0.9*q;opacity=1-q;
+        stretchVerts(c,pos,quat,ease.inQuad(remap(elimP,0.10,0.25)));
+      }
+    }else if(p<1&&TR_ID==='ripple'){           // —— 涟漪点将：在弧位就地凝出（升起+微过冲）
+      const u=clamp01(p/0.45);
+      pos.y+=0.55*(1-ease.outCubic(u));
+      quat.copy(slotQuat(c.angA));
+      scale=lerp(0.55,1,ease.outBack(u));
+      opacity=Math.min(1,u/0.10);
+      c.mat.color.setScalar(1+0.45*(1-ease.outCubic(u)));   // 凝出瞬间轻亮后回落
+      restoreVerts(c);
+    }else if(p<1){                             // —— 螺旋+贝塞尔飞行（0.55s，错峰 70ms）
+      // 螺旋发生在 XY 屏面：亮核(0,2.55,0) → 弧位 (R cosA, R sinA, 0)，easeOutBack 过冲回弹
+      const u=clamp01(p/0.55);
+      const ue=ease.outBack(u), k=ease.outCubic(u);
+      const r=Math.max(0.02,ARC_R*ue), a=c.angA*DEG+2.3*(1-ease.inOutCubic(u));
+      pos.set(r*Math.cos(a), r*Math.sin(a)+2.55*(1-k), 0.12*Math.sin(Math.PI*u));
+      // 姿态：飞行自旋 → 末段并入弧位切线微倾 12°
+      const spin=_q2.setFromAxisAngle(_v1.set(0,0,1),(1-u)*2.4*Math.sign(c.ph-3.14));
+      quat.copy(slotQuat(c.angA)).premultiply(spin);
+      quat.slerp(slotQuat(c.angA),ease.smooth(remap(u,0.55,1)));
+      scale=lerp(0.5,1,ease.outCubic(u));
+      c.mat.color.setScalar(1);                    // 无残留：每帧复位
+      restoreVerts(c);
+    }else{                                     // —— 落位待命 / 英雄专属轨迹
+      const fl=0.035*Math.sin(2*Math.PI*t/1.9+c.ph)+0.012*Math.sin(2*Math.PI*t/1.1+c.ph2);
+      if(c.hero){
+        // S4 后段移向阵前中央 → S5 飞向镜头 → 定格呼吸 → 溶解（v1.4 整体后移 0.7s）
+        if(t<T_FREEZE0)pos=c.base.clone().lerp(new THREE.Vector3(0,0.25,1.1),ease.inOutCubic(remap(t,8.9,10.2)));
+        else pos=new THREE.Vector3(0,0.25,1.1).lerp(HERO_S5,ease.inOutCubic(remap(t,T_FREEZE0,T_FREEZE0+0.6)));
+        if(t>=T_FREEZE0+0.6){pos.copy(HERO_S5);
+          const br=1+0.022*Math.sin(2*Math.PI*(t-(T_FREEZE0+0.6))/0.8);scale=br;}
+        // 姿态：+Z 朝向相机（Matrix4.lookAt(eye,target)：非相机物体需 eye=目标点）
+        _m1.lookAt(camera.position,pos,_v1.set(0,1,0));quat.setFromRotationMatrix(_m1);
+      }else{
+        pos=c.base.clone();pos.y+=fl;
+        quat.copy(slotQuat(c.angA));
+        quat.multiply(_q2.setFromAxisAngle(_v1.set(0,0,1),1.5*DEG*Math.sin(2*Math.PI*t/2.3+c.ph)));
+        // v1.4：游框掠过时描边泛涟漪；花月点亮后其余 25 卡轻微压暗（每帧复位）
+        const rip=selRippleAt(c.angA,t);
+        const dim=1-0.18*ease.outCubic(remap(t,6.95,7.10));
+        c.mat.color.setScalar(dim*(1+1.0*rip));
+        restoreVerts(c);
+      }
+    }
+    c.grp.position.copy(pos);
+    c.grp.quaternion.copy(quat);
+    c.grp.scale.setScalar(scale);
+    c.mat.opacity=opacity;
+    // 英雄卡溶解（9.2–9.5 原节拍 → 9.9–10.2 新时间）：描边与卡底淡出，网格与三子留原位
+    if(c.hero){
+      c.mat.opacity=opacity*(1-remap(t6,9.2,9.5));
+      c.grp.visible=t6<9.55;
+    }
+  }
+  /* --- 英雄迷你盘：随卡 → 落盘（Rx(−90°)，格距与坐标零变化，§6） --- */
+  if(t6<9.2){
+    miniBoard.position.copy(heroCard.grp.position);
+    miniBoard.quaternion.copy(heroCard.grp.quaternion);
+    miniBoard.scale.copy(heroCard.grp.scale);
+  }else{
+    const e=ease.inOutCubic(remap(t6,9.2,9.5));
+    _v1.set(1,0,0);_q2.setFromAxisAngle(_v1,-RAD2);           // 卡面(上=+y) → 盘面(上=−z)
+    miniBoard.position.lerpVectors(heroCard.grp.position,new THREE.Vector3(0,0,0),e);
+    miniBoard.quaternion.slerpQuaternions(heroCard.grp.quaternion,_q2,e);
+    miniBoard.scale.setScalar(1);                              // 禁用整体缩放（§6 铁律）
+  }
+  miniBoard.visible=t>=heroCard.tFly;
+  miniGrid.material.opacity=0.62+0.18*ease.smooth(remap(t6,9.2,9.35));
+  miniTY.material.opacity=Math.min(1,remap(t6,9.25,9.45));   // 天元菱标随卡面菱形交接
+  // 盘面三子软影：溶解期从卡面阴影接手（先更新世界矩阵，避免一帧滞后）
+  miniBoard.updateMatrixWorld(true);
+  const shOp=remap(t6,9.2,9.5);
+  boardShadows.forEach((m,i)=>{miniStones[i].getWorldPosition(_v2);
+    m.visible=shOp>0;m.material.opacity=0.62*shOp;
+    m.position.set(_v2.x,0.0025,_v2.z)});
+}
+// 弧位姿态：面向镜头 + 绕弧切线微倾 12°
+const _slotQ={};
+function slotQuat(aDeg){
+  const key=Math.round(aDeg*10);
+  if(!_slotQ[key]){
+    const a=aDeg*DEG,tg=_v1.set(-Math.sin(a),Math.cos(a),0).normalize();
+    _slotQ[key]=new THREE.Quaternion().setFromAxisAngle(tg,12*DEG);
+  }
+  return _slotQ[key];
+}
+// 顶点引力拉丝：网格顶点向黑洞方向位移渐增
+function stretchVerts(c,pos,quat,amt){
+  if(!c.geo)return;
+  if(amt<=0){if(c.stretched){c.geo.attributes.position.array.set(c.baseVerts);c.geo.attributes.position.needsUpdate=true;c.stretched=false}return}
+  c.stretched=true;
+  const dir=_v1.set(0,0,0).sub(pos).normalize().applyQuaternion(quat.clone().invert());
+  const arr=c.geo.attributes.position.array,base=c.baseVerts;
+  for(let i=0;i<arr.length;i+=3){
+    const r=Math.hypot(base[i],base[i+1]);
+    const pull=amt*0.22*(0.3+r*1.6);
+    arr[i]=base[i]+dir.x*pull;arr[i+1]=base[i+1]+dir.y*pull;arr[i+2]=base[i+2];
+  }
+  c.geo.attributes.position.needsUpdate=true;
+}
+function updateSweeps(t){
+  /* v1.4 游框选将（6.0–7.1）：滑行一圈 → 锁定收缩 → 双脉冲 → 化光吸收 */
+  const selOn=t>=T_SEL0&&t<7.08;
+  selFrame.visible=selGlow.visible=selOn;
+  if(selOn){
+    const a=selAngleAt(t)*DEG;
+    const lock=ease.outCubic(remap(t,6.60,6.82));
+    const absorb=ease.inCubic(remap(t,6.86,7.06));
+    const pulse=burst(t,6.63,6.74)+burst(t,6.76,6.87);       // 锁定后双脉冲
+    const sc=(0.98-0.10*lock)*(1-0.42*absorb)*(1+0.06*pulse);
+    selFrame.position.set(ARC_R*Math.cos(a),ARC_R*Math.sin(a),0.13);
+    const tg=_v1.set(-Math.sin(a),Math.cos(a),0).normalize();
+    _q2.setFromAxisAngle(tg,12*DEG);selFrame.quaternion.copy(_q2);
+    selFrame.scale.set(sc,sc,1);
+    selFrame.material.opacity=0.95*(1-absorb);
+    selGlow.position.set(selFrame.position.x,selFrame.position.y,0.12);
+    selGlow.material.opacity=0.22*(1-absorb);
+  }
+  // S5 卡框描边扫光一周（v1.9：10.85–11.2）
+  if(t>=10.85&&t<=11.22){
+    const u=remap(t,10.85,11.2);
+    const pp=roundedPerim(u*perimLen());
+    rimSweepA.visible=rimSweepB.visible=true;
+    placeOnRim(rimSweepA,pp,0.004,0.16);
+    placeOnRim(rimSweepB,Math.max(0,pp-0.09),0.004,0.10);
+    rimSweepA.material.opacity=rimSweepB.material.opacity=0.95*(1-remap(t,11.15,11.22));
+  }else rimSweepA.visible=rimSweepB.visible=false;
+}
+// 圆角方框周长参数化（卡框 0.72、圆角 0.05）：自上边左端顺时针
+function perimLen(){return 4*(CARD-0.1)+2*Math.PI*0.05}
+function roundedPerim(p){
+  const st=CARD-0.1,arc=2*Math.PI*0.05/4;
+  const seg=[st,arc,st,arc,st,arc,st,arc];let acc=0;
+  for(let i=0;i<8;i++){if(p<=acc+seg[i]){const u=(p-acc)/seg[i];return[i,u]}acc+=seg[i]}
+  return[7,1];
+}
+function placeOnRim(spr,p,dz,scale){
+  // E=半边长 0.36；c=角弧圆心坐标 0.31；r=0.05
+  const E=CARD/2,r=0.05,c=E-r;
+  const[i,u]=roundedPerim(p);let x,y;
+  switch(i){
+    case 0:x=-c+u*2*c;y=E;break;                                   // 上
+    case 1:{const a=Math.PI/2*(1-u);x=c+r*Math.cos(a);y=c+r*Math.sin(a);break} // 右上角
+    case 2:x=E;y=c-u*2*c;break;                                     // 右
+    case 3:{const a=-Math.PI/2*u;x=c+r*Math.cos(a);y=-c+r*Math.sin(a);break}  // 右下角
+    case 4:x=c-u*2*c;y=-E;break;                                    // 下
+    case 5:{const a=-Math.PI/2-Math.PI/2*u;x=-c+r*Math.cos(a);y=-c+r*Math.sin(a);break} // 左下角
+    case 6:x=-E;y=-c+u*2*c;break;                                   // 左
+    case 7:{const a=Math.PI-Math.PI/2*u;x=-c+r*Math.cos(a);y=c+r*Math.sin(a);break}      // 左上角
+  }
+  _v1.set(x,y,dz).applyQuaternion(heroCard.grp.quaternion).add(heroCard.grp.position);
+  spr.position.copy(_v1);spr.scale.setScalar(scale);
+}
+
+/* ================= S7 对弈落子（game.html 专属：MOVES 驱动，取子→飞行→落子→补子，全闭式） =================
+   片内时间 t 已含 T_OPEN 偏移（t=16.0 ≡ 开场末帧）；每手窗口 [T_OPEN+k*PERIOD, +PERIOD]。
+   相位（u = t - 手起点）：0.09–0.26 蓄势微升预亮 → 0.26–1.36 单段抛物线飞行（水平 inCubic 先慢后快——悬停似思考、末段加速果断落子+拱高 MV_ARC，一气呵成）
+   → 1.36 落子定格，最新子高亮常亮（下一手取子瞬间让位还原）→ 1.62–1.88 取子台柱顶补子弹出 → 收静。 */
+const MV_TAKE0=0.26,MV_LAND=1.36;
+const MV_BACK0=1.62,MV_BACK1=1.88;
+const STONE_Y=0.012,MV_ARC=0.60;                        // 盘面落子高度 / 抛物线拱高
+const MV_HL=0.40,MV_HL_IN=0.15,MV_HL_OUT=0.20;          // 最新落子高亮：亮度 / 渐入 / 让位渐出
+const SLOT_I=5,SLOT_A=5*2.35+0.5,SLOT_R=0.115+(5%2?0.035:0),SLOT_TY=0.075+5*0.03;  // 柱顶第 6 颗（与 holo 构建式一致）
+const MV_SPIN=0.22;                                     // 取子柱自转速（与 holo 块 col.rotation.y=t*0.22 同步）
+const slotW=(cx,ct)=>{const a=SLOT_A-MV_SPIN*ct;return{x:cx+Math.cos(a)*SLOT_R,z:Math.sin(a)*SLOT_R}};  // 柱顶世界位置（含自转）
+const slotBob=t=>SLOT_TY+0.006*Math.sin(2*Math.PI*t/1.6+5*1.3);
+const mvPieces=MOVES.map((mv,k)=>{
+  const black=mv.c!=='W',tx=mv.x*S,tz=-mv.y*S;
+  const fly=mkStone(black);fly.visible=false;scene.add(fly);
+  const flyGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  flyGlow.scale.setScalar(0.34);flyGlow.renderOrder=1;fly.add(flyGlow);
+  const sh=new THREE.Mesh(new THREE.PlaneGeometry(0.13,0.115),
+    new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,opacity:0,depthWrite:false}));
+  sh.rotation.x=-Math.PI/2;sh.position.set(tx,0.0025,tz);sh.renderOrder=2;sh.visible=false;scene.add(sh);
+  const st=mkStone(black);st.position.set(tx,STONE_Y,tz);st.visible=false;scene.add(st);
+  const flash=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  flash.position.set(tx,0.035,tz);flash.scale.setScalar(0.32);flash.renderOrder=1;flash.visible=false;scene.add(flash);  // 落子后转为最新子高亮晕（RO1：须高于 boardBase RO0，见 prompt-game.md §5 透明排序坑）
+  return{k,black,tx,tz,fly,flyGlow,sh,st,flash};
+});
+const slotGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:COL.sweep,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+slotGlow.scale.setScalar(0.22);slotGlow.visible=false;scene.add(slotGlow);
+function updateMoves(t){
+  if(BOWL_ID!=='holo'||!bowlC||!MOVES.length)return;
+  for(const p of mvPieces){
+    const u=t-(T_OPEN+p.k*PERIOD);
+    // 落子定格（恒久）+ 软影坠落末段渐入
+    p.st.visible=u>=MV_LAND;
+    p.sh.visible=u>=MV_LAND-0.5;
+    p.sh.material.opacity=.42*clamp01((u-(MV_LAND-0.5))/0.5);
+    // 最新落子保持高亮：渐入后常亮；下一手取子瞬间 0.2s 渐出让位（末手持续到片尾）
+    let hl=0;
+    if(u>=MV_LAND){
+      hl=MV_HL*clamp01((u-MV_LAND)/MV_HL_IN);
+      if(p.k+1<MOVES.length){const nt=T_OPEN+(p.k+1)*PERIOD+MV_TAKE0;if(t>nt)hl*=1-clamp01((t-nt)/MV_HL_OUT)}
+    }
+    p.flash.visible=hl>0.001;
+    p.flash.material.opacity=hl;
+    // 飞子：单段抛物线（水平 inCubic 先慢后快 + 4e(1-e) 拱高），全航迹无内部接缝；辉光按航时 55%→95% 渐隐（与进度解耦，inCubic 下不再突兀）
+    let show=false;
+    if(u>MV_TAKE0&&u<MV_LAND){
+      show=true;
+      const wb=bowlC.items[p.black?0:1],ta=T_OPEN+p.k*PERIOD+MV_TAKE0;
+      const sp=slotW(wb.col.position.x,ta),y0=slotBob(ta)+0.05;   // 起飞点冻结于取子瞬间（含柱自转，交接零跳变）
+      const fu=remap(u,MV_TAKE0,MV_LAND),e=ease.inCubic(fu);
+      p.fly.position.set(lerp(sp.x,p.tx,e),lerp(y0,STONE_Y,e)+MV_ARC*4*e*(1-e),lerp(sp.z,p.tz,e));
+      p.flyGlow.material.opacity=.45*(1-remap(fu,0.55,0.95));
+    }else{p.fly.visible=false;p.flyGlow.material.opacity=0}
+    p.fly.visible=show;
+  }
+  // 取子台柱顶（每色盒各一槽）：蓄势预亮 → 被取走 → 补子弹出（各自最近一手窗口）
+  for(let side=0;side<2;side++){
+    const black=side===0,col=bowlC.items[side].col,stone=col.children[SLOT_I];
+    let mu=-1;
+    for(let k=MOVES.length-1;k>=0;k--){
+      if((MOVES[k].c!=='W')!==black)continue;
+      const u=t-(T_OPEN+k*PERIOD);
+      if(u>0){mu=u;break}
+    }
+    const sp=slotW(col.position.x,t);                           // 预亮/回闪跟随柱自转，悬在真实石子上方
+    if(mu>0.09&&mu<MV_TAKE0){                    // 蓄势：微升 + 预亮渐起渐隐
+      stone.visible=true;stone.scale.setScalar(1);
+      stone.position.y=slotBob(t)+0.05*ease.outCubic(remap(mu,0.09,MV_TAKE0));
+      slotGlow.visible=true;slotGlow.position.set(sp.x,stone.position.y+0.05,sp.z);
+      slotGlow.material.opacity=.4*ease.outCubic(remap(mu,0.09,MV_TAKE0))*(1-remap(mu,MV_TAKE0,MV_TAKE0+0.31));
+    }else if(mu>=MV_TAKE0&&mu<MV_BACK0){         // 被取走
+      stone.visible=false;slotGlow.visible=false;
+    }else if(mu>=MV_BACK0&&mu<MV_BACK1+0.3){     // 补子弹出 + 回闪
+      stone.visible=true;stone.position.y=slotBob(t);
+      stone.scale.setScalar(Math.max(0.001,ease.outBack(remap(mu,MV_BACK0,MV_BACK1))));
+      slotGlow.visible=true;slotGlow.position.set(sp.x,stone.position.y+0.05,sp.z);
+      slotGlow.material.opacity=.45*Math.sin(Math.PI*clamp01(remap(mu,MV_BACK0,MV_BACK1+0.2)));
+    }else{                                        // 待机
+      stone.visible=true;stone.scale.setScalar(1);slotGlow.visible=false;
+    }
+  }
+}
+/* ================= S8 五连特效 + S9 退场（v2.0：全闭式纯函数，无状态无随机） =================
+   取胜检测：开局三子 + MOVES 逐手落图，四轴（横/竖/两斜）任一连五即胜；WIN_AT 可手动指定。
+   T0（特效起点）= 胜手落定 +0.12；特效配色按胜方分冷暖：黑胜=冰青（全场主色家族）/ 白胜=暖金香槟（唯一暖色分野）。
+   WIN_FX：'beam' 光轨贯珠 | 'const' 星座连线 | 'pulse' 脉冲悬浮——均含逐子点火光环+落点扩散环。
+   退场 EXIT_MODE（END_DUR>0 才追加片尾）：棋子按序归位取子台，柱顶吸收闪光+柱身脉冲；开局三子随
+   miniBoard 局部系同步归位（世界→局部 = (X,-Z,Y)）；软影随子离盘渐隐；终拍盘框缓暗收静。 */
+
+// —— 取胜检测（导入期一次）——
+const WINFX_ID=WIN_FX||'beam',EXIT_ID=EXIT_MODE||'arc';
+const seqCells=[...heroStonesPos.map(s=>({x:s[0],y:s[1],black:!!s[2]})),...MOVES.map(m=>({x:m.x,y:m.y,black:m.c!=='W'}))];
+const cellKey=(x,y)=>x+','+y;
+const AXES=[[1,0],[0,1],[1,1],[1,-1]];
+function lineAt(i){                                   // 前 i+1 手落图后，过第 i 手的四轴连五（返回沿线排序的 5 子）
+  const s=seqCells[i],bd=new Map();
+  for(let k=0;k<=i;k++)bd.set(cellKey(seqCells[k].x,seqCells[k].y),seqCells[k]);
+  for(const[dx,dy]of AXES){
+    const line=[s];
+    for(const d of[1,-1]){
+      let x=s.x+dx*d,y=s.y+dy*d,cc;
+      while((cc=bd.get(cellKey(x,y)))&&cc.black===s.black){line.push(cc);x+=dx*d;y+=dy*d}
+    }
+    if(line.length>=5){
+      line.sort((a,b)=>(a.x-b.x)*dx+(a.y-b.y)*dy);
+      return{black:s.black,cells:line.slice(0,5)};
+    }
+  }
+  return null;
+}
+const WIN=(()=>{                                       // {i(全局手序 0..14), black, cells}；自动检测取最早胜手
+  if(WIN_AT!=null){const i=3+WIN_AT;const r=lineAt(i);return r?{i,...r}:null}
+  for(let i=3;i<seqCells.length;i++){const r=lineAt(i);if(r)return{i,...r}}
+  return null;
+})();
+const END_DUR=!WIN?0:(END_SEC>0?END_SEC:({arc:4.6,train:5.4,dust:4.0}[EXIT_ID]||4.6));  // 片尾追加时长
+let updateWinFx=()=>{},updateExit=()=>{};              // frame() 钩子（无胜负时为空操作）
+
+if(WIN){
+const seqIndex=new Map(seqCells.map((s,i)=>[s,i]));
+// —— 胜方五子引用（开局子在 miniBoard 局部系，落子在盘面世界系）——
+const winRefs=WIN.cells.map(cl=>{
+  const i=seqIndex.get(cl);
+  if(i<3)return{st:miniStones[i],sh:boardShadows[i],mini:true,tx:cl.x*S,tz:-cl.y*S};
+  const p=mvPieces[i-3];
+  return{st:p.st,sh:p.sh,mini:false,tx:p.tx,tz:p.tz};
+});
+const jw=WIN.cells.indexOf(seqCells[WIN.i]);          // 胜手在线内位次（点火/行波原点）
+const winPts=winRefs.map(r=>({x:r.tx,z:r.tz}));
+const WA=winPts[0];
+const cum=[0];                                        // 沿线累计弧长（5 子共线，pointAt 即线性插值）
+for(let j=1;j<5;j++)cum.push(cum[j-1]+Math.hypot(winPts[j].x-winPts[j-1].x,winPts[j].z-winPts[j-1].z));
+const WIN_L=cum[4];
+const DIRU={x:(winPts[4].x-WA.x)/WIN_L,z:(winPts[4].z-WA.z)/WIN_L};
+const ptAt=p=>({x:WA.x+DIRU.x*p,z:WA.z+DIRU.z*p});
+const WIN_YAW=Math.atan2(-DIRU.z,DIRU.x);             // 局部 +x → 线向
+const FXC=WIN.black?{core:'#EAFFFF',main:'#04C7E8',hi:'#9BEEFF'}     // 黑=冰青
+                   :{core:'#FFF6DC',main:'#E8C25A',hi:'#FFE9B8'};    // 白=暖金香槟
+const hiRGB=(()=>{const n=parseInt(FXC.hi.slice(1),16);return[(n>>16&255)/255,(n>>8&255)/255,(n&255)/255]})();
+// —— 时间轴（对弈片秒）——
+const T0=(WIN.i-3)*PERIOD+MV_LAND+0.12;               // 特效起点（胜手落定 +0.12）
+const ignJ=j=>T0+0.14*Math.abs(j-jw);                 // 逐子点火：自胜子向两端 0.14s/步
+const TD0=T0+0.62,TD_DUR=0.55;                        // 光轨/连线绘制窗口
+const T_X0=Math.max(TD0+TD_DUR+0.33,MOVES.length*PERIOD+0.15);   // 退场起点
+// —— 全体棋子引用 + 退场次序 ——
+const allStones=seqCells.map((cl,i)=>{
+  if(i<3)return{st:miniStones[i],sh:boardShadows[i],mini:true,tx:cl.x*S,tz:-cl.y*S,black:cl.black,seq:i};
+  const p=mvPieces[i-3];
+  return{st:p.st,sh:p.sh,mini:false,tx:p.tx,tz:p.tz,black:cl.black,seq:i};
+});
+const TRAIN5=new Set(winRefs.map(r=>r.st));
+const exitRank=new Map();                              // st → 次序：arc/dust=纯逆布局序；train=胜五按线序先行、余子接续
+if(EXIT_ID==='train'){
+  winRefs.forEach((r,i)=>exitRank.set(r.st,i));
+  allStones.filter(s=>!TRAIN5.has(s.st)).sort((a,b)=>b.seq-a.seq).forEach((s,i)=>exitRank.set(s.st,5+i));
+}else allStones.slice().sort((a,b)=>b.seq-a.seq).forEach((s,i)=>exitRank.set(s.st,i));
+// —— 共用贴图（胜方配色）——
+const beamTex=(()=>{const c=cnv(1024,128),x=c.getContext('2d');   // 光轨：纵向高斯 + 高饱和芯（与白热棋子辉光拉开色相）+ 端部外露
+  const g=x.createLinearGradient(0,0,1024,0);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.03,rgba(FXC.main,.30));g.addColorStop(.3,rgba(FXC.main,.75));
+  g.addColorStop(.5,rgba(FXC.hi,.97));g.addColorStop(.7,rgba(FXC.main,.75));g.addColorStop(.97,rgba(FXC.main,.30));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,1024,128);
+  const v=x.createLinearGradient(0,0,0,128);
+  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(.28,'rgba(255,255,255,1)');v.addColorStop(.72,'rgba(255,255,255,1)');v.addColorStop(1,'rgba(0,0,0,0)');
+  x.globalCompositeOperation='destination-in';x.fillStyle=v;x.fillRect(0,0,1024,128);
+  return tex(c)})();
+const pulseTex=(()=>{const c=cnv(256,64),x=c.getContext('2d');    // 行波段：横向均匀亮带（两端羽化）
+  const g=x.createLinearGradient(0,0,0,64);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.3,rgba(FXC.main,.9));g.addColorStop(.5,rgba(FXC.core,1));g.addColorStop(.7,rgba(FXC.main,.9));g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g;x.fillRect(0,0,256,64);
+  const h=x.createLinearGradient(0,0,256,0);
+  h.addColorStop(0,'rgba(0,0,0,0)');h.addColorStop(.18,'rgba(255,255,255,1)');h.addColorStop(.82,'rgba(255,255,255,1)');h.addColorStop(1,'rgba(0,0,0,0)');
+  x.globalCompositeOperation='destination-in';x.fillStyle=h;x.fillRect(0,0,256,64);
+  return tex(c)})();
+const flareTex=(()=>{const c=cnv(128,128),x=c.getContext('2d');   // 四芒星（const 变体）
+  x.translate(64,64);
+  const g=x.createRadialGradient(0,0,0,0,0,14);g.addColorStop(0,rgba(FXC.core,.98));g.addColorStop(1,rgba(FXC.core,0));
+  x.fillStyle=g;x.beginPath();x.arc(0,0,14,0,7);x.fill();
+  x.lineCap='round';
+  for(const rot of[0,Math.PI/2]){
+    x.save();x.rotate(rot);
+    x.strokeStyle=rgba(FXC.hi,.85);x.lineWidth=5;x.beginPath();x.moveTo(-56,0);x.lineTo(56,0);x.stroke();
+    x.strokeStyle=rgba(FXC.core,.6);x.lineWidth=11;x.beginPath();x.moveTo(-30,0);x.lineTo(30,0);x.stroke();
+    x.restore();
+  }
+  return tex(c)})();
+const ringFxTex=(()=>{const c=cnv(128,128),x=c.getContext('2d');  // 盘面扩散环
+  x.strokeStyle=rgba(FXC.hi,.9);x.lineWidth=7;x.shadowColor=FXC.main;x.shadowBlur=12;
+  x.beginPath();x.arc(64,64,50,0,7);x.stroke();
+  x.strokeStyle=rgba(FXC.main,.55);x.lineWidth=2.5;x.shadowBlur=0;x.beginPath();x.arc(64,64,50,0,7);x.stroke();
+  return tex(c)})();
+const mkSpr=(map,color,sc,ro)=>{const s=new THREE.Sprite(new THREE.SpriteMaterial({map,color,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  s.scale.setScalar(sc);s.renderOrder=ro??1;s.visible=false;scene.add(s);return s};
+const ringMesh=(x0,z0)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.6),
+  new THREE.MeshBasicMaterial({map:ringFxTex,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  m.rotation.x=-Math.PI/2;m.position.set(x0,0.004,z0);m.renderOrder=1;m.visible=false;scene.add(m);return m};
+// —— S8 对象：逐子光环/扩散环（+pulse 二段环）/四芒星/光轨/行波段/星屑 ——
+const winHalos=winRefs.map(r=>{const s=mkSpr(glowTex,FXC.hi,0.26,1);s.position.set(r.tx,0.035,r.tz);return s});
+const winRings=winRefs.map(r=>ringMesh(r.tx,r.tz));
+const winRings2=EXIT_ID==='pulse'?winRefs.map(r=>ringMesh(r.tx,r.tz)):[];
+const starFlares=winRefs.map(r=>{const s=mkSpr(flareTex,FXC.hi,0.30,2);s.position.set(r.tx,0.045,r.tz);return s});
+const beamLen=WIN_L+0.34;
+const mkBeam=(w,y,col)=>{const g=new THREE.PlaneGeometry(beamLen,w);g.translate(beamLen/2,0,0);
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:beamTex,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  if(col)m.material.color.set(col);
+  m.rotation.order='YXZ';m.rotation.y=WIN_YAW;m.rotation.x=-Math.PI/2;m.position.set(WA.x,y,WA.z);m.renderOrder=1;m.visible=false;scene.add(m);return m};
+const beam=mkBeam(0.16,0.016,FXC.main),beamWide=mkBeam(0.42,0.008,FXC.main);  // 主轨 + 盘面底光带（draw 用 scale.x）
+const coreBeam=mkBeam(0.06,0.02,FXC.hi);                          // 高饱和芯线
+const lineThin=mkBeam(0.055,0.016,FXC.hi);                        // const 变体细连线
+const comet=mkSpr(glowTex,FXC.core,0.26,2);
+const pulseSegs=[1,-1].map(()=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(0.50,0.14),
+  new THREE.MeshBasicMaterial({map:pulseTex,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  m.rotation.order='YXZ';m.rotation.y=WIN_YAW;m.rotation.x=-Math.PI/2;m.renderOrder=1;m.visible=false;scene.add(m);return m});
+const winMotes=particleSys(46,i=>{const r=mulberry32(3100+i*7);    // const 变体：沿线上空漂浮星屑
+  const u=r(),px=WA.x+DIRU.x*WIN_L*u+(r()-0.5)*0.16,pz=WA.z+DIRU.z*WIN_L*u+(r()-0.5)*0.16;
+  return{p:[px,0.05+r()*0.10,pz],v:[(r()-0.5)*0.05,0.10+r()*0.12,(r()-0.5)*0.05],
+    t0:T0+0.3+r()*2.2,life:0.7+r()*0.5,size:0.10+r()*0.16,c:hiRGB,curv:0.2}});
+// —— S9 对象：逐子归台光尾 / 盒位吸收闪光 ——
+const exitTrail=allStones.map(()=>mkSpr(glowTex,FXC.core,0.26,2));
+const trayFlash=[0,1].map(()=>mkSpr(glowTex,FXC.hi,0.34,2));
+const trayX=black=>black?-BOWL_X:BOWL_X;
+const absorbAt=(black,ct)=>{const sp=slotW(trayX(black),ct);return{x:sp.x,y:slotBob(ct)+0.05,z:sp.z}};  // ct=片内时间
+const EXIT_STAG=0.15,EXIT_FL=0.95;                     // 退场：间隔 / 单子窗口（u=0.95 吸收）
+const planOf=s=>{                                      // 每子退场计划：u0 起步时刻；L 吸收时刻
+  const r=exitRank.get(s.st);
+  if(EXIT_ID==='train'&&TRAIN5.has(s.st)){
+    const j=winRefs.findIndex(w=>w.st===s.st);
+    return{u0:T_X0+j*0.06,L:T_X0+1.38+j*0.09,r:j,train5:true};
+  }
+  if(EXIT_ID==='dust')return{u0:T_X0+r*0.13,L:T_X0+r*0.13+0.62,r};
+  const u0=(EXIT_ID==='train'?T_X0+1.75:T_X0)+(EXIT_ID==='train'?r-5:r)*EXIT_STAG;
+  return{u0,L:u0+EXIT_FL,r};
+};
+const plans=allStones.map(s=>planOf(s));
+// —— S8 帧更新：点火 → 光轨/连线/行波 →（t≥T_X0 整体让位）——
+updateWinFx=t=>{
+  if(t<T0-0.001)return;
+  const gFade=1-remap(t,T_X0,T_X0+0.60);              // 退场开始后特效整体溶解
+  winRefs.forEach((r,j)=>{
+    const ig=ignJ(j),a=remap(t,ig,ig+0.20),h=winHalos[j];
+    const tp=EXIT_ID==='pulse'?TD0+Math.abs(cum[j]-cum[jw])/(WIN_L/0.55):-9;
+    const boost=EXIT_ID==='pulse'?0.30*Math.exp(-Math.pow((t-tp)/0.13,2)):0;   // 行波过子增亮
+    h.visible=a>0.001&&gFade>0.001;
+    const settle=WINFX_ID==='beam'?0.10*remap(t,TD0,TD0+0.4):0;   // 光轨成形后光环让位收一档
+    h.material.opacity=(0.26-settle+boost+0.04*Math.sin(2*Math.PI*t/1.6+j*1.3))*ease.outCubic(a)*gFade;
+    const rg=winRings[j],ru=remap(t,ig,ig+0.55);
+    rg.visible=window.__NO_RINGS?false:(ru>0.001&&ru<0.999&&gFade>0.001);   // __NO_RINGS: 临时二分调试开关
+    rg.material.opacity=0.34*(1-ru)*ease.outCubic(Math.min(1,ru*3))*gFade;
+    rg.scale.setScalar(0.35+0.95*ease.outCubic(ru));
+    if(EXIT_ID==='const'){
+      const f=starFlares[j];
+      f.visible=a>0.001&&gFade>0.001;
+      f.material.opacity=0.75*ease.outCubic(a)*(0.8+0.2*Math.sin(2*Math.PI*t/0.9+j*2.1))*gFade;
+      f.material.rotation=t*0.45;
+    }
+  });
+  if(WINFX_ID==='beam'){
+    const d=ease.outQuart(remap(t,TD0,TD0+TD_DUR)),vis=d>0.001&&gFade>0.001;
+    beam.visible=beamWide.visible=coreBeam.visible=vis;
+    beam.scale.x=beamWide.scale.x=coreBeam.scale.x=Math.max(0.001,d);
+    const hold=1+0.06*Math.sin(2*Math.PI*t/1.8);
+    beam.material.opacity=0.85*Math.min(1,d*3)*gFade*hold;
+    beamWide.material.opacity=0.18*Math.min(1,d*3)*gFade*hold;
+    coreBeam.material.opacity=1.0*Math.min(1,d*3)*gFade*hold;
+    if(d>=0.999){                                      // 保持段：光珠沿轨巡游（能量流动感）
+      const cu=((t-TD0-TD_DUR)%1.2)/1.2,su=ease.inOutCubic(cu);
+      comet.visible=gFade>0.001;
+      comet.position.set(ptAt(WIN_L*su).x,0.05,ptAt(WIN_L*su).z);
+      comet.material.opacity=0.4*gFade;
+    }else{
+      comet.visible=d>0.001;                           // 绘制彗头
+      if(comet.visible){const u=d;
+        comet.position.set(ptAt(WIN_L*u).x,0.05,ptAt(WIN_L*u).z);
+        comet.material.opacity=0.8*(1-remap(u,0.82,1))*gFade;}
+    }
+  }else if(WINFX_ID==='const'){
+    const d=ease.outQuart(remap(t,TD0,TD0+TD_DUR));
+    lineThin.visible=d>0.001&&gFade>0.001;
+    lineThin.scale.x=Math.max(0.001,d);
+    lineThin.material.opacity=0.95*Math.min(1,d*3)*gFade;
+    winMotes.uniforms.uTime.value=t;
+  }else{                                               // pulse：自胜子向两端的行波 + 过子环 + 浮空
+    const SPD=WIN_L/0.55;
+    pulseSegs.forEach((sg,si)=>{
+      const dir=si?-1:1,p=cum[jw]+dir*(t-TD0)*SPD,on=t>TD0&&p<WIN_L+0.12&&p>-0.12&&gFade>0.001;
+      sg.visible=on;
+      if(on){const pc=Math.min(WIN_L,Math.max(0,p)),pt=ptAt(pc);
+        sg.position.set(pt.x,0.02,pt.z);sg.material.opacity=0.8*gFade;}
+    });
+    winRefs.forEach((r,j)=>{
+      const tp=TD0+Math.abs(cum[j]-cum[jw])/SPD,ru=remap(t,tp,tp+0.5),rg=winRings2[j];
+      rg.visible=ru>0.001&&ru<0.999&&gFade>0.001;
+      rg.material.opacity=0.42*(1-ru)*gFade;
+      rg.scale.setScalar(0.5+1.3*ease.outCubic(ru));
+      if(t>tp+0.18&&t<T_X0){                            // 波过后缓升悬浮（局部位次相位）
+        const lift=0.02*ease.outCubic(remap(t,tp+0.18,tp+0.68))+0.006*Math.sin(2*Math.PI*t/1.7+j*1.1);
+        if(r.mini)r.st.position.set(r.tx,-r.tz,STONE_Y+lift);   // miniBoard 局部系：世界(X,Y,Z)→局部(X,-Z,Y)
+        else r.st.position.y=STONE_Y+lift;
+      }
+    });
+  }
+};
+// —— S9 帧更新：按序离盘 → 抛物线归台 → 柱顶吸收 ——
+updateExit=t=>{
+  if(t<T_X0-0.001)return;
+  const hlFade=1-remap(t,T_X0,T_X0+0.40);            // 末手“最新子高亮”随退场让位（updateMoves 每帧重写，此处压回）
+  if(hlFade<1)for(const p of mvPieces)p.flash.material.opacity*=hlFade;
+  allStones.forEach((s,i)=>{
+    const pl=plans[i],u=(t-pl.u0)/EXIT_FL;
+    if(t<pl.u0)return;                                 // 未动：盘面原位
+    if(EXIT_ID==='dust'){                              // —— 星尘回流：原地溶解 + 光痕归台
+      const du=remap(t,pl.u0,pl.u0+0.30);
+      if(du<1){s.st.visible=true;s.st.scale.setScalar(Math.max(0.001,1-ease.inCubic(du)));
+        s.sh.material.opacity*=(1-du);}
+      else s.st.visible=false;
+      const su=remap(t,pl.u0+0.12,pl.u0+0.62),tr=exitTrail[i];
+      tr.visible=su>0.001&&su<0.999;
+      if(tr.visible){const ab=absorbAt(s.black,T_OPEN+Math.min(pl.L,t)),e=ease.inOutCubic(su);
+        const nx=lerp(s.tx,ab.x,e),nz=lerp(s.tz,ab.z,e),ny=lerp(STONE_Y,ab.y,e)+0.30*4*e*(1-e);
+        tr.position.set(nx,ny,nz);tr.scale.setScalar(0.20+0.10*(1-su));
+        tr.material.opacity=0.7*Math.sin(Math.PI*su);}
+      return;
+    }
+    if(pl.train5){                                     // —— train：胜五随线升起 → 压缩编队飞向胜方盒 → 逐子吸收
+      const j=pl.r;
+      if(t>=pl.L){s.st.visible=false;s.sh.visible=false;return}
+      const rise=ease.inOutCubic(remap(t,T_X0,T_X0+0.45));
+      const trayC={x:trayX(s.black),z:0};
+      const fl=ease.inOutCubic(remap(t,T_X0+0.55,T_X0+1.30));
+      const o=(cum[j]-cum[jw]);
+      const gx=lerp(s.tx,trayC.x+DIRU.x*o*0.5,fl),gz=lerp(s.tz,trayC.z+DIRU.z*o*0.5,fl);
+      const gy=lerp(STONE_Y,0.26,Math.max(rise,fl))+0.02*Math.sin(2*Math.PI*t/1.6+j);
+      const ab=absorbAt(s.black,T_OPEN+Math.min(pl.L,t));
+      const dash=ease.outCubic(remap(t,pl.L-0.10,pl.L));
+      const nx=lerp(gx,ab.x,dash),nz=lerp(gz,ab.z,dash),ny=lerp(gy,ab.y,dash);
+      if(s.mini)s.st.position.set(nx,-nz,ny);else s.st.position.set(nx,ny,nz);
+      s.sh.material.opacity*=(1-clamp01(rise));
+      const tr=exitTrail[i];tr.visible=dash<0.999&&fl>0.001;
+      tr.position.set(nx,ny,nz);tr.material.opacity=0.4*fl;
+      s.st.scale.setScalar(Math.max(0.001,1-remap(t,pl.L-0.03,pl.L)));
+      return;
+    }
+    // —— arc：蓄势微升 → 单段抛物线归台 → 柱顶吸收（目标实时跟随旋柱，交接零跳变）——
+    if(u>=1){s.st.visible=false;s.sh.visible=false;return}
+    const antic=ease.outCubic(remap(u,0,0.08));
+    const e=ease.inOutCubic(remap(u,0.08,EXIT_FL));
+    const ab=absorbAt(s.black,T_OPEN+Math.min(pl.L,t));
+    const arch=0.34*4*e*(1-e);
+    const nx=lerp(s.tx,ab.x,e),nz=lerp(s.tz,ab.z,e);
+    const ny=lerp(STONE_Y,ab.y,e)+arch+0.05*antic*(1-e);
+    if(s.mini)s.st.position.set(nx,-nz,ny);else s.st.position.set(nx,ny,nz);
+    s.sh.material.opacity*=(1-clamp01(u/0.4));
+    const tr=exitTrail[i];tr.visible=u>0.08&&u<EXIT_FL;
+    tr.position.set(nx,ny+0.01,nz);tr.material.opacity=0.45*Math.sin(Math.PI*clamp01((u-0.08)/(EXIT_FL-0.08)));
+    s.st.scale.setScalar(u>0.93?Math.max(0.001,1-remap(u,0.93,1)*0.7):1);
+  });
+  [0,1].forEach(side=>{                                // 柱身脉冲 + 盒位吸收闪光（各色最近一次吸收驱动）
+    const black=side===0,col=bowlC.items[side].col,tf=trayFlash[side];
+    let pk=0;
+    plans.forEach((pl,i)=>{
+      if(allStones[i].black!==black)return;
+      const d=t-pl.L;
+      if(d>0&&d<0.55)pk=Math.max(pk,Math.exp(-6.5*d));
+    });
+    col.children[SLOT_I].scale.setScalar(1+0.16*pk);
+    tf.visible=pk>0.01;
+    tf.material.opacity=0.5*pk;
+    tf.position.set(trayX(black),0.10,0);
+  });
+  // 终拍：全场霓虹缓暗一档（盘框 + 天元微光），归空收静
+  const dim=ease.inOutCubic(remap(t,T_X0+2.9,T_X0+3.6));
+  if(dim>0){
+    boardNeon.material.opacity*=1-0.30*dim;
+    tyGlow.material.opacity*=1-0.4*dim;
+  }
+};
+}  // end if(WIN)
+
+/* ================= window.film ================= */
+window.film={
+  width:1920,height:1080,duration:MOVES.length*PERIOD+END_DUR,   // v2.0：检出胜负时追加退场段（END_DUR）
+  ready:Promise.resolve(),
+  frame:(gt)=>frame(gt+T_OPEN),
+};
+</script>
+</body>
+</html>

@@ -18,4 +18,10 @@ export const MOVES = [
   { c: 'B', x: -1, y: 0 },    // 黑15
 ];
 
-export const PERIOD = 2.1;   // 每手时长（秒，v3 再加快）；game/film.html 的 iframe hash #t=0,N 需同步为 MOVES.length*PERIOD（12 手 = 25.2）
+export const PERIOD = 2.1;   // 每手时长（秒，v3 再加快）；game/film.html 的 iframe hash #t=0,N 需同步为 MOVES.length*PERIOD+END_DUR（12 手 + dust 退场 = 29.2）
+
+/* —— v2.0 五连特效 + 退场（2026-10-26 用户选定：beam 光轨贯珠 + dust 星尘回流）—— */
+export const WIN_AT = null;        // 取胜手（MOVES 下标，从 0 起）；null=自动检测五连珠（黑15 → 检出 y=0 横五连）
+export const WIN_FX = 'beam';      // 五连特效：'beam' 光轨贯珠（选定）| 'const' 星座连线 | 'pulse' 脉冲悬浮（黑白异色：黑=冰青 / 白=暖金）
+export const EXIT_MODE = 'dust';   // 退场：'dust' 星尘回流（选定）| 'arc' 逆序归位 | 'train' 连珠队形先行（盘面归空，棋子回取子台）
+export const END_SEC = 0;          // 退场段时长（秒，0=按 EXIT_MODE 取默认 dust 4.0 / arc 4.6 / train 5.4）；film.html hash 需同步 25.2+END_DUR
