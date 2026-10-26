@@ -39,7 +39,7 @@ u = t − 手起点（手 k 起点 = T_OPEN + k·PERIOD）：
 
 - **取子源**：`BOWL_MODE='holo'` 柱顶第 6 颗（`SLOT_I=5`，构建式 `a=5*2.35+0.5, rr=0.115+(5%2?0.035:0)=0.15, ty=0.075+5*0.03=0.225`，呼吸 `slotBob(t)` 与 holo 块同式；**旋柱半径/层高改动时引擎 SLOT_* 必须同步；柱全程自转 `col.rotation.y=0.22t` → 取子/辉光世界角=SLOT_A−0.22t（飞子起飞点冻结于取子瞬间 `ta=T_OPEN+k·PERIOD+0.26`，slotGlow 实时跟随；v1.1 修复取子横跳 ~180°）**；柱顶子经近俯视外扩略越锥口属定版观感——v1.0.1 曾收紧半径，用户回退：收紧后旋柱太挤，宁保舒展）。黑盒 `bowlC.items[0]` / 白盒 `items[1]`，按 `MOVES[k].c` 取对应盒。
 - **MOVES 格式**：`{c:'B'|'W', x:int, y:int}`；黑白轮流由数据自证，引擎不做规则校验。
-- 片长 = `MOVES.length × PERIOD`；**game/film.html 的 hash `#t=0,N` 与 `game.html` 内 `PERIOD` 三处必须同步**（本版 PERIOD=2.1，当前 8 手片长 16.8）。
+- 片长 = `MOVES.length × PERIOD`；**game/film.html 的 hash `#t=0,N` 与 `game.html` 内 `PERIOD` 三处必须同步**（本版 PERIOD=2.1，当前 12 手片长 25.2）。
 - 高亮晕/软影每手一套（flash 精灵复用）：**最新落子高亮** op 0.40（`MV_HL`）常亮，下一手取子瞬间 0.2s 让位；落子棋子与软影按手数永久累加；v1.1 已删波纹环（mvRipple）。
 
 ## 5. game.html 生成与渲染（工程坑）

@@ -12,6 +12,10 @@ export const MOVES = [
   { c: 'B', x: 0, y: 2 },    // 黑9
   { c: 'W', x: -1, y: 3 },    // 白10
   { c: 'B', x: 1, y: 3 },    // 黑11
+  { c: 'W', x: 1, y: 2 },    // 白12
+  { c: 'B', x: -2, y: 0 },    // 黑13
+  { c: 'W', x: -1, y: 1 },    // 白14
+  { c: 'B', x: -1, y: 0 },    // 黑15
 ];
 
-export const PERIOD = 2.1;   // 每手时长（秒，v3 再加快）；game/film.html 的 iframe hash #t=0,N 需同步为 MOVES.length*PERIOD（8 手 = 16.8）
+export const PERIOD = 2.1;   // 每手时长（秒，v3 再加快）；game/film.html 的 iframe hash #t=0,N 需同步为 MOVES.length*PERIOD（12 手 = 25.2）
