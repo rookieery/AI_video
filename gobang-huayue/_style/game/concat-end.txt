@@ -1,0 +1,2 @@
+file 'D:/code/AI_video/gobang-huayue/gobang-huayue.mp4'
+file 'D:/code/AI_video/gobang-huayue/game/gobang-game-w4b5w6b7w8b9w10b11w12b13w14b15-end.mp4'
