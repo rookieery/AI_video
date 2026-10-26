@@ -25,3 +25,9 @@ export const WIN_AT = null;        // 取胜手（MOVES 下标，从 0 起）；
 export const WIN_FX = 'beam';      // 五连特效：'beam' 光轨贯珠（选定）| 'const' 星座连线 | 'pulse' 脉冲悬浮（黑白异色：黑=冰青 / 白=暖金）
 export const EXIT_MODE = 'dust';   // 退场：'dust' 星尘回流（选定）| 'arc' 逆序归位 | 'train' 连珠队形先行（盘面归空，棋子回取子台）
 export const END_SEC = 0;          // 退场段时长（秒，0=按 EXIT_MODE 取默认 dust 4.0 / arc 4.6 / train 5.4）；film.html hash 需同步 25.2+END_DUR
+
+/* —— v2.1 活三光轨（2026-10-26 新增）：连/跳活三被堵时在「堵点那一手」的 PERIOD 窗口内播光轨封光 ——
+   跳三被堵缺口=双束两头汇聚、被堵端点=单束朝被堵方向；无逐子点火，0.26 起扫与飞子同拍、1.36 恰好被落子封光、
+   2.02 前收净（总时长不变）。检测不分色，配色随三子方：黑=冰青 / 白=暖金（同五连语义）。 */
+export const LIVE3_FX = 'beam';    // 活三特效：'beam' 光轨封光（选定）| null 关闭
+export const LIVE3_SKIP = [9];     // 跳过检测的「成三手」MOVES 下标：黑13(下标9) 是四三，四三特效后续单独做，不播活三光轨

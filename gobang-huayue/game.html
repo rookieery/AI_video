@@ -28,7 +28,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE, MOVES, PERIOD, WIN_AT, WIN_FX, EXIT_MODE, END_SEC } from './game-config.js';
+import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE, MOVES, PERIOD, WIN_AT, WIN_FX, EXIT_MODE, END_SEC, LIVE3_FX, LIVE3_SKIP } from './game-config.js';
 
 /* ================= 风格调色板 =================
    ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
@@ -231,6 +231,52 @@ const WIN=(()=>{                            // {i(全局手序 0..14), black, ce
 })();
 const END_DUR=!WIN?0:(END_SEC>0?END_SEC:({arc:4.6,train:5.4,dust:4.0}[EXIT_MODE]||4.6));   // 退场段时长（无胜负不追加）
 const DUR = T_OPEN + MOVES.length*PERIOD + END_DUR;   // 内部绝对时长（frame 钳制用）；对弈片自身时长 = MOVES.length*PERIOD+END_DUR
+
+/* —— v2.1 活三检测（并列于取胜检测；纯逻辑不占时长，不影响 DUR 钳制）——
+   逐手落图后查含新子的活三：连三（三连两端全空）/ 跳三（三子一缺口、两外端空，填缺成活四；黑13 的 B_BBB
+   属冲四威胁不匹配）。仅当下一手确实落在堵点（端点或缺口）上才成事件——「被堵」叙事恒成立，MOVES 换谱自动跟随。
+   事件坐标 = 堵点那一手（k 为其 MOVES 下标），特效在该手 PERIOD 窗口内播；端堵=单束自最远端子扫向堵点，
+   中堵缺口=双束自两头汇聚；via = 束段途经的三子（掠过增亮用）。每手至多取一线（本局无双三）。 */
+const L3_EV=(()=>{ if(!LIVE3_FX)return[];
+  const PATS=[{st:[-1,0,1],g:-9,en:[-2,2]},{st:[0,1,2],g:-9,en:[-1,3]},{st:[-2,-1,0],g:-9,en:[-3,1]},   // 连活三
+              {st:[-1,0,2],g:1,en:[-2,3]},{st:[0,2,3],g:1,en:[-1,4]},                                    // 跳活三（缺口在 +侧）
+              {st:[-3,-2,0],g:-1,en:[-4,1]},{st:[-2,0,1],g:-1,en:[-3,2]}];                               // 跳活三（缺口在 −侧）
+  const evs=[];
+  for(let i=3;i<seqCells.length-1;i++){
+    if(LIVE3_SKIP&&LIVE3_SKIP.includes(i-3))continue;   // 四三等复合形由专属特效接管（LIVE3_SKIP）
+    const s=seqCells[i],C=s.black?'B':'W',mv=seqCells[i+1],bd=new Map();
+    for(let k=0;k<=i;k++)bd.set(cellKey(seqCells[k].x,seqCells[k].y),seqCells[k]);
+    for(const[dx,dy]of AXES){
+      const at=j=>{const x=s.x+dx*j,y=s.y+dy*j;
+        if(x<-7||x>7||y<-7||y>7)return'X';
+        const cc=bd.get(cellKey(x,y));return cc?(cc.black?'B':'W'):'.'};
+      let ev=null;
+      for(const p of PATS){
+        if(p.st.every(j=>at(j)===C)&&p.en.every(j=>at(j)==='.')&&(p.g<0||at(p.g)==='.')){ev=p;break}
+      }
+      if(!ev)continue;
+      const dot=((mv.x-s.x)*dx+(mv.y-s.y)*dy)/(dx*dx+dy*dy),cr=Math.abs((mv.x-s.x)*dy-(mv.y-s.y)*dx);   // 斜轴 |d|²=2：dot 须归一为线参 j
+      if(cr!==0||(dot!==ev.g&&!ev.en.includes(dot)))continue;        // 下一手未堵在堵点上 → 不触发
+      const w=j=>({x:(s.x+dx*j)*S,z:-(s.y+dy*j)*S});
+      const bp=w(dot);
+      let beams;
+      if(dot===ev.g){                                                // 中堵缺口：双束两头汇聚
+        beams=[{j0:ev.st[0],j1:dot},{j0:ev.st[ev.st.length-1],j1:dot}];
+      }else{                                                         // 端堵：单束自距堵点最远的端子扫向堵点
+        const far=ev.st.reduce((p,q)=>Math.abs(q-dot)>Math.abs(p-dot)?q:p);
+        beams=[{j0:far,j1:dot}];
+      }
+      for(const bm of beams){
+        const dir=Math.sign(bm.j1-bm.j0);
+        bm.a=w(bm.j0);bm.b=w(bm.j1);bm.via=[];
+        for(let j=bm.j0;dir*j<dir*bm.j1;j+=dir)if(ev.st.includes(j))bm.via.push(w(j));
+      }
+      evs.push({k:i+1-3,black:s.black,block:bp,beams});
+      break;
+    }
+  }
+  return evs;
+})();
 // v1.9 时间轴：6.0–7.1 游框选将；S4 7.1–10.2（张开 0.55/淘汰 1.9/归一收拢 0.65）；S5 10.2–11.2；S6 同比例顺延 11.2–14.3；棋盒 14.25–16.0
 const T_SEL0=6.0,T_SEL1=7.1;          // 游框选将
 const T_HOLE0=7.1,T_HOLE1=7.65;       // 太极张开（v1.9：0.3→0.55s）
@@ -1793,6 +1839,7 @@ function frame(t){
   updateMoves(t);
   const tg=t-T_OPEN;   // S8/S9 时间基 = 对弈片秒（T0/T_X0 等常量均为片内秒；absorbAt 内部自行加回 T_OPEN）
   updateWinFx(tg);     // S8 五连特效（v2.0，t<T0 空操作）
+  updateLive3(tg);     // S7.5 活三光轨（v2.1，窗外空操作）
   updateExit(tg);      // S9 退场（v2.0，t<T_X0 空操作；须在 updateMoves/updateCards 之后覆写棋子位）
   composer.render();
 }
@@ -2070,6 +2117,93 @@ function updateMoves(t){
       stone.visible=true;stone.scale.setScalar(1);slotGlow.visible=false;
     }
   }
+}
+/* ================= S7.5 活三光轨（v2.1：连/跳活三被堵封光，全闭式纯函数，无状态无随机） =================
+   事件来自文件头 L3_EV（形成活三的下一手确实落在堵点上才成立）。动画完全内嵌堵点那手的 PERIOD 窗口：
+   0.26 光束自端子亮起（与对方飞子起飞同拍）→ 0.26–1.36 连续扫过三子（无逐子点火停顿，仅掠过瞬时增亮；
+   尖端 inCubic 与飞子同缓动，同步加速汇聚）→ 1.36 尖端抵堵点、对方子落定「封光」（撞击闪光 + 盘面扩散环）
+   → 星光自堵点沿轨倒流回端子、光束渐熄 → 2.02 收净，不污染下一手窗口。
+   跳三被堵缺口 = 双束两头汇聚；被堵端点 = 单束朝被堵方向。配色随三子方（同五连语义）：黑 = 冰青 / 白 = 暖金香槟。 */
+const L3_TAKE=MV_TAKE0,L3_HIT=MV_LAND;      // 起扫 / 封光（与飞子相位严格对齐）
+const L3_BACK=1.46,L3_OUT=2.02;             // 回流起 / 全熄（PERIOD=2.1 窗口内收净）
+let updateLive3=()=>{};
+if(L3_EV.length){
+  const L3_FXC=b=>b?{core:'#EAFFFF',main:'#04C7E8',hi:'#9BEEFF'}      // 黑 = 冰青
+                   :{core:'#FFF6DC',main:'#E8C25A',hi:'#FFE9B8'};     // 白 = 暖金香槟
+  const l3Cache={};                                                   // 光轨/扩散环贴图按色族缓存（黑/白各一份）
+  const l3BeamTex=f=>l3Cache['b'+f.main]||(l3Cache['b'+f.main]=(()=>{
+    const c=cnv(1024,128),x=c.getContext('2d');                       // 同 S8 beamTex 公式：纵向高斯 + 高饱和芯 + 端部羽化
+    const g=x.createLinearGradient(0,0,1024,0);
+    g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.03,rgba(f.main,.30));g.addColorStop(.3,rgba(f.main,.75));
+    g.addColorStop(.5,rgba(f.hi,.97));g.addColorStop(.7,rgba(f.main,.75));g.addColorStop(.97,rgba(f.main,.30));g.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=g;x.fillRect(0,0,1024,128);
+    const v=x.createLinearGradient(0,0,0,128);
+    v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(.28,'rgba(255,255,255,1)');v.addColorStop(.72,'rgba(255,255,255,1)');v.addColorStop(1,'rgba(0,0,0,0)');
+    x.globalCompositeOperation='destination-in';x.fillStyle=v;x.fillRect(0,0,1024,128);
+    return tex(c)})());
+  const l3RingTex=f=>l3Cache['r'+f.main]||(l3Cache['r'+f.main]=(()=>{
+    const c=cnv(128,128),x=c.getContext('2d');
+    x.strokeStyle=rgba(f.hi,.9);x.lineWidth=7;x.shadowColor=f.main;x.shadowBlur=12;
+    x.beginPath();x.arc(64,64,50,0,7);x.stroke();
+    x.strokeStyle=rgba(f.main,.55);x.lineWidth=2.5;x.shadowBlur=0;x.beginPath();x.arc(64,64,50,0,7);x.stroke();
+    return tex(c)})());
+  const l3Objs=L3_EV.map(ev=>{
+    const f=L3_FXC(ev.black);
+    const mkBeam=(seg,w,y,col)=>{const L=Math.hypot(seg.b.x-seg.a.x,seg.b.z-seg.a.z);
+      const g=new THREE.PlaneGeometry(L,w);g.translate(L/2,0,0);      // 自起点向堵点生长（scale.x 控制扫动进度，止于堵点不外露）
+      const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:l3BeamTex(f),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+      if(col)m.material.color.set(col);
+      m.rotation.order='YXZ';m.rotation.y=Math.atan2(-(seg.b.z-seg.a.z),seg.b.x-seg.a.x);
+      m.rotation.x=-Math.PI/2;m.position.set(seg.a.x,y,seg.a.z);m.renderOrder=1;m.visible=false;scene.add(m);
+      return{m,L};};
+    const beams=ev.beams.map(seg=>{
+      const trio=[mkBeam(seg,0.16,0.016),mkBeam(seg,0.42,0.008),mkBeam(seg,0.06,0.02,f.hi)];  // 主轨 + 盘面底光带 + 高饱和芯
+      const halos=seg.via.map(p=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:f.hi,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+        sp.scale.setScalar(0.26);sp.position.set(p.x,0.035,p.z);sp.renderOrder=1;sp.visible=false;scene.add(sp);
+        return{s:sp,al:Math.hypot(p.x-seg.a.x,p.z-seg.a.z)};});
+      const back=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:f.core,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+      back.scale.setScalar(0.22);back.renderOrder=2;back.visible=false;scene.add(back);
+      return{trio,halos,back,seg};
+    });
+    const flash=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:f.hi,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    flash.scale.setScalar(0.40);flash.position.set(ev.block.x,0.05,ev.block.z);flash.renderOrder=2;flash.visible=false;scene.add(flash);
+    const ring=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.6),
+      new THREE.MeshBasicMaterial({map:l3RingTex(f),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+    ring.rotation.x=-Math.PI/2;ring.position.set(ev.block.x,0.004,ev.block.z);ring.renderOrder=1;ring.visible=false;scene.add(ring);
+    return{ev,beams,flash,ring};
+  });
+  updateLive3=tg=>{
+    for(const o of l3Objs){
+      const u=tg-o.ev.k*PERIOD,on=u>L3_TAKE-0.001&&u<L3_OUT;
+      if(!on){o.flash.visible=o.ring.visible=false;
+        for(const b of o.beams){b.trio.forEach(t=>t.m.visible=false);b.halos.forEach(h=>h.s.visible=false);b.back.visible=false}
+        continue;}
+      const d=ease.inCubic(remap(u,L3_TAKE,L3_HIT));     // 扫动进度（与飞子 inCubic 同拍，同步加速汇聚）
+      const hold=1-remap(u,L3_HIT,L3_OUT);               // 封光后渐熄
+      const pul=1+0.06*Math.sin(2*Math.PI*tg/1.8);       // 光轨微呼吸（同五连）
+      for(const b of o.beams){
+        const v=d>0.001&&hold>0.001,L=b.trio[0].L,tip=d*L;   // 几何已按 L 建好：scale.x 用纯比例 d（同 S8），尖端世界距离 = d*L
+        b.trio.forEach((t,i)=>{t.m.visible=v;t.m.scale.x=Math.max(0.001,d);
+          t.m.material.opacity=[0.85,0.18,1.0][i]*Math.min(1,d*3)*hold*(i<2?pul:1);});
+        for(const h of b.halos){                         // 途经棋子随光束掠过瞬时增亮（非逐子点火）
+          const a=(0.20*Math.exp(-Math.pow((tip-h.al)/0.07,2))+(d<0.22?0.10*(1-d/0.22):0))*hold;
+          h.s.visible=a>0.001;h.s.material.opacity=a;
+        }
+        const bu=remap(u,L3_BACK,L3_OUT);                // 星光回流：光斑自堵点倒流回端子
+        b.back.visible=bu>0.001&&bu<0.999;
+        if(b.back.visible){const e=ease.inOutCubic(bu);
+          b.back.position.set(lerp(b.seg.b.x,b.seg.a.x,e),0.05,lerp(b.seg.b.z,b.seg.a.z,e));
+          b.back.material.opacity=0.5*Math.sin(Math.PI*bu);}
+      }
+      const hi=u-L3_HIT;                                 // 封光：撞击闪光 + 盘面扩散环
+      o.flash.visible=hi>0&&hi<0.5;
+      o.flash.material.opacity=0.55*Math.exp(-7*hi);
+      const ru=clamp01(hi/0.55);
+      o.ring.visible=hi>0&&hi<0.55;
+      o.ring.material.opacity=0.34*(1-ru);
+      o.ring.scale.setScalar(0.35+0.95*ease.outCubic(ru));
+    }
+  };
 }
 /* ================= S8 五连特效 + S9 退场（v2.0：全闭式纯函数，无状态无随机） =================
    取胜检测：开局三子 + MOVES 逐手落图，四轴（横/竖/两斜）任一连五即胜；WIN_AT 可手动指定。
