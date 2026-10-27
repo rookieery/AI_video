@@ -28,7 +28,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE, TITLE_MODE, TITLE_FX, TAIJI_NAME_FX, TAIJI_NAME_LAYOUT, MOVES, PERIOD, WIN_AT, WIN_FX, EXIT_MODE, END_SEC, LIVE3_FX, L43_FX, MOVE_TEXTS, MT_LAYOUT, MT_STYLE } from './game-config.js';
+import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE, TITLE_MODE, TITLE_FX, TAIJI_NAME_FX, TAIJI_NAME_LAYOUT, MOVES, PERIOD, WIN_AT, WIN_FX, EXIT_MODE, END_SEC, LIVE3_FX, C4_FX, D3_FX, L43_FX, MOVE_TEXTS, MT_LAYOUT, MT_STYLE } from './game-config.js';
 
 /* ================= 风格调色板 =================
    ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
@@ -290,17 +290,51 @@ const L43_EV=(()=>{ if(!L43_FX)return[];
   return evs;
 })();
 
+/* —— v2.4 双活三检测（浦月新增；特效并入 S10 四三管线，双向辐射同语言）——
+   一手同时成两条活三（异轴、均含新子，L3_PATS 同款连/跳活三、不要求下一手堵）＝即时双威胁，
+   特效在成着手自己的 PERIOD 窗口内播：落子点三道小光波 + 每条活三一束、自落子点贯向最远己子（同四三）。
+   该手的活三封光（S7.5）自动跳过（其「三」由本特效接管）。白18 (0,4)：纵三 (0,2)(0,3)(0,4) +
+   斜三 (2,2)(1,3)(0,4)，两端 (0,1)/(0,5) 与 (3,1)/(-1,5) 当时全空，双活三成立。 */
+const D3_EV=(()=>{ if(!D3_FX)return[];
+  const L43SET=new Set(L43_EV.map(e=>e.i));
+  const evs=[];
+  for(let i=3;i<seqCells.length-1;i++){
+    if((WIN&&i===WIN.i)||L43SET.has(i))continue;        // 胜手归 S8；四三的「四+三」由 S10 接管
+    const s=seqCells[i],C=s.black?'B':'W',bd=new Map();
+    for(let k=0;k<=i;k++)bd.set(cellKey(seqCells[k].x,seqCells[k].y),seqCells[k]);
+    const segs=[];
+    for(const[dx,dy]of AXES){
+      const at=j=>{const x=s.x+dx*j,y=s.y+dy*j;
+        if(x<-7||x>7||y<-7||y>7)return'X';
+        const cc=bd.get(cellKey(x,y));return cc?(cc.black?'B':'W'):'.'};
+      const w=j=>({x:(s.x+dx*j)*S,z:-(s.y+dy*j)*S});
+      for(const p of L3_PATS){
+        if(!(p.st.every(j=>at(j)===C)&&p.en.every(j=>at(j)==='.')&&(p.g<0||at(p.g)==='.')))continue;
+        let far=0;                                      // 束向：线参绝对值最大的己子（自落子点贯向远端）
+        for(const q of p.st)if(Math.abs(q)>Math.abs(far))far=q;
+        const dir=Math.sign(far),seg={a:w(0),b:w(far)};seg.via=[];
+        for(let j=dir;dir*j<=dir*far;j+=dir)if(at(j)===C)seg.via.push(w(j));
+        segs.push(seg);break;                           // 每轴至多取一线（本局双活三为异轴）
+      }
+    }
+    if(segs.length>=2)evs.push({i,k:i-3,black:s.black,pt:{x:s.x*S,z:-s.y*S},beams:segs.slice(0,2)});
+  }
+  return evs;
+})();
+
 /* —— v2.1 活三检测（并列于取胜检测；纯逻辑不占时长，不影响 DUR 钳制）——
    逐手落图后查含新子的活三：连三（三连两端全空）/ 跳三（三子一缺口、两外端空，填缺成活四；黑13 的 B_BBB
    属冲四威胁不匹配）。仅当下一手确实落在堵点（端点或缺口）上才成事件——「被堵」叙事恒成立，MOVES 换谱自动跟随。
    事件坐标 = 堵点那一手（k 为其 MOVES 下标），特效在该手 PERIOD 窗口内播；端堵=单束自最远端子扫向堵点，
-   中堵缺口=双束自两头汇聚；via = 束段途经的三子（掠过增亮用）。每手至多取一线（本局无双三）。 */
+   中堵缺口=双束自两头汇聚；via = 束段途经的三子（掠过增亮用）。每手至多取一线（本局无双三）。
+   v2.4：双活三那手（D3SET）的两条三已由 S10 管线双向辐射接管，活三封光自动跳过。 */
 const L3_EV=(()=>{ if(!LIVE3_FX)return[];
   const PATS=L3_PATS;
   const L43SET=new Set(L43_EV.map(e=>e.i));
+  const D3SET=new Set(D3_EV.map(e=>e.i));
   const evs=[];
   for(let i=3;i<seqCells.length-1;i++){
-    if(L43SET.has(i))continue;                          // 四三那手的活三由 S10 四三特效接管（v2.2 自动抑制）
+    if(L43SET.has(i)||D3SET.has(i))continue;            // 四三/双活三那手的活三由 S10 管线接管（v2.2/v2.4 自动抑制）
     const s=seqCells[i],C=s.black?'B':'W',mv=seqCells[i+1],bd=new Map();
     for(let k=0;k<=i;k++)bd.set(cellKey(seqCells[k].x,seqCells[k].y),seqCells[k]);
     for(const[dx,dy]of AXES){
@@ -331,6 +365,58 @@ const L3_EV=(()=>{ if(!LIVE3_FX)return[];
       evs.push({k:i+1-3,black:s.black,block:bp,beams});
       break;
     }
+  }
+  return evs;
+})();
+
+/* —— v2.3 冲四封堵检测（浦月新增；特效并入 S7.5 活三封光管线）——
+   逐手落图后查含新子的冲四：含新子的 5 窗恰 4 己子 + 1 空堵点，且全轴堵点并集恰为 1——
+   死四（两头已堵，0 堵点）与活四（两头皆空，2 堵点，下一步直接归 S8 五连）均不算；
+   再要求对方下一手恰好落在该堵点上才成事件。特效内嵌堵点那手 PERIOD 窗口（同活三封光节拍）。
+   束形：实体四端堵 = 单束自最远己子扫向堵点；缺口在中间的跳四 = 双束自两头汇聚（同活三中堵）。
+   胜手归 S8、四三手的「四」已由 S10 接管，均跳过。本局触发 5 手：
+   黑19→白20（x=2 纵四端堵 (2,-3)）、黑21→白22（y=1−x 斜跳四中堵 (1,0)）、白24→黑25（(-2,6)）、
+   白26→黑27（(-3,5)）、白28→黑29（x=0 纵跳四中堵 (0,5)）；白30 活四 2 堵点不触发。 */
+const C4_EV=(()=>{ if(!C4_FX)return[];
+  const L43SET=new Set(L43_EV.map(e=>e.i));
+  const evs=[];
+  for(let i=3;i<seqCells.length-1;i++){
+    if((WIN&&i===WIN.i)||L43SET.has(i))continue;        // 胜手归 S8；四三的「四」由 S10 四三特效接管
+    const s=seqCells[i],C=s.black?'B':'W',mv=seqCells[i+1],bd=new Map();
+    for(let k=0;k<=i;k++)bd.set(cellKey(seqCells[k].x,seqCells[k].y),seqCells[k]);
+    let pt=null,beams=null;
+    for(const[dx,dy]of AXES){
+      const at=j=>{const x=s.x+dx*j,y=s.y+dy*j;
+        if(x<-7||x>7||y<-7||y>7)return'X';
+        const cc=bd.get(cellKey(x,y));return cc?(cc.black?'B':'W'):'.'};
+      const w=j=>({x:(s.x+dx*j)*S,z:-(s.y+dy*j)*S});
+      for(let p=0;p<5;p++){                             // 含新子的 5 窗：恰 4 己子 + 1 空（ge）
+        let own=0,ge=-9,em=0,ok=true;
+        for(let q=-p;q<5-p;q++){const c=at(q);
+          if(c===C)own++;
+          else if(c==='.'){em++;if(em>1){ok=false;break}ge=q}
+          else{ok=false;break}}
+        if(!ok||own!==4||em!==1)continue;
+        const gx=s.x+dx*ge,gy=s.y+dy*ge;
+        if(pt&&(pt.gx!==gx||pt.gy!==gy)){pt='X';break}  // 第二个堵点＝活四/四四（不止一个方向）→ 整手排除
+        if(pt)continue;                                 // 同一堵点的另一窗：仍是单方向，不重复建束
+        pt={gx,gy};
+        const all=[];for(let q=-p;q<5-p;q++)if(at(q)===C)all.push(q);
+        if(all[0]<ge&&all[all.length-1]>ge){            // 缺口在中间：双束自两头汇聚（同活三中堵）
+          beams=[{j0:all[0],j1:ge},{j0:all[all.length-1],j1:ge}];
+        }else{                                          // 端堵：单束自距堵点最远己子扫向堵点
+          const far=all.reduce((a,b)=>Math.abs(b-ge)>Math.abs(a-ge)?b:a);
+          beams=[{j0:far,j1:ge}];
+        }
+        for(const bm of beams){
+          const dir=Math.sign(bm.j1-bm.j0);
+          bm.a=w(bm.j0);bm.b=w(bm.j1);bm.via=[];
+          for(let j=bm.j0;dir*j<dir*bm.j1;j+=dir)if(at(j)===C)bm.via.push(w(j));
+        }
+      }
+      if(pt==='X')break;
+    }
+    if(pt&&pt!=='X'&&mv.x===pt.gx&&mv.y===pt.gy)evs.push({k:i+1-3,black:s.black,block:{x:pt.gx*S,z:-pt.gy*S},beams});
   }
   return evs;
 })();
@@ -2305,8 +2391,9 @@ const l3BeamMk=(f,seg,w,y,col)=>{const L=Math.hypot(seg.b.x-seg.a.x,seg.b.z-seg.
   m.rotation.x=-Math.PI/2;m.position.set(seg.a.x,y,seg.a.z);m.renderOrder=1;m.visible=false;scene.add(m);
   return{m,L};};
 let updateLive3=()=>{},updateFourThree=()=>{};
-if(L3_EV.length){
-  const l3Objs=L3_EV.map(ev=>{
+const L3_ALL=L3_EV.concat(C4_EV);                     // v2.3：冲四封堵与活三封光同管线（事件同构，节拍/配色一致）
+if(L3_ALL.length){
+  const l3Objs=L3_ALL.map(ev=>{
     const f=L3_FXC(ev.black);
     const beams=ev.beams.map(seg=>{
       const trio=[l3BeamMk(f,seg,0.16,0.016),l3BeamMk(f,seg,0.42,0.008),l3BeamMk(f,seg,0.06,0.02,f.hi)];  // 主轨 + 盘面底光带 + 高饱和芯
@@ -2350,14 +2437,16 @@ if(L3_EV.length){
     }
   };
 }
-/* ================= S10 四三特效（v2.2：落子点小光波 + 双光轨迸发，全闭式纯函数，无状态无随机） =================
+/* ================= S10 四三特效（v2.2：落子点小光波 + 双光轨迸发，全闭式纯函数，无状态无随机）
+   v2.4 起双活三（D3_EV，浦月新增）并入本管线：事件同构（落子点 + 每条活三一束），双束双向辐射同语言。
    事件来自文件头 L43_EV（成着手同时成冲四+活三，异轴）。动画内嵌成着手自己的 PERIOD 窗口：
    1.36 落子即爆——落子点三道小光波荡开（错拍 0.08s，各 0.40s 消散）；1.38–1.90 两条光轨自落子点分别
    向「四」「三」方向迸发（outCubic 快起缓收，与落子冲击同感），跨缺口贯向最远己子，途经棋子掠过瞬时
    增亮（同活三）；1.94 起渐熄、2.08 收净。配色随子方（同活三/五连语义）：黑 = 冰青 / 白 = 暖金香槟。 */
-if(L43_EV.length){
+if(L43_EV.length||D3_EV.length){
   const L43_RIP=MV_LAND,L43_TAKE=1.38,L43_FULL=1.90,L43_FADE=1.94,L43_OUT=2.08;   // 光波起 / 双束起 / 迸满 / 渐熄起 / 全熄
-  const l43Objs=L43_EV.map(ev=>{
+  const L43_ALL=L43_EV.concat(D3_EV);               // v2.4：双活三与四三同管线（事件同构：pt + 双束自落子点辐射）
+  const l43Objs=L43_ALL.map(ev=>{
     const f=L3_FXC(ev.black);
     const beams=ev.beams.map(seg=>{
       const trio=[l3BeamMk(f,seg,0.16,0.016),l3BeamMk(f,seg,0.42,0.008),l3BeamMk(f,seg,0.06,0.02,f.hi)];  // 主轨 + 盘面底光带 + 高饱和芯（同活三）
