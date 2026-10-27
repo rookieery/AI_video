@@ -17,3 +17,14 @@ export const ELIM_MODE = 'taiji';
 
 // S6.5 尾声棋盒（v1.7 定稿 'holo'）：'capsule' 悬浮能量舱 | 'jar' 霓虹棋罐 | 'holo' 全息取子台 | 'none' 无棋盒
 export const BOWL_MODE = 'holo';
+
+// v2.0 开场字幕（待确认）——书名「五子棋开局大全」位置：
+// 'inner' 封面扉页（翻开在内侧揭示，微调 S1–S3 节拍：翻开提前+书多停留）| 'top' 封面顶部小字（零时序改动）| 'none'
+export const TITLE_MODE = 'inner';
+
+// 书名/太极开局名 字体效果：'solid' 实心霓虹 | 'hollow' 空心描边 | 'scan' 扫描线
+export const TITLE_FX = 'scan';
+export const TAIJI_NAME_FX = 'solid';
+
+// 太极开局名（如「花月」）排布：'arc' 沿内圈上方弧排（环形铭文）| 'flat' 水平并排于带区下部
+export const TAIJI_NAME_LAYOUT = 'arc';

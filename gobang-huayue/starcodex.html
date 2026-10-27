@@ -28,7 +28,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { DIRECT, INDIRECT } from './openings.js';
-import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE } from './config.js';
+import { SELECTED, STYLE, BOOK_STYLE, TRANSITION, ELIM_MODE, BOWL_MODE, TITLE_MODE, TITLE_FX, TAIJI_NAME_FX, TAIJI_NAME_LAYOUT } from './config.js';
 
 /* ================= 风格调色板 =================
    ?style=gold（默认，暗金版）| a 霓虹棋谱 | b 夜城全息 | c 全息终端
@@ -191,6 +191,10 @@ const TR_ID=TRANSITION||'pillar';            // 转场机制：pillar | fountain
 const TR_PILLAR=TR_ID==='pillar';            // 现行光柱基线（书缝辉光/光污染强度按此分档）
 const ELIM_ID=ELIM_MODE||'hole';             // S4 淘汰机制：hole | taiji | singularity | ring
 const BOWL_ID=BOWL_MODE||'none';             // S6.5 棋盒：capsule | jar | holo | none
+const TITLE_ID=TITLE_MODE||'none';           // v2.0 书名：inner 封面扉页（微调时序）| top 封面顶部（零时序改动）| none
+const TITLE_FX_ID=TITLE_FX||'solid';         // 书名字体：solid 实心霓虹 | hollow 空心描边 | scan 扫描线
+const TJNAME_FX=TAIJI_NAME_FX||'solid';      // 太极开局名字体：同上
+const TJNAME_LAYOUT=TAIJI_NAME_LAYOUT||'arc';// 太极开局名排布：arc 弧排 | flat 水平
 const BOOK_STYLES={
   seal:{glass:.27,pageOp:.55,backOp:.32,flame:'plasma',stones:'solid',lattice:'dots',innerPlate:false,scan:0,sealOp:.95,stoneR:.066,flameSize:.40},
   holo:{glass:.26,pageOp:.34,backOp:.18,flame:'vector',stones:'wire',lattice:'dots',innerPlate:false,scan:.14,sealOp:1.0,stoneR:.060,flameSize:.40},
@@ -396,6 +400,52 @@ const taijiBaseTex=(()=>{const c=cnv(512,512),x=c.getContext('2d');
   // 外缘细环（气场边界）
   x.strokeStyle='rgba(155,238,255,.20)';x.lineWidth=2;
   x.beginPath();x.arc(0,0,TAIJI_R+4,0,7);x.stroke();
+  return tex(c)})();
+
+// v2.0 开场字幕：霓虹字贴图（颜色走风格调色板，随 STYLE 联动）
+// fx：solid 实心霓虹（亮芯渐变+细描边+辉光）| hollow 空心描边（全息线框）| scan 扫描线字芯（全息终端）
+const TITLE_FONT='"Microsoft YaHei","SimHei",sans-serif';
+function neonChar(x,ch,cx,cy,px,fx,w,back){
+  x.save();x.font=`${w} ${px}px ${TITLE_FONT}`;x.textAlign='center';x.textBaseline='middle';
+  if(back){ // 暗色衬底（法线混合贴图用：压住身后亮缘，提对比）
+    x.shadowColor='rgba(2,8,16,.85)';x.shadowBlur=px*0.5;
+    x.fillStyle='rgba(2,8,16,.85)';x.fillText(ch,cx,cy);x.fillText(ch,cx,cy);
+    x.shadowBlur=px*0.3;
+  }
+  if(fx==='hollow'){
+    x.shadowColor=COL.gold;x.shadowBlur=px*0.5;
+    x.strokeStyle=COL.goldHi;x.lineWidth=Math.max(1.5,px*0.05);
+    x.strokeText(ch,cx,cy);x.strokeText(ch,cx,cy);
+  }else{
+    x.shadowColor=COL.gold;x.shadowBlur=px*0.42;
+    const g=x.createLinearGradient(0,cy-px*0.54,0,cy+px*0.54);
+    if(fx==='scan'){
+      for(let i=0;i<=20;i++)g.addColorStop(i/20,rgba(i%2?COL.gold:COL.sweep,i%2?0.38:0.95));
+    }else{g.addColorStop(0,rgba(COL.sweep,.97));g.addColorStop(1,rgba(COL.goldHi,.85))}
+    x.fillStyle=g;x.fillText(ch,cx,cy);
+    x.shadowBlur=px*0.14;x.strokeStyle=rgba(COL.goldHi,.85);x.lineWidth=Math.max(1,px*0.026);
+    x.strokeText(ch,cx,cy);
+  }
+  x.restore();
+}
+function neonLine(x,str,cx,cy,px,gap,fx,w){   // 带字距的一行
+  const x0=cx-(str.length-1)*(px+gap)/2;
+  for(let i=0;i<str.length;i++)neonChar(x,str[i],x0+i*(px+gap)+px/2,cy,px,fx,w);
+}
+// 书名·扉页式两行（封面内侧揭示用）
+const bookTitleTex=(()=>{
+  const c=cnv(760,440),x=c.getContext('2d');
+  neonLine(x,'五子棋',380,128,150,26,TITLE_FX_ID,900);
+  neonLine(x,'开局大全',380,318,108,20,TITLE_FX_ID,900);
+  x.strokeStyle=rgba(COL.gold,.4);x.lineWidth=2;    // 扉页分隔细线+中点菱形
+  x.beginPath();x.moveTo(210,232);x.lineTo(330,232);x.moveTo(430,232);x.lineTo(550,232);x.stroke();
+  x.fillStyle=rgba(COL.goldHi,.75);
+  x.save();x.translate(380,232);x.rotate(Math.PI/4);x.fillRect(-5,-5,10,10);x.restore();
+  return tex(c)})();
+// 书名·封面顶部单行小字（零时序改动备选）
+const bookTitleTopTex=(()=>{
+  const c=cnv(1024,96),x=c.getContext('2d');
+  neonLine(x,'五子棋开局大全',512,50,58,10,TITLE_FX_ID,700);
   return tex(c)})();
 
 // v1.5 星环收束：主环（亮细环）+ 副环（虚线细环，反向旋转）
@@ -916,6 +966,19 @@ const coverPivot=new THREE.Group();          // 绕书脊（局部 -x 端）翻�
     new THREE.MeshBasicMaterial({map:coverFrameTex,transparent:true,depthWrite:false,
       blending:THREE.AdditiveBlending,opacity:.9}));
   coverFrame.position.set(W/2,0,0.0235);coverFrame.renderOrder=8;coverPivot.add(coverFrame);
+  // v2.0 书名字幕（扉页式：贴封面内侧，闭合时被封面挡住，翻开>100° 才揭示——visible 由帧驱动守门）
+  var titleInner=null,titleTop=null;
+  if(TITLE_ID==='inner'){
+    titleInner=new THREE.Mesh(new THREE.PlaneGeometry(0.66,0.382),
+      new THREE.MeshBasicMaterial({map:bookTitleTex,transparent:true,opacity:0,depthWrite:false}));
+    titleInner.position.set(W/2,0.02,-0.019);titleInner.rotation.y=Math.PI;
+    titleInner.renderOrder=9;coverPivot.add(titleInner);
+  }else if(TITLE_ID==='top'){
+    titleTop=new THREE.Mesh(new THREE.PlaneGeometry(0.88,0.0825),
+      new THREE.MeshBasicMaterial({map:bookTitleTopTex,transparent:true,opacity:0,depthWrite:false,
+        blending:THREE.AdditiveBlending}));
+    titleTop.position.set(W/2,0.52,0.0245);titleTop.renderOrder=9;coverPivot.add(titleTop);
+  }
   // 全息扫描线（holo）
   var holoScan=new THREE.Mesh(new THREE.PlaneGeometry(W*0.98,H*0.99),
     new THREE.MeshBasicMaterial({map:holoScanTex,transparent:true,depthWrite:false,
@@ -1141,6 +1204,27 @@ const tjCore=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:'#EAFF
 tjCore.position.z=0.02;
 if(ELIM_ID==='taiji'){accretion.visible=false;horizon.scale.setScalar(0.52);photonRing.material.opacity=.4;
   hole.add(tjBase,tjArmCr,tjArmCy,tjCore)}
+// v2.0 太极开局名（当前选中局名，如「花月」）：独立贴图 mesh 挂 hole 组——只随 open 缩放，不随臂自转
+// arc=沿内圈上方弧排（环形铭文，字头朝外）/ flat=水平并排于带区下部
+const tjNameTex=(()=>{
+  const c=cnv(512,512),x=c.getContext('2d');x.translate(256,256);
+  if(TJNAME_LAYOUT==='flat'){
+    const px=64,y=TAIJI_R*0.56;
+    neonChar(x,heroOpening.name[0],-px*0.60,y,px,TJNAME_FX,900,true);
+    neonChar(x,heroOpening.name[1], px*0.60,y,px,TJNAME_FX,900,true);
+  }else{
+    const px=58,r=TAIJI_R*0.63;
+    for(let i=0;i<2;i++){
+      const a=-Math.PI/2+(i?1:-1)*0.38;
+      x.save();x.translate(r*Math.cos(a),r*Math.sin(a));x.rotate(a+Math.PI/2);
+      neonChar(x,heroOpening.name[i],0,0,px,TJNAME_FX,900,true);x.restore();
+    }
+  }
+  return tex(c)})();
+const tjName=new THREE.Mesh(new THREE.PlaneGeometry(2.7,2.7),
+  new THREE.MeshBasicMaterial({map:tjNameTex,transparent:true,opacity:0,depthWrite:false}));
+tjName.position.z=0.03;tjName.renderOrder=2;
+if(ELIM_ID==='taiji')hole.add(tjName);
 // —— ring 星环收束：主环 + 反旋虚线副环 + 25 颗族色光珠（逐卡入环轨）+ 收束核闪
 const ringDisc=new THREE.Mesh(new THREE.PlaneGeometry(2.5,2.5),
   new THREE.MeshBasicMaterial({map:ringTexMain,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending}));
@@ -1461,10 +1545,13 @@ function frame(t){
   nebP1.rotation.z=0.02+0.012*t*0.02;nebP2.rotation.z=-0.03-0.008*t*0.02;
 
   /* --- S1/S2 浮书 --- */
-  const bookGone=t>3.45;
+  // v2.0 inner 书名揭示需要可读窗口：翻开提前到 2.25–3.05，书多停留至 3.98 缓沉退场（helix 星门节拍零改动）
+  const BO0=TITLE_ID==='inner'?2.25:2.6, BO1=TITLE_ID==='inner'?3.05:3.4;
+  const bookGone=t>(TITLE_ID==='inner'?3.98:3.45);
   book.visible=!bookGone;
   if(book.visible){
     let sink=ease.inOutCubic(remap(t,3.2,3.4))*0.55;
+    if(TITLE_ID==='inner')sink+=ease.inOutCubic(remap(t,3.15,3.95))*0.9;
     if(TR_ID==='fountain'){          // 羽化：提前深沉 + 微缩，星屑自书页喷出
       sink=ease.inOutCubic(remap(t,3.15,3.42))*0.75;
       book.scale.setScalar(1-0.10*ease.inCubic(remap(t,3.15,3.45)));
@@ -1476,7 +1563,14 @@ function frame(t){
     }
     book.position.set(0,0.05*Math.sin(2*Math.PI*t/3)-sink,0);
     book.rotation.y=4*DEG*Math.sin(2*Math.PI*t/6);
-    coverPivot.rotation.y=178*DEG*ease.inOutCubic(remap(t,2.6,3.4));
+    coverPivot.rotation.y=178*DEG*ease.inOutCubic(remap(t,BO0,BO1));
+    // v2.0 书名揭示/退场（titleInner 另需翻角>100° 守门：闭合时被封面深度遮挡之外双保险）
+    if(titleInner){
+      const rev=ease.outCubic(remap(t,2.72,3.0))*(1-ease.inQuad(remap(t,3.58,3.92)));
+      titleInner.material.opacity=rev;
+      titleInner.visible=rev>0.01&&coverPivot.rotation.y>100*DEG;
+    }
+    if(titleTop)titleTop.material.opacity=(1-ease.inQuad(remap(t,2.62,2.92)))*(0.92+0.08*Math.sin(2*Math.PI*t/1.6));
     if(TR_ID==='ripple')coverPivot.rotation.y*=1-ease.inOutCubic(remap(t,3.15,3.5));
     // 封印：外环慢转，四团能量焰各自反向自转/呼吸；1.6 后整体亮度爬升
     const heat=env(t,[[0,.72],[1.6,.72],[2.2,1.25],[2.7,1.05],[3.4,.9]]);
@@ -1710,6 +1804,8 @@ function frame(t){
         lensRing.material.opacity=0.10*open*(1+0.3*Math.sin(2*Math.PI*t/0.9));
         tjCore.material.opacity=0.9*Math.sin(Math.PI*remap(t,9.25,10.05));
         tjCore.scale.setScalar(0.35+0.55*remap(t,9.25,9.8));
+        // v2.0 开局名：随太极张开阔入，归一收拢前退场（不遮 9.25 核闪）
+        tjName.material.opacity=0.95*open*env(t,[[T_HOLE1-0.30,0],[T_HOLE1+0.15,1],[9.32,1],[9.68,0]]);
         holeLight.intensity=1.4*open*(1+0.5*conv);
       }else if(ELIM_ID==='ring'){
         /* 星环收束：主环/副环对旋（随吸收增亮）→ 9.55 环体向心收束 → 核闪；光珠沿环轨公转 */
